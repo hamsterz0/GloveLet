@@ -5,4 +5,5 @@ cache: pip
 install:
   - pip install -r requirements.txt
 script:
-  - python tests.py
+  - python main.py
+    pep8 --first main.py
