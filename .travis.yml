@@ -4,6 +4,8 @@ python:
 cache: pip
 install:
   - pip install -r requirements.txt
+before_script:
+  - "pep8 --first main.py"
+  - pyflakes main.py 
 script:
   - python main.py
-    pep8 --first main.py
