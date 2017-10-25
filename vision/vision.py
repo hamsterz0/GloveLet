@@ -8,20 +8,26 @@ Computer Vision for finger(s) tracking
 '''
 import cv2
 import numpy as np
+import tkinter
+import threading
 
 class VisionTracking(object):
 
-    posX = 0
-    posY = 0
-    camera = None
+ 
     THRESHOLD_MAX = 255
     THRESHOLD_MIN = 0
+    SCREEN_UPDATE_TIME = 5
 
     def __init__(self):
         """
-        Initializing the threshold to None. 
+        Initializing the member variables.
         """
         self.threshold = None
+        self.screen_width = 0
+        self.screen_height = 0
+        self.posX = 0
+        self.posY = 0
+        self.camera = None
 
     def __callback(self, value):
         """
@@ -96,6 +102,14 @@ class VisionTracking(object):
         # TODO: For now using the default camera.
         self.camera = cv2.VideoCapture(0)
 
+    def __findScreenSize():
+        root = tkinter.Tk()
+        root.withdraw()
+        self.width, self.height = root.winfo_screenwidth(), root.winfo_screenheight()
+
+    def __track(self):
+        print('Hello, World!')
+
     def run(self):
         """
         Main function from where the tracking would begin.
@@ -105,4 +119,6 @@ class VisionTracking(object):
         self.__selectWebCam()
         # Running the range detector
         # This would be used for now to calibrate. 
-        self.__rangeDetector()
+        # self.__rangeDetector()
+        # Calling the vision tracking process every x seconds
+        threading.Timer(self.SCREEN_UPDATE_TIME, self.__track).start()
