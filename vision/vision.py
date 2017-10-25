@@ -10,12 +10,13 @@ import cv2
 import numpy as np
 import tkinter
 import threading
+import pyautogui
 
 class VisionTracking(object):
  
     THRESHOLD_MAX = 255
     THRESHOLD_MIN = 0
-    SCREEN_UPDATE_TIME = 5
+    SCREEN_UPDATE_TIME = 3
 
     def __init__(self):
         """
@@ -92,6 +93,7 @@ class VisionTracking(object):
 
             if cv2.waitKey(1) & 0xFF is ord('q'):
                 break
+        cv2.destroyAllWindows()
 
     def __selectWebCam(self):
         """
@@ -106,8 +108,56 @@ class VisionTracking(object):
         root.withdraw()
         self.width, self.height = root.winfo_screenwidth(), root.winfo_screenheight()
 
+    def __frameOperations(self, mask):
+        kernel = np.ones((5,5), np.uint8)
+        frame = cv2.erode(mask, kernel, iterations=2)
+        frame = cv2.dilate(mask, kernel, iterations=2)
+        frame = cv2.morphologyEx(mask, cv2.MORPH_OPEN, kernel)
+        frame = cv2.morphologyEx(mask, cv2.MORPH_CLOSE, kernel)
+        return frame
+
     def __track(self):
-        print('Hello, World!')
+        ret, frame = self.camera.read()
+        frame = cv2.flip(frame, 1)    # flipping the frame vertically.
+        # frameRGB = cv2.cvtColor(frame, cv2.RGB2BGR)
+        frameHSV = cv2.cvtColor(frame, cv2.COLOR_BGR2HSV)
+        lower_threshold = np.array(self.threshold[:3])
+        upper_threshold = np.array(self.threshold[3:])
+        mask = cv2.inRange(frameHSV, lower_threshold, upper_threshold)
+        frame = self.__frameOperations(mask)
+        
+        contours = cv2.findContours(frame, 1, 2)
+        cnt = contours[0]
+        """
+        Type of data returned. 
+        {'nu12': 2.429873851311728e-06, 'mu12': 1381809220.850586, 'm11': 25132807395.0, 
+        'm30': 57909074053770.0, 'm01': 60077235.0, 
+        'mu11': 85381234.61649323, 'm21': 10519418922885.0, 'nu21': 5.220555276767182e-07, 
+        'nu03': -1.9641993131654756e-06, 'nu02': 0.0012610491682499118, 
+        'mu21': 296880079.4124689, 'm03': 520824457515.0, 'mu20': 68320922.18600464, 
+        'nu11': 0.00013411302032940116, 'm12': 2234892975645.0, 'nu30': 8.039795096010302e-09, 
+        'm10': 332658720.0, 'm02': 5326324995.0, 'm20': 138760534800.0, 
+        'mu02': 802829841.8216686, 'nu20': 0.00010731544545134859, 'mu03': -1116991617.0978394,
+         'm00': 797895.0, 'mu30': 4572032.8203125}
+
+        """
+        M = cv2.moments(cnt)
+        moment00 = M['m00']
+        moment01 = M['m01']
+        moment10 = M['m10']
+
+        if moment00 > 20000 and moment00 < 20000000:
+            self.posX = moment10/moment00
+            self.posY = moment01/moment00
+            self.__moveMouse()
+
+        print('PosX: {}, PosY: {}'.format(self.posX, self.posY))
+
+        cv2.imshow("Mask", mask)
+        cv2.imshow("Frame", frame)
+
+    def __moveMouse(self):
+        pyautogui.moveTo(self.posX, self.posY)
 
     def getCoordinates(self):
         """
@@ -118,6 +168,12 @@ class VisionTracking(object):
         self.__selectWebCam()
         # Running the range detector
         # This would be used for now to calibrate. 
-        # self.__rangeDetector()
+        self.__rangeDetector()
         # Calling the vision tracking process every x seconds
-        threading.Timer(self.SCREEN_UPDATE_TIME, self.__track).start()
+        while True:
+            self.__track()
+            # threading.Timer(self.SCREEN_UPDATE_TIME, ).start()
+            if cv2.waitKey(1) & 0xFF is ord('q'):
+                break
+        cv2.destroyAllWindows()
+
