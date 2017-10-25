@@ -12,7 +12,6 @@ import tkinter
 import threading
 
 class VisionTracking(object):
-
  
     THRESHOLD_MAX = 255
     THRESHOLD_MIN = 0
@@ -110,7 +109,7 @@ class VisionTracking(object):
     def __track(self):
         print('Hello, World!')
 
-    def run(self):
+    def getCoordinates(self):
         """
         Main function from where the tracking would begin.
         The main function that the public can call. 
