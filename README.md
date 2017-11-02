@@ -1,2 +1,2 @@
-# imu-gesture-tracking
-tracking mouse, objects etc on devices with our imu gesture tracking.
+# 3D Viewer Tool
+For visualizing IMU data in 3-dimensional space.
