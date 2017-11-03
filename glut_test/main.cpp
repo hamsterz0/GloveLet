@@ -1,14 +1,22 @@
 #include <iostream>
 #include <GL/glut.h>
+#include <glm/glm.hpp>
+#include <glm/vec3.hpp>
+#include <glm/vec4.hpp>
+#include <glm/matrix.hpp>
+#include <glm/gtc/matrix_transform.hpp>
+#include <glm/gtx/transform.hpp>
+#include <glm/gtx/euler_angles.hpp>
 
 void draw(void);
 void specialKeys(int key, int x, int y);
 
 float rotate_y = 0.0f;
 float rotate_x = 0.0f;
-float size = 0.25f;
+float size = 1.0f;
 float mv_z = 0.0f;
 
+glm::vec3 pos(0, 0, 0);
 
 int main(int argc, char* argv[]) {
     glutInit(&argc, argv);
@@ -42,7 +50,6 @@ void draw(void) {
     glMatrixMode(GL_MODELVIEW);
     glLoadIdentity();
     glTranslatef(0.0f,0.0f,-10.0f);
-
 
     glPushMatrix();
     glRotatef(rotate_x,1.0f,0.0f,0.0f);
