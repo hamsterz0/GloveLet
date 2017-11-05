@@ -1,3 +1,7 @@
+# 3D Viewer Tool
+
+A simple 3D model viewer to be used for visualizing data captured by the Glovelet's sensors.
+
 ## Getting Started
 
 In console:
