@@ -51,9 +51,9 @@ public:
     void setWorldRotation(glm::fquat &rot);
     glm::fquat getLocalRotation();
     void setLocalRotation(glm::fquat &rot);
-    WorldObject getPrevSibling();
+    WorldObject* getPrevSibling();
     void setPrevSibling(WorldObject &wo);
-    WorldObject getNextSibling();
+    WorldObject* getNextSibling();
     void setNextSibling(WorldObject &wo);
 };
 
