@@ -44,6 +44,7 @@
 				<Option type="1"/>
 				<Option compiler="gcc"/>
 				<Compiler>
+					<Add directory="/home/joseph/Projects/glovlet/3d-viewer-tool/./lib"/>
 					<Add directory="/usr/include/c++/5"/>
 					<Add directory="/usr/include/x86_64-linux-gnu/c++/5"/>
 					<Add directory="/usr/include/c++/5/backward"/>
@@ -67,6 +68,7 @@
 				<Option type="1"/>
 				<Option compiler="gcc"/>
 				<Compiler>
+					<Add directory="/home/joseph/Projects/glovlet/3d-viewer-tool/./lib"/>
 					<Add directory="/usr/include/c++/5"/>
 					<Add directory="/usr/include/x86_64-linux-gnu/c++/5"/>
 					<Add directory="/usr/include/c++/5/backward"/>
@@ -84,22 +86,28 @@
 				</MakeCommands>
 			</Target>
 		</Build>
-		<Unit filename="/home/joseph/Projects/glovlet/3d-viewer-tool/Polygon.cpp">
+		<Unit filename="/home/joseph/Projects/glovlet/3d-viewer-tool/lib/Model.h">
 			<Option target="3d-viewer-tool.exe"/>
 		</Unit>
-		<Unit filename="/home/joseph/Projects/glovlet/3d-viewer-tool/Polygon.h">
+		<Unit filename="/home/joseph/Projects/glovlet/3d-viewer-tool/lib/Polygon.h">
 			<Option target="3d-viewer-tool.exe"/>
 		</Unit>
-		<Unit filename="/home/joseph/Projects/glovlet/3d-viewer-tool/Vertex.cpp">
-			<Option target="3d-viewer-tool.exe"/>
-		</Unit>
-		<Unit filename="/home/joseph/Projects/glovlet/3d-viewer-tool/WorldObject.cpp">
-			<Option target="3d-viewer-tool.exe"/>
-		</Unit>
-		<Unit filename="/home/joseph/Projects/glovlet/3d-viewer-tool/WorldObject.h">
+		<Unit filename="/home/joseph/Projects/glovlet/3d-viewer-tool/lib/WorldObject.h">
 			<Option target="3d-viewer-tool.exe"/>
 		</Unit>
 		<Unit filename="/home/joseph/Projects/glovlet/3d-viewer-tool/main.cpp">
+			<Option target="3d-viewer-tool.exe"/>
+		</Unit>
+		<Unit filename="/home/joseph/Projects/glovlet/3d-viewer-tool/src/Model.cpp">
+			<Option target="3d-viewer-tool.exe"/>
+		</Unit>
+		<Unit filename="/home/joseph/Projects/glovlet/3d-viewer-tool/src/Polygon.cpp">
+			<Option target="3d-viewer-tool.exe"/>
+		</Unit>
+		<Unit filename="/home/joseph/Projects/glovlet/3d-viewer-tool/src/Vertex.cpp">
+			<Option target="3d-viewer-tool.exe"/>
+		</Unit>
+		<Unit filename="/home/joseph/Projects/glovlet/3d-viewer-tool/src/WorldObject.cpp">
 			<Option target="3d-viewer-tool.exe"/>
 		</Unit>
 		<Unit filename="/home/joseph/Projects/glovlet/3d-viewer-tool/CMakeLists.txt">
