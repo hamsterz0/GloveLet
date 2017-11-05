@@ -8,43 +8,43 @@
 		<Option virtualFolders="CMake Files\;"/>
 		<Build>
 			<Target title="all">
-				<Option working_dir="/home/joseph/Projects/glovlet/3d-viewer-tool/cmake-build-debug"/>
+				<Option working_dir="/home/joseph/Projects/imu-tracking/3d-viewer-tool/cmake-build-debug"/>
 				<Option type="4"/>
 				<MakeCommands>
-					<Build command="/usr/bin/make -j4 -f &quot;/home/joseph/Projects/glovlet/3d-viewer-tool/cmake-build-debug/Makefile&quot;  VERBOSE=1 all"/>
-					<CompileFile command="/usr/bin/make -j4 -f &quot;/home/joseph/Projects/glovlet/3d-viewer-tool/cmake-build-debug/Makefile&quot;  VERBOSE=1 &quot;$file&quot;"/>
-					<Clean command="/usr/bin/make -j4 -f &quot;/home/joseph/Projects/glovlet/3d-viewer-tool/cmake-build-debug/Makefile&quot;  VERBOSE=1 clean"/>
-					<DistClean command="/usr/bin/make -j4 -f &quot;/home/joseph/Projects/glovlet/3d-viewer-tool/cmake-build-debug/Makefile&quot;  VERBOSE=1 clean"/>
+					<Build command="/usr/bin/make -j4 -f &quot;/home/joseph/Projects/imu-tracking/3d-viewer-tool/cmake-build-debug/Makefile&quot;  VERBOSE=1 all"/>
+					<CompileFile command="/usr/bin/make -j4 -f &quot;/home/joseph/Projects/imu-tracking/3d-viewer-tool/cmake-build-debug/Makefile&quot;  VERBOSE=1 &quot;$file&quot;"/>
+					<Clean command="/usr/bin/make -j4 -f &quot;/home/joseph/Projects/imu-tracking/3d-viewer-tool/cmake-build-debug/Makefile&quot;  VERBOSE=1 clean"/>
+					<DistClean command="/usr/bin/make -j4 -f &quot;/home/joseph/Projects/imu-tracking/3d-viewer-tool/cmake-build-debug/Makefile&quot;  VERBOSE=1 clean"/>
 				</MakeCommands>
 			</Target>
 			<Target title="rebuild_cache">
-				<Option working_dir="/home/joseph/Projects/glovlet/3d-viewer-tool/cmake-build-debug"/>
+				<Option working_dir="/home/joseph/Projects/imu-tracking/3d-viewer-tool/cmake-build-debug"/>
 				<Option type="4"/>
 				<MakeCommands>
-					<Build command="/usr/bin/make -j4 -f &quot;/home/joseph/Projects/glovlet/3d-viewer-tool/cmake-build-debug/Makefile&quot;  VERBOSE=1 rebuild_cache"/>
-					<CompileFile command="/usr/bin/make -j4 -f &quot;/home/joseph/Projects/glovlet/3d-viewer-tool/cmake-build-debug/Makefile&quot;  VERBOSE=1 &quot;$file&quot;"/>
-					<Clean command="/usr/bin/make -j4 -f &quot;/home/joseph/Projects/glovlet/3d-viewer-tool/cmake-build-debug/Makefile&quot;  VERBOSE=1 clean"/>
-					<DistClean command="/usr/bin/make -j4 -f &quot;/home/joseph/Projects/glovlet/3d-viewer-tool/cmake-build-debug/Makefile&quot;  VERBOSE=1 clean"/>
+					<Build command="/usr/bin/make -j4 -f &quot;/home/joseph/Projects/imu-tracking/3d-viewer-tool/cmake-build-debug/Makefile&quot;  VERBOSE=1 rebuild_cache"/>
+					<CompileFile command="/usr/bin/make -j4 -f &quot;/home/joseph/Projects/imu-tracking/3d-viewer-tool/cmake-build-debug/Makefile&quot;  VERBOSE=1 &quot;$file&quot;"/>
+					<Clean command="/usr/bin/make -j4 -f &quot;/home/joseph/Projects/imu-tracking/3d-viewer-tool/cmake-build-debug/Makefile&quot;  VERBOSE=1 clean"/>
+					<DistClean command="/usr/bin/make -j4 -f &quot;/home/joseph/Projects/imu-tracking/3d-viewer-tool/cmake-build-debug/Makefile&quot;  VERBOSE=1 clean"/>
 				</MakeCommands>
 			</Target>
 			<Target title="edit_cache">
-				<Option working_dir="/home/joseph/Projects/glovlet/3d-viewer-tool/cmake-build-debug"/>
+				<Option working_dir="/home/joseph/Projects/imu-tracking/3d-viewer-tool/cmake-build-debug"/>
 				<Option type="4"/>
 				<MakeCommands>
-					<Build command="/usr/bin/make -j4 -f &quot;/home/joseph/Projects/glovlet/3d-viewer-tool/cmake-build-debug/Makefile&quot;  VERBOSE=1 edit_cache"/>
-					<CompileFile command="/usr/bin/make -j4 -f &quot;/home/joseph/Projects/glovlet/3d-viewer-tool/cmake-build-debug/Makefile&quot;  VERBOSE=1 &quot;$file&quot;"/>
-					<Clean command="/usr/bin/make -j4 -f &quot;/home/joseph/Projects/glovlet/3d-viewer-tool/cmake-build-debug/Makefile&quot;  VERBOSE=1 clean"/>
-					<DistClean command="/usr/bin/make -j4 -f &quot;/home/joseph/Projects/glovlet/3d-viewer-tool/cmake-build-debug/Makefile&quot;  VERBOSE=1 clean"/>
+					<Build command="/usr/bin/make -j4 -f &quot;/home/joseph/Projects/imu-tracking/3d-viewer-tool/cmake-build-debug/Makefile&quot;  VERBOSE=1 edit_cache"/>
+					<CompileFile command="/usr/bin/make -j4 -f &quot;/home/joseph/Projects/imu-tracking/3d-viewer-tool/cmake-build-debug/Makefile&quot;  VERBOSE=1 &quot;$file&quot;"/>
+					<Clean command="/usr/bin/make -j4 -f &quot;/home/joseph/Projects/imu-tracking/3d-viewer-tool/cmake-build-debug/Makefile&quot;  VERBOSE=1 clean"/>
+					<DistClean command="/usr/bin/make -j4 -f &quot;/home/joseph/Projects/imu-tracking/3d-viewer-tool/cmake-build-debug/Makefile&quot;  VERBOSE=1 clean"/>
 				</MakeCommands>
 			</Target>
 			<Target title="3d-viewer-tool.exe">
-				<Option output="/home/joseph/Projects/glovlet/3d-viewer-tool/cmake-build-debug/3d-viewer-tool.exe" prefix_auto="0" extension_auto="0"/>
-				<Option working_dir="/home/joseph/Projects/glovlet/3d-viewer-tool/cmake-build-debug"/>
+				<Option output="/home/joseph/Projects/imu-tracking/3d-viewer-tool/cmake-build-debug/3d-viewer-tool.exe" prefix_auto="0" extension_auto="0"/>
+				<Option working_dir="/home/joseph/Projects/imu-tracking/3d-viewer-tool/cmake-build-debug"/>
 				<Option object_output="./"/>
 				<Option type="1"/>
 				<Option compiler="gcc"/>
 				<Compiler>
-					<Add directory="/home/joseph/Projects/glovlet/3d-viewer-tool/./lib"/>
+					<Add directory="/home/joseph/Projects/imu-tracking/3d-viewer-tool/./lib"/>
 					<Add directory="/usr/include/c++/5"/>
 					<Add directory="/usr/include/x86_64-linux-gnu/c++/5"/>
 					<Add directory="/usr/include/c++/5/backward"/>
@@ -55,20 +55,20 @@
 					<Add directory="/usr/include"/>
 				</Compiler>
 				<MakeCommands>
-					<Build command="/usr/bin/make -j4 -f &quot;/home/joseph/Projects/glovlet/3d-viewer-tool/cmake-build-debug/Makefile&quot;  VERBOSE=1 3d-viewer-tool.exe"/>
-					<CompileFile command="/usr/bin/make -j4 -f &quot;/home/joseph/Projects/glovlet/3d-viewer-tool/cmake-build-debug/Makefile&quot;  VERBOSE=1 &quot;$file&quot;"/>
-					<Clean command="/usr/bin/make -j4 -f &quot;/home/joseph/Projects/glovlet/3d-viewer-tool/cmake-build-debug/Makefile&quot;  VERBOSE=1 clean"/>
-					<DistClean command="/usr/bin/make -j4 -f &quot;/home/joseph/Projects/glovlet/3d-viewer-tool/cmake-build-debug/Makefile&quot;  VERBOSE=1 clean"/>
+					<Build command="/usr/bin/make -j4 -f &quot;/home/joseph/Projects/imu-tracking/3d-viewer-tool/cmake-build-debug/Makefile&quot;  VERBOSE=1 3d-viewer-tool.exe"/>
+					<CompileFile command="/usr/bin/make -j4 -f &quot;/home/joseph/Projects/imu-tracking/3d-viewer-tool/cmake-build-debug/Makefile&quot;  VERBOSE=1 &quot;$file&quot;"/>
+					<Clean command="/usr/bin/make -j4 -f &quot;/home/joseph/Projects/imu-tracking/3d-viewer-tool/cmake-build-debug/Makefile&quot;  VERBOSE=1 clean"/>
+					<DistClean command="/usr/bin/make -j4 -f &quot;/home/joseph/Projects/imu-tracking/3d-viewer-tool/cmake-build-debug/Makefile&quot;  VERBOSE=1 clean"/>
 				</MakeCommands>
 			</Target>
 			<Target title="3d-viewer-tool.exe/fast">
-				<Option output="/home/joseph/Projects/glovlet/3d-viewer-tool/cmake-build-debug/3d-viewer-tool.exe" prefix_auto="0" extension_auto="0"/>
-				<Option working_dir="/home/joseph/Projects/glovlet/3d-viewer-tool/cmake-build-debug"/>
+				<Option output="/home/joseph/Projects/imu-tracking/3d-viewer-tool/cmake-build-debug/3d-viewer-tool.exe" prefix_auto="0" extension_auto="0"/>
+				<Option working_dir="/home/joseph/Projects/imu-tracking/3d-viewer-tool/cmake-build-debug"/>
 				<Option object_output="./"/>
 				<Option type="1"/>
 				<Option compiler="gcc"/>
 				<Compiler>
-					<Add directory="/home/joseph/Projects/glovlet/3d-viewer-tool/./lib"/>
+					<Add directory="/home/joseph/Projects/imu-tracking/3d-viewer-tool/./lib"/>
 					<Add directory="/usr/include/c++/5"/>
 					<Add directory="/usr/include/x86_64-linux-gnu/c++/5"/>
 					<Add directory="/usr/include/c++/5/backward"/>
@@ -79,38 +79,38 @@
 					<Add directory="/usr/include"/>
 				</Compiler>
 				<MakeCommands>
-					<Build command="/usr/bin/make -j4 -f &quot;/home/joseph/Projects/glovlet/3d-viewer-tool/cmake-build-debug/Makefile&quot;  VERBOSE=1 3d-viewer-tool.exe/fast"/>
-					<CompileFile command="/usr/bin/make -j4 -f &quot;/home/joseph/Projects/glovlet/3d-viewer-tool/cmake-build-debug/Makefile&quot;  VERBOSE=1 &quot;$file&quot;"/>
-					<Clean command="/usr/bin/make -j4 -f &quot;/home/joseph/Projects/glovlet/3d-viewer-tool/cmake-build-debug/Makefile&quot;  VERBOSE=1 clean"/>
-					<DistClean command="/usr/bin/make -j4 -f &quot;/home/joseph/Projects/glovlet/3d-viewer-tool/cmake-build-debug/Makefile&quot;  VERBOSE=1 clean"/>
+					<Build command="/usr/bin/make -j4 -f &quot;/home/joseph/Projects/imu-tracking/3d-viewer-tool/cmake-build-debug/Makefile&quot;  VERBOSE=1 3d-viewer-tool.exe/fast"/>
+					<CompileFile command="/usr/bin/make -j4 -f &quot;/home/joseph/Projects/imu-tracking/3d-viewer-tool/cmake-build-debug/Makefile&quot;  VERBOSE=1 &quot;$file&quot;"/>
+					<Clean command="/usr/bin/make -j4 -f &quot;/home/joseph/Projects/imu-tracking/3d-viewer-tool/cmake-build-debug/Makefile&quot;  VERBOSE=1 clean"/>
+					<DistClean command="/usr/bin/make -j4 -f &quot;/home/joseph/Projects/imu-tracking/3d-viewer-tool/cmake-build-debug/Makefile&quot;  VERBOSE=1 clean"/>
 				</MakeCommands>
 			</Target>
 		</Build>
-		<Unit filename="/home/joseph/Projects/glovlet/3d-viewer-tool/lib/Model.h">
+		<Unit filename="/home/joseph/Projects/imu-tracking/3d-viewer-tool/main.cpp">
 			<Option target="3d-viewer-tool.exe"/>
 		</Unit>
-		<Unit filename="/home/joseph/Projects/glovlet/3d-viewer-tool/lib/Polygon.h">
+		<Unit filename="/home/joseph/Projects/imu-tracking/3d-viewer-tool/src/Model.cpp">
 			<Option target="3d-viewer-tool.exe"/>
 		</Unit>
-		<Unit filename="/home/joseph/Projects/glovlet/3d-viewer-tool/lib/WorldObject.h">
+		<Unit filename="/home/joseph/Projects/imu-tracking/3d-viewer-tool/src/Model.h">
 			<Option target="3d-viewer-tool.exe"/>
 		</Unit>
-		<Unit filename="/home/joseph/Projects/glovlet/3d-viewer-tool/main.cpp">
+		<Unit filename="/home/joseph/Projects/imu-tracking/3d-viewer-tool/src/Polygon.cpp">
 			<Option target="3d-viewer-tool.exe"/>
 		</Unit>
-		<Unit filename="/home/joseph/Projects/glovlet/3d-viewer-tool/src/Model.cpp">
+		<Unit filename="/home/joseph/Projects/imu-tracking/3d-viewer-tool/src/Polygon.h">
 			<Option target="3d-viewer-tool.exe"/>
 		</Unit>
-		<Unit filename="/home/joseph/Projects/glovlet/3d-viewer-tool/src/Polygon.cpp">
+		<Unit filename="/home/joseph/Projects/imu-tracking/3d-viewer-tool/src/Vertex.cpp">
 			<Option target="3d-viewer-tool.exe"/>
 		</Unit>
-		<Unit filename="/home/joseph/Projects/glovlet/3d-viewer-tool/src/Vertex.cpp">
+		<Unit filename="/home/joseph/Projects/imu-tracking/3d-viewer-tool/src/WorldObject.cpp">
 			<Option target="3d-viewer-tool.exe"/>
 		</Unit>
-		<Unit filename="/home/joseph/Projects/glovlet/3d-viewer-tool/src/WorldObject.cpp">
+		<Unit filename="/home/joseph/Projects/imu-tracking/3d-viewer-tool/src/WorldObject.h">
 			<Option target="3d-viewer-tool.exe"/>
 		</Unit>
-		<Unit filename="/home/joseph/Projects/glovlet/3d-viewer-tool/CMakeLists.txt">
+		<Unit filename="/home/joseph/Projects/imu-tracking/3d-viewer-tool/CMakeLists.txt">
 			<Option virtualFolder="CMake Files\"/>
 		</Unit>
 	</Project>
