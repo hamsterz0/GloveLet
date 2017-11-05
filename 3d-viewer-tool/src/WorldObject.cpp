@@ -96,35 +96,35 @@ glm::fvec3 WorldObject::getLocalPosition() {
 void WorldObject::setLocalPosition(glm::fvec3 &pos) {
     // TODO define
 }
-
+// TODO doc
 glm::fquat WorldObject::getWorldRotation() {
     // TODO define
 }
-
+// TODO doc
 void WorldObject::setWorldRotation(glm::fquat &rot) {
     // TODO define
 }
-
+// TODO doc
 glm::fquat WorldObject::getLocalRotation() {
     // TODO define
 }
-
+// TODO doc
 void WorldObject::setLocalRotation(glm::fquat &rot) {
     // TODO define
 }
-
+// TODO doc
 WorldObject *WorldObject::getPrevSibling() {
     // TODO define
 }
-
+// TODO doc
 void WorldObject::setPrevSibling(WorldObject &wo) {
     // TODO define
 }
-
+// TODO doc
 WorldObject *WorldObject::getNextSibling() {
     // TODO define
 }
-
+// TODO doc
 void WorldObject::setNextSibling(WorldObject &wo) {
     // TODO define
 }
