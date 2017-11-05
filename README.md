@@ -20,29 +20,14 @@ Installing the dependencies on Linux:
 sudo apt-get install freeglut3-dev libglm-dev cmake
 ```
 
-<i>No instructions for Windows yet...</i>
+*No instructions for Windows yet...*
 
 ### Building
 
+In a terminal or command line tool, change to 3d-viewer-tool directory:
+```
+cmake CMakeLists.txt
+make 3d-viewer-tool.exe
+```
 
-## Running the tests
-<!--
-Explain how to run the automated tests for this system
--->
-### Break down into end to end tests
-<!--
-Explain what these tests test and why
-
-```
-Give an example
-```
--->
-### And coding style tests
-<!--
-Explain what these tests test and why
-
-```
-Give an example
-```
--->
-## Built With
+This will build and compile the 3d-viewer-tool.exe object file.
