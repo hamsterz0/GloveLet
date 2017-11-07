@@ -89,19 +89,30 @@
 		<Unit filename="/home/joseph/Projects/glovlet/3d-viewer-tool/main.cpp">
 			<Option target="3d-viewer-tool.exe"/>
 		</Unit>
+<<<<<<< ea68916f30945be8d814a878f9948738e220d8a3
 		<Unit filename="/home/joseph/Projects/glovlet/3d-viewer-tool/src/Mesh.cpp">
 			<Option target="3d-viewer-tool.exe"/>
 		</Unit>
 		<Unit filename="/home/joseph/Projects/glovlet/3d-viewer-tool/src/Mesh.h">
+=======
+		<Unit filename="/home/joseph/Projects/imu-tracking/3d-viewer-tool/src/Mesh.cpp">
+			<Option target="3d-viewer-tool.exe"/>
+		</Unit>
+		<Unit filename="/home/joseph/Projects/imu-tracking/3d-viewer-tool/src/Mesh.h">
+>>>>>>> Fix unexpected parent/child relationship behavior.
 			<Option target="3d-viewer-tool.exe"/>
 		</Unit>
 		<Unit filename="/home/joseph/Projects/glovlet/3d-viewer-tool/src/Polygon.cpp">
 			<Option target="3d-viewer-tool.exe"/>
 		</Unit>
+<<<<<<< ea68916f30945be8d814a878f9948738e220d8a3
 		<Unit filename="/home/joseph/Projects/glovlet/3d-viewer-tool/src/Vertex.cpp">
 			<Option target="3d-viewer-tool.exe"/>
 		</Unit>
 		<Unit filename="/home/joseph/Projects/glovlet/3d-viewer-tool/src/WorldObject.cpp">
+=======
+		<Unit filename="/home/joseph/Projects/imu-tracking/3d-viewer-tool/src/Vertex.cpp">
+>>>>>>> Fix unexpected parent/child relationship behavior.
 			<Option target="3d-viewer-tool.exe"/>
 		</Unit>
 		<Unit filename="/home/joseph/Projects/glovlet/3d-viewer-tool/src/WorldObject.h">

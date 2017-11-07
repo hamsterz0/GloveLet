@@ -35,7 +35,7 @@
 class WorldObject {
 protected:
     std::string name = "";
-    glm::fvec3 pos;
+    glm::fvec3 position;
     glm::fvec3 local_pos;
     glm::fquat rot = glm::fquat(1.0f, 0.0f, 0.0f, 0.0f);
     glm::fquat local_rot = glm::fquat(1.0f, 0.0f, 0.0f, 0.0f);
@@ -70,7 +70,7 @@ public:
     WorldObject getNextSibling();
     Mesh getMesh();
     void setMesh(Mesh &mesh);
-    WorldObject duplicate();
+    WorldObject * duplicate();
 };
 
 
