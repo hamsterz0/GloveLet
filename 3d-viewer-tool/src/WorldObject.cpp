@@ -3,6 +3,7 @@
 //
 #pragma once
 
+#include <GL/gl.h>
 #include "glm/gtc/type_ptr.hpp"
 #include "WorldObject.h"
 
@@ -30,8 +31,8 @@ WorldObject::~WorldObject() {
  * Constructs a \c WorldObject with no mesh at world origin and default rotation.
  */
 WorldObject::WorldObject() {
-    pos = fvec3(0.0f, 0.0f, 0.0f);
-    local_pos = fvec3(pos);
+    position = fvec3(0.0f, 0.0f, 0.0f);
+    local_pos = fvec3(position);
     rot = fquat(1.0f, 0.0f, 0.0f, 0.0f);
     local_rot = fquat(rot);
     mesh = nullptr;
@@ -40,9 +41,9 @@ WorldObject::WorldObject() {
  * Constructs a \c WorldObject with no mesh at \p position with default rotation.
  * @param position - the world position coordinate vector
  */
-WorldObject::WorldObject(Mesh *mesh, glm::fvec3 &position) {
-    pos = fvec3(position);
-    local_pos = fvec3(pos);
+WorldObject::WorldObject(Mesh *mesh, glm::fvec3 &position) : WorldObject() {
+    this->position = fvec3(position);
+    local_pos = fvec3(0.0f, 0.0f, 0.0f);
     this->mesh = mesh;
 }
 /*!
@@ -71,23 +72,26 @@ WorldObject::WorldObject(Mesh *mesh, glm::fvec3 &position, glm::fvec3 &euler_ang
  */
 void WorldObject::render() {
     mat4 rot_mat = mat4_cast(rot);
+    mat4 local_rot_mat = mat4_cast(local_rot);
     auto next = first_child;
-    glPushMatrix();
-    glTranslatef(pos.x, pos.y, pos.z);
+    glTranslatef(position.x, position.y, position.z);
     glMultMatrixf(glm::value_ptr(rot_mat));
+    glTranslatef(local_pos.x, local_pos.y, local_pos.z);
+    glMultMatrixf(glm::value_ptr(local_rot_mat));
     mesh->render();
     while( next != nullptr ) {
+        glPushMatrix(); // separates rendering for each child.
         next->render();
+        glPopMatrix();
         next = next->next_sibling;
     }
-    glPopMatrix();
 }
 /*!
  * Moves the \c WorldObject by the amount in \p ds.
  * @param ds - the delta-position vector
  */
 void WorldObject::move(glm::fvec3 &ds) {
-    pos += ds;
+    position += ds;
 }
 /*!
  * Rotates the object by the specified amount.
@@ -98,8 +102,7 @@ void WorldObject::move(glm::fvec3 &ds) {
  */
 void WorldObject::rotate(glm::fvec3 &euler_angles, bool doLocalRotation) {
     fquat new_rot = fquat(euler_angles);
-    if(doLocalRotation) rot = rot * new_rot;
-    else rot = new_rot * rot;
+    rotate(new_rot, doLocalRotation);
 }
 /*!
  * Rotates the object by the specified amount.
@@ -109,8 +112,10 @@ void WorldObject::rotate(glm::fvec3 &euler_angles, bool doLocalRotation) {
  * @param doLocalRotation - *optional* performs rotation locally instead of globally
  */
 void WorldObject::rotate(glm::fquat &quaternion, bool doLocalRotation) {
-    if(doLocalRotation) rot = rot * quaternion;
-    else rot = quaternion * rot;
+    if(doLocalRotation)
+        local_rot = local_rot * quaternion;
+    else
+        rot = quaternion * rot;
 }
 /*!
  * Detaches the specified child from this object.
@@ -134,6 +139,7 @@ void WorldObject::detachChild(WorldObject &child) {
  * @param child
  */
 void WorldObject::addChild(WorldObject &child) {
+    if(!(&child)) return;
     if(first_child == nullptr) {
         first_child = &child;
         last_child = &child;
@@ -147,7 +153,6 @@ void WorldObject::addChild(WorldObject &child) {
         last_child = &child;                // set the new last_child to point to child
     }
     child.parent = this;
-    child.pos = child.parent->pos + local_pos;
 }
 /*!
  * Attaches this \c WorldObject to the specified parent.
@@ -165,7 +170,7 @@ void WorldObject::setParent(WorldObject &parent) {
  * frame of the parent.
  */
 glm::fvec3 WorldObject::getPosition() {
-    return pos;
+    return position;
 }
 /*!
  * Set position vector.
@@ -175,7 +180,7 @@ glm::fvec3 WorldObject::getPosition() {
  * @param pos - \c glm::fvec3 - the position vector.
  */
 void WorldObject::setPosition(glm::fvec3 &pos) {
-    this->pos = fvec3(pos);
+    position = fvec3(pos);
 }
 /*!
  * Get local position vector.
@@ -273,7 +278,7 @@ void WorldObject::setMesh(Mesh &mesh) {
  * Duplicates this \c WorldObject sharing the mesh.
  * @return \code WorldObject \endcode
  */
-WorldObject WorldObject::duplicate() {
-    WorldObject *copy = new WorldObject(this->mesh, this->pos, this->rot);
-    return *copy;
+WorldObject * WorldObject::duplicate() {
+    WorldObject *copy = new WorldObject(mesh, position, rot);
+    return copy;
 }

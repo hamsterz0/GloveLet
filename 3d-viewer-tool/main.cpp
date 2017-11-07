@@ -30,9 +30,11 @@ glm::vec3 child_pos(1.8f, 0.0f, 0.0f);
 glm::vec2 mouse_prev(0.0f, 0.0f);
 glm::vec2 mouse_chg(0.0f, 0.0f);
 glm::vec2 mouse_pos(0.0f, 0.0f);
-glm::fquat q(1.0f, 0.0f, 0.0f, 0.0f);
 
-WorldObject** test_obj = new WorldObject*[TEST_OBJ_SZ];
+glm::fquat q = fquat(fvec3(0.0f, 0.0f, radians(1.0f)));
+glm::fquat lq = fquat(fvec3(radians(1.0f), 0.0f, 0.0f));
+
+WorldObject* test_obj[TEST_OBJ_SZ];
 
 int main(int argc, char* argv[]) {
     createTestObject(test_obj, TEST_OBJ_SZ);
@@ -72,11 +74,11 @@ void draw(void) {
     glFrustum(-2.67, 2.67, -1.5, 1.5, 6.0, 600.0);
     glMatrixMode(GL_MODELVIEW);
     glLoadIdentity();
-    glTranslatef(0.0f,0.0f,-10.0f);
+    glTranslatef(0.0f,0.0f,-15.0f);
 
-    for(int i = 0; i < TEST_OBJ_SZ; i++) {
-        if(test_obj[i]) test_obj[i]->render();
-    }
+    glPushMatrix();
+    test_obj[0]->render();
+    glPopMatrix();
 
     // Draw order
     glFlush();
@@ -84,10 +86,20 @@ void draw(void) {
 }
 
 void idle() {
-    if(upKeyPressed) obj_pos.z += 0.075f;
-    if(downKeyPressed) obj_pos.z -= 0.075f;
-    if(rightKeyPressed) obj_pos.x += 0.075f;
-    if(leftKeyPressed) obj_pos.x -= 0.075f;
+    fvec3 mv = fvec3(0.0f, 0.0f, 0.0f);
+    if(upKeyPressed) mv.z += 0.075f;
+    if(downKeyPressed) mv.z -= 0.075f;
+    if(rightKeyPressed) mv.x += 0.075f;
+    if(leftKeyPressed) mv.x -= 0.075f;
+    test_obj[0]->move(mv);
+
+    for(int i = 1; i < TEST_OBJ_SZ; i++) {
+        if(test_obj[i]) {
+            test_obj[i]->rotate(q);
+            test_obj[i]->rotate(lq, true);
+        }
+    }
+
     glutPostRedisplay();
 }
 
@@ -168,21 +180,40 @@ void mouseMotionHandler(int x, int y) {
     mouse_prev.y = y;
 }
 
-void createTestObject(WorldObject **obj, size_t sz) {
+void createTestObject(WorldObject * obj[], size_t sz) {
     fvec3 pos = fvec3(0.0f, 0.0f, 0.0f);
     obj[0] = new WorldObject(new CubeMesh(1.0f), pos);
-    fquat rot = fquat(fvec3(0.0f, 0.0f, 0.0f));
-    pos = fvec3(1.0f, 0.0f, 0.0f);
+    auto rot = fquat(fvec3(0.0f, 0.0f, 0.0f));
+    pos = fvec3(0.0f, 0.0f, 0.0f);
     obj[1] = new WorldObject(
             new RectangularPrismMesh(0.75f, 0.25f, 0.25f),
             pos, rot);
-    rot = fquat(fvec3(0.0f, 0.0f, 90.0f));
-    pos = fvec3(0.0f, 1.0f, 0.0f);
-    obj[2] = new WorldObject(
-            new RectangularPrismMesh(0.75f, 0.25f, 0.25f),
-            pos, rot);
-    obj[3] = nullptr;
-    obj[4] = nullptr;
+    pos = fvec3(2.5f, 0.0f, 0.0f);
+    obj[1]->setLocalPosition(pos);
+
+    rot = fquat(fvec3(0.0f, 0.0f, radians(90.0f)));
+    pos = fvec3(0.0f, 2.5f, 0.0f);
+    obj[2] = obj[1]->duplicate();
+    obj[2]->setLocalRotation(rot);
+    obj[2]->setLocalPosition(pos);
+
+    rot = fquat(fvec3(0.0f, 0.0f, radians(-90.0f)));
+    pos = fvec3(0.0f, -2.5f, 0.0f);
+    obj[3] = obj[1]->duplicate();
+    obj[3]->setLocalPosition(pos);
+    obj[3]->setLocalRotation(rot);
+
+    rot = fquat(fvec3(0.0f, radians(180.0f), 0.0));
+    pos = fvec3(-2.5f, 0.0f, 0.0f);
+    obj[4] = obj[1]->duplicate();
+    obj[4]->setLocalPosition(pos);
+
     obj[5] = nullptr;
     obj[6] = nullptr;
+
+    for(int i = 1; i < TEST_OBJ_SZ; i++) {
+        obj[0]->addChild(*obj[i]);
+    }
+
+//    obj[0]->getMesh().setRenderMode(wireframe);
 }
