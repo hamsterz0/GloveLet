@@ -3,6 +3,7 @@
 //
 #pragma once
 
+#include "glm/gtc/type_ptr.hpp"
 #include "WorldObject.h"
 
 using namespace glm;
@@ -25,107 +26,254 @@ WorldObject::~WorldObject() {
         }
     }
 }
-// TODO doc
+/*!
+ * Constructs a \c WorldObject with no mesh at world origin and default rotation.
+ */
 WorldObject::WorldObject() {
-    world_pos = fvec3(0.0f, 0.0f, 0.0f);
-    local_pos = fvec3(world_pos);
-    world_quat = fquat(1.0f, 0.0f, 0.0f, 0.0f);
-    local_quat = fquat(world_quat);
-    polygons = nullptr;
+    pos = fvec3(0.0f, 0.0f, 0.0f);
+    local_pos = fvec3(pos);
+    rot = fquat(1.0f, 0.0f, 0.0f, 0.0f);
+    local_rot = fquat(rot);
+    mesh = nullptr;
 }
-// TODO doc
-WorldObject::WorldObject(glm::fvec3 &position) {
-    world_pos = fvec3(position);
-    local_pos = fvec3(world_pos);
-    world_quat = fquat(1.0f, 0.0f, 0.0f, 0.0f);
-    local_quat = fquat(world_quat);
-    polygons = nullptr;
+/*!
+ * Constructs a \c WorldObject with no mesh at \p position with default rotation.
+ * @param position - the world position coordinate vector
+ */
+WorldObject::WorldObject(Mesh *mesh, glm::fvec3 &position) {
+    pos = fvec3(position);
+    local_pos = fvec3(pos);
+    this->mesh = mesh;
 }
-// TODO doc
-WorldObject::WorldObject(fvec3 &position, fvec3 &euler_angles) {
-    world_pos = fvec3(position);
-    local_pos = fvec3(world_pos);
-    world_quat = fquat(euler_angles);
-    local_quat = fquat(world_quat);
-    polygons = nullptr;
+/*!
+ * Construct a \c WorldObject with no mesh at \p position and rotation defined by \p quaternion.
+ * @param position - the world position coordinate vector
+ * @param quaternion - the rotation of the object expressed in euler angles
+ */
+WorldObject::WorldObject(Mesh *mesh, glm::fvec3 &position, glm::fquat &quaternion)
+        : WorldObject(mesh, position)
+{
+    rot = fquat(quaternion);
+    local_rot = fquat(rot);
 }
-// TODO doc
-WorldObject::WorldObject(fvec3 &position, fquat &quaternion) {
-    world_pos = fvec3(position);
-    local_pos = fvec3(world_pos);
-    world_quat = fquat(quaternion);
-    local_quat = fquat(world_quat);
-    polygons = nullptr;
+/*!
+ * Construct a \c WorldObject with no mesh at \p position and rotation defined by \p euler_angles.
+ * @param position - the world position coordinate vector
+ * @param euler_angles - the rotation of the object expressed in euler angles
+ */
+WorldObject::WorldObject(Mesh *mesh, glm::fvec3 &position, glm::fvec3 &euler_angles)
+        : WorldObject(mesh, position)
+{
+    rot = glm::fquat(euler_angles);
+}
+/*!
+ * Render this object.
+ */
+void WorldObject::render() {
+    mat4 rot_mat = mat4_cast(rot);
+    auto next = first_child;
+    glPushMatrix();
+    glTranslatef(pos.x, pos.y, pos.z);
+    glMultMatrixf(glm::value_ptr(rot_mat));
+    mesh->render();
+    while( next != nullptr ) {
+        next->render();
+        next = next->next_sibling;
+    }
+    glPopMatrix();
 }
 /*!
  * Moves the \c WorldObject by the amount in \p ds.
  * @param ds - the delta-position vector
  */
 void WorldObject::move(glm::fvec3 &ds) {
-    world_pos += ds;
+    pos += ds;
 }
-// TODO doc
+/*!
+ * Rotates the object by the specified amount.
+ * \attention Rotations are global by default. Local rotations will be made before
+ * any translations, and will be relative to this \c WorldObject's local axis frame.
+ * @param euler_angles - the euler angle rotation
+ * @param doLocalRotation - *optional* performs rotation locally instead of globally
+ */
+void WorldObject::rotate(glm::fvec3 &euler_angles, bool doLocalRotation) {
+    fquat new_rot = fquat(euler_angles);
+    if(doLocalRotation) rot = rot * new_rot;
+    else rot = new_rot * rot;
+}
+/*!
+ * Rotates the object by the specified amount.
+ * \attention Rotations are global by default. Local rotations will be made before
+ * any translations, and will be relative to this \c WorldObject's local axis frame.
+ * @param euler_angles - the quaternion rotation
+ * @param doLocalRotation - *optional* performs rotation locally instead of globally
+ */
+void WorldObject::rotate(glm::fquat &quaternion, bool doLocalRotation) {
+    if(doLocalRotation) rot = rot * quaternion;
+    else rot = quaternion * rot;
+}
+/*!
+ * Detaches the specified child from this object.
+ * \attention Detaching a child does not affect the child's world position.
+ * @param child - the child to detach
+ */
 void WorldObject::detachChild(WorldObject &child) {
-    // TODO define
+    WorldObject* next = first_child;
+    while(next != nullptr) {
+        if(next == &child) {
+            next->prev_sibling = next->next_sibling;
+            next->prev_sibling = nullptr;
+            next->next_sibling = nullptr;
+            next->parent = nullptr;
+            return;
+        }
+    }
 }
-// TODO doc
+/*!
+ * Adds \p child as a child of this \c WorldObject.
+ * @param child
+ */
 void WorldObject::addChild(WorldObject &child) {
-    // TODO define
+    if(first_child == nullptr) {
+        first_child = &child;
+        last_child = &child;
+    } else if(first_child == last_child) {
+        last_child = &child;
+        first_child->next_sibling = last_child;
+        last_child->prev_sibling = first_child;
+    } else {
+        last_child->next_sibling = &child;  // set the current last_child->next_sibling to point to the new child
+        child.prev_sibling = last_child;    // set child's previous sibling to point to the current last_child
+        last_child = &child;                // set the new last_child to point to child
+    }
+    child.parent = this;
+    child.pos = child.parent->pos + local_pos;
 }
-// TODO doc
+/*!
+ * Attaches this \c WorldObject to the specified parent.
+ * @param parent - \c WorldObject - the parent \c WorldObject
+ */
 void WorldObject::setParent(WorldObject &parent) {
-    // TODO define
+    parent.addChild(*this);
 }
-// TODO doc
-void WorldObject::updateQuaternion(glm::fvec3 &euler_angles) {
-    // TODO define
+/*!
+ * Get position vector.
+ * @return \code glm::fvec3 \endcode
+ * <br>
+ * Returns the relative global position vector of this \c WorldObject. If this \c WorldObject
+ * is a child of another, the position returned will be relative to the axis
+ * frame of the parent.
+ */
+glm::fvec3 WorldObject::getPosition() {
+    return pos;
 }
-// TODO doc
-glm::fvec3 WorldObject::getWorldPosition() {
-    // TODO define
+/*!
+ * Set position vector.
+ * \attention Sets the relative global position vector of this \c WorldObject. If this \c WorldObject
+ * is a child of another, the position will be relative to the axis
+ * frame of the parent.
+ * @param pos - \c glm::fvec3 - the position vector.
+ */
+void WorldObject::setPosition(glm::fvec3 &pos) {
+    this->pos = fvec3(pos);
 }
-// TODO doc
-void WorldObject::setWorldPosition(glm::fvec3 &pos) {
-    // TODO define
-}
-// TODO doc
+/*!
+ * Get local position vector.
+ * @return \code glm::fvec3 \endcode
+ * <br>
+ * Returns the local position vector of this \c WorldObject.
+ */
 glm::fvec3 WorldObject::getLocalPosition() {
-    // TODO define
+    return local_pos;
 }
-// TODO doc
+/*!
+ * Set local position vector.
+ * \attention Sets the local position vector of this \c WorldObject.
+ * The position will be relative to the axis frame of this \c WorldObject.
+ * @param pos - \c glm::fvec3 - the position vector.
+ */
 void WorldObject::setLocalPosition(glm::fvec3 &pos) {
-    // TODO define
+    local_pos = fvec3(pos);
 }
-// TODO doc
-glm::fquat WorldObject::getWorldRotation() {
-    // TODO define
+/*!
+ * Get rotation.
+ * @return \code glm::fquat \endcode
+ * <br>
+ * Returns the relative global rotation quaternion of this \c WorldObject.
+ * If this \c WorldObject is a child of another, the quaternion returned will be
+ * relative to the axis frame of the parent.
+ */
+glm::fquat WorldObject::getRotation() {
+    return rot;
 }
-// TODO doc
-void WorldObject::setWorldRotation(glm::fquat &rot) {
-    // TODO define
+/*!
+ * Set rotation.
+ * \attention Sets the relative global rotation quaternion of this \c WorldObject.
+ * If this \c WorldObject is a child of another, the rotation will be relative to
+ * the axis frame of the parent.
+ * @param rot - \c glm::fquat - the quaternion rotation
+ */
+void WorldObject::setRotation(glm::fquat &rot) {
+    this->rot = fquat(rot);
 }
-// TODO doc
+/*!
+ * Get rotation.
+ * @return \code glm::fquat \endcode
+ * <br>
+ * Returns the local rotation quaternion of this \c WorldObject.
+ * The quaternion returned will be relative to the axis of this \c WorldObject.
+ */
 glm::fquat WorldObject::getLocalRotation() {
-    // TODO define
+    return local_rot;
 }
-// TODO doc
+/*!
+ * Set local rotation.
+ * \attention Sets the local rotation quaternion of this \c WorldObject.
+ * The rotation will be relative to the axis frame of this \c WorldObject.
+ * @param rot - \c glm::fquat - the quaternion rotation.
+ */
 void WorldObject::setLocalRotation(glm::fquat &rot) {
-    // TODO define
+    local_rot = fquat(rot);
 }
-// TODO doc
-WorldObject *WorldObject::getPrevSibling() {
-    // TODO define
+/*!
+ * Get reference to previous sibling.
+ * @return \code WorldObject* \endcode
+ * Will be \c nullptr if this \c WorldObject doesn't have a parent, or is the
+ * first child.
+ */
+WorldObject WorldObject::getPrevSibling() {
+    if(parent == nullptr) return *parent;
+    return *prev_sibling;
 }
-// TODO doc
-void WorldObject::setPrevSibling(WorldObject &wo) {
-    // TODO define
+/*!
+ * Get reference to next sibling.
+ * @return \code WorldObject* \endcode
+ * Will be \c nullptr if this \c WorldObject doesn't have a parent, or is the
+ * last child.
+ */
+WorldObject WorldObject::getNextSibling() {
+    if(parent == nullptr) return *parent;
+    return *next_sibling;
 }
-// TODO doc
-WorldObject *WorldObject::getNextSibling() {
-    // TODO define
+/*!
+ * Get reference to mesh.
+ * @return \code Polygon** \endcode
+ */
+Mesh WorldObject::getMesh() {
+    return *mesh;
 }
-// TODO doc
-void WorldObject::setNextSibling(WorldObject &wo) {
-    // TODO define
+/*!
+ * Set reference of mesh
+ * @param mesh
+ */
+void WorldObject::setMesh(Mesh &mesh) {
+    this->mesh = &mesh;
 }
-
+/*!
+ * Duplicates this \c WorldObject sharing the mesh.
+ * @return \code WorldObject \endcode
+ */
+WorldObject WorldObject::duplicate() {
+    WorldObject *copy = new WorldObject(this->mesh, this->pos, this->rot);
+    return *copy;
+}

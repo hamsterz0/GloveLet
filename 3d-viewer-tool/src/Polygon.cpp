@@ -2,8 +2,7 @@
 // Created by joseph on 11/4/17.
 //
 #include <GL/gl.h>
-#include <iostream>
-#include "Polygon.h"
+#include "Mesh.h"
 
 Polygon::~Polygon() {
     Vertex* prev = nullptr;
@@ -57,9 +56,10 @@ Polygon::Polygon(size_t n_vert, Vertex &v, ...) {
 }
 /*!
  * Draws the polygon.
+ * @param mode - \c RenderMode - *optional* sets the render mode.
  */
-void Polygon::draw() {
-    glBegin(GL_POLYGON);
+void Polygon::draw(RenderMode mode) {
+    glBegin(mode);
     glColor3f(color.x, color.y, color.z);
     Vertex* next = start_vertex;
     while(*next != *end_vertex) {
@@ -87,38 +87,50 @@ void Polygon::addVertex(Vertex &v) {
 
     end_vertex->setNextVertex(*start_vertex);
 }
-/*!
+/*TODO!
  *
  * @return
  */
-const Vertex Polygon::getStartVertex() {
+const Vertex* Polygon::getStartVertex() {
     // TODO define
 }
-/*!
+/*TODO!
  *
  * @return
  */
-const Vertex Polygon::getEndVertex() {
-    // TODO define
-}
-/*!
- *
- * @param v
- */
-void Polygon::setStartVertex(Vertex &v) {
-    // TODO define
-}
-/*!
- *
- * @param v
- */
-void Polygon::setEndVertex(Vertex &v) {
+const Vertex* Polygon::getEndVertex() {
     // TODO define
 }
 /*!
  * Set the color of the polygon.
- * @param c - glm::fvec3 with elements representing (red, green, blue)
+ * @param c - \c glm::fvec3 - with elements representing (red, green, blue)
  */
 void Polygon::setColor(glm::fvec3 &c) {
     color = c;
 }
+/*!
+ * Get pointer reference to next polygon in mesh.
+ * \attention If this is the last polygon of the mesh, \c nullptr will be returned.
+ * @return \code Polygon* \endcode
+ */
+Polygon *Polygon::getNextPolygon() {
+    return next_polygon;
+}
+/*!
+ * Get pointer reference to previous polygon in mesh.
+ * \attention If this is the first polygon of the mesh, \c nullptr will be returned.
+ * @return \code Polygon* \endcode
+ */
+Polygon *Polygon::getPrevPolygon() {
+    return prev_polygon;
+}
+
+void Polygon::setNextPolygon(Polygon *poly) {
+    next_polygon = poly;
+}
+
+void Polygon::setPrevPolygon(Polygon *poly) {
+    prev_polygon = poly;
+}
+
+
