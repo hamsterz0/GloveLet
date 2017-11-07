@@ -4,9 +4,12 @@
 #include <GL/glut.h>
 #include <glm/glm.hpp>
 #include <glm/gtc/type_ptr.hpp>
-#include <glm/gtx/quaternion.hpp>
 
-#include "src/Polygon.h"
+#include "src/WorldObject.h"
+
+#ifndef TEST_OBJ_SZ
+#define TEST_OBJ_SZ 7
+#endif
 
 using namespace glm;
 
@@ -15,26 +18,24 @@ void idle(void);
 void specialKeys(int key, int x, int y);
 void specialUpKeys(int key, int x, int y);
 void mouseMotionHandler(int x, int y);
-void buildCube(Polygon* c[]);
+void createTestObject(WorldObject **obj, size_t sz);
 
-float rotate_y = 0.0f;
-float rotate_x = 0.0f;
-float size = 1.0f;
 bool isMouseChgInit = false;
 bool upKeyPressed = false;
 bool downKeyPressed = false;
 bool leftKeyPressed = false;
 bool rightKeyPressed = false;
 glm::vec3 obj_pos(0.0f, 0.0f, 0.0f);
+glm::vec3 child_pos(1.8f, 0.0f, 0.0f);
 glm::vec2 mouse_prev(0.0f, 0.0f);
 glm::vec2 mouse_chg(0.0f, 0.0f);
 glm::vec2 mouse_pos(0.0f, 0.0f);
 glm::fquat q(1.0f, 0.0f, 0.0f, 0.0f);
 
-Polygon* cube[6];
+WorldObject** test_obj = new WorldObject*[TEST_OBJ_SZ];
 
 int main(int argc, char* argv[]) {
-    buildCube(cube);
+    createTestObject(test_obj, TEST_OBJ_SZ);
 
     glutInit(&argc, argv);
     // Simple buffer
@@ -45,13 +46,16 @@ int main(int argc, char* argv[]) {
     glEnable(GL_TEXTURE_2D);
     glEnable(GL_DEPTH_TEST);
     glShadeModel(GL_SMOOTH);
-    glDepthFunc(GL_LEQUAL);
+    glDepthFunc(GL_LEQUAL);     // Instructs GL functions to render depth, not orthogonal
     glHint(GL_PERSPECTIVE_CORRECTION_HINT, GL_NICEST);
-//    glutSetKeyRepeat(GLUT_KEY_REPEAT_OFF);
-    // Call to the drawing function
+    glutSetKeyRepeat(GLUT_KEY_REPEAT_OFF);
+    // Callback to the drawing function
     glutDisplayFunc(draw);
+    // Callback to special key handler function
     glutSpecialFunc(specialKeys);
+    // Callback to special key UP handler function
     glutSpecialUpFunc(specialUpKeys);
+    // Callback to mouse motion handler function
     glutPassiveMotionFunc(mouseMotionHandler);
     glutIdleFunc(idle);
     glutMainLoop();
@@ -70,16 +74,9 @@ void draw(void) {
     glLoadIdentity();
     glTranslatef(0.0f,0.0f,-10.0f);
 
-    mat4 rot_mat = mat4_cast(q); // cast quaternion to 4x4 rotation matrix
-
-    glPushMatrix();
-    glTranslatef(obj_pos.x,obj_pos.y,obj_pos.z);
-    glMultMatrixf(value_ptr(rot_mat));
-    // FRONT
-    for(int i = 0; i < 6; i++) {
-        cube[i]->draw();
+    for(int i = 0; i < TEST_OBJ_SZ; i++) {
+        if(test_obj[i]) test_obj[i]->render();
     }
-    glPopMatrix();
 
     // Draw order
     glFlush();
@@ -165,122 +162,27 @@ void mouseMotionHandler(int x, int y) {
     // Reversing the order to (q * rot) results in the local transform.
     // IE in the local transform, the rotation stays true to the object's origin axis,
     //      which the object's origin axis is changing relative to the world origin axis.
-    // The
-    q = rot * q;
+    test_obj[0]->rotate(rot);
 
     mouse_prev.x = x;
     mouse_prev.y = y;
 }
 
-void buildCube(Polygon* c[]) {
-    Polygon* p;
-    fvec3 v;
-    Vertex* v1;
-    Vertex* v2;
-    Vertex* v3;
-    Vertex* v4;
-    fvec3 color;
-
-    // FRONT
-    v = fvec3(-size,-size,-size);
-    v1 = new Vertex(v);
-    v = fvec3(size,-size,-size);
-    v2 = new Vertex(v);
-    v = fvec3(size,size,-size);
-    v3 = new Vertex(v);
-    v = fvec3(-size,size,-size);
-    v4 = new Vertex(v);
-
-    p = new Polygon(*v1);
-    p->addVertex(*v2);
-    p->addVertex(*v3);
-    p->addVertex(*v4);
-    c[0] = p;
-    color = fvec3(1.0f, 1.0f, 1.0f);
-    c[0]->setColor(color);
-    // BACK
-    v = fvec3(-size,-size,size);
-    v1 = new Vertex(v);
-    v = fvec3(-size,size,size);
-    v2 = new Vertex(v);
-    v = fvec3(size,size,size);
-    v3 = new Vertex(v);
-    v = fvec3(size,-size,size);
-    v4 = new Vertex(v);
-
-    p = new Polygon(*v1);
-    p->addVertex(*v2);
-    p->addVertex(*v3);
-    p->addVertex(*v4);
-    c[1] = p;
-    color = fvec3(1.0f, 0.0f, 1.0f);
-    c[1]->setColor(color);
-    // RIGHT
-    v = fvec3(size,-size,-size);
-    v1 = new Vertex(v);
-    v = fvec3(size,-size,size);
-    v2 = new Vertex(v);
-    v = fvec3(size,size,size);
-    v3 = new Vertex(v);
-    v = fvec3(size,size,-size);
-    v4 = new Vertex(v);
-
-    p = new Polygon(*v1);
-    p->addVertex(*v2);
-    p->addVertex(*v3);
-    p->addVertex(*v4);
-    c[2] = p;
-    color = fvec3(1.0f, 0.0f, 0.0f);
-    c[2]->setColor(color);
-    // LEFT
-    v = fvec3(-size,-size,-size);
-    v1 = new Vertex(v);
-    v = fvec3(-size,size,-size);
-    v2 = new Vertex(v);
-    v = fvec3(-size,size,size);
-    v3 = new Vertex(v);
-    v = fvec3(-size,-size,size);
-    v4 = new Vertex(v);
-
-    p = new Polygon(*v1);
-    p->addVertex(*v2);
-    p->addVertex(*v3);
-    p->addVertex(*v4);
-    c[3] = p;
-    color = fvec3(0.0f, 0.0f, 1.0f);
-    c[3]->setColor(color);
-    // TOP
-    v = fvec3(-size,size,-size);
-    v1 = new Vertex(v);
-    v = fvec3(-size,size,size);
-    v2 = new Vertex(v);
-    v = fvec3(size,size,size);
-    v3 = new Vertex(v);
-    v = fvec3(size,size,-size);
-    v4 = new Vertex(v);
-
-    p = new Polygon(*v1);
-    p->addVertex(*v2);
-    p->addVertex(*v3);
-    p->addVertex(*v4);
-    c[4] = p;
-    color = fvec3(0.0f, 1.0f, 0.0f);
-    c[4]->setColor(color);
-    // BOTTOM
-    v = fvec3(-size,-size,-size);
-    v1 = new Vertex(v);
-    v = fvec3(size,-size,-size);
-    v2 = new Vertex(v);
-    v = fvec3(size,-size,size);
-    v3 = new Vertex(v);
-    v = fvec3(-size,-size,size);
-    v4 = new Vertex(v);
-
-    p = new Polygon(*v1);
-    p->addVertex(*v2);
-    p->addVertex(*v3);
-    p->addVertex(*v4);
-    c[5] = p;
-    color = fvec3(0.0f, 1.0f, 0.0f);
-    c[5]->setColor(color);
+void createTestObject(WorldObject **obj, size_t sz) {
+    fvec3 pos = fvec3(0.0f, 0.0f, 0.0f);
+    obj[0] = new WorldObject(new CubeMesh(1.0f), pos);
+    fquat rot = fquat(fvec3(0.0f, 0.0f, 0.0f));
+    pos = fvec3(1.0f, 0.0f, 0.0f);
+    obj[1] = new WorldObject(
+            new RectangularPrismMesh(0.75f, 0.25f, 0.25f),
+            pos, rot);
+    rot = fquat(fvec3(0.0f, 0.0f, 90.0f));
+    pos = fvec3(0.0f, 1.0f, 0.0f);
+    obj[2] = new WorldObject(
+            new RectangularPrismMesh(0.75f, 0.25f, 0.25f),
+            pos, rot);
+    obj[3] = nullptr;
+    obj[4] = nullptr;
+    obj[5] = nullptr;
+    obj[6] = nullptr;
 }

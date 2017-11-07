@@ -1,9 +1,9 @@
 //
 // Created by joseph on 11/4/17.
 //
-#include "Polygon.h"
+#include "Mesh.h"
 
-Vertex::Vertex(Vertex &v){
+Vertex::Vertex(Vertex &v) {
     pos = glm::fvec3(v.pos);
     next_vertex = v.next_vertex;
 }
