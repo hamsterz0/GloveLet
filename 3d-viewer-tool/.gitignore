@@ -1,8 +1,9 @@
+cmake-build-debug/*
+cmake-build-debug/*.cbp
 CMakeCache.txt
 CMakeFiles/
 .idea/
 cmake-build-debug/
 Makefile
 cmake_install.cmake
-glut_test.cbp
-glut_test.exe
+*.cbp
