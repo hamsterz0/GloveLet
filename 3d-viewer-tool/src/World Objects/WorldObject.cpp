@@ -47,25 +47,26 @@ WorldObject::WorldObject(Mesh *mesh, glm::fvec3 &position) : WorldObject() {
     this->mesh = mesh;
 }
 /*!
- * Construct a \c WorldObject with no mesh at \p position and rotation defined by \p quaternion.
- * @param position - the world position coordinate vector
- * @param quaternion - the rotation of the object expressed in euler angles
- */
-WorldObject::WorldObject(Mesh *mesh, glm::fvec3 &position, glm::fquat &quaternion)
-        : WorldObject(mesh, position)
-{
-    rot = fquat(quaternion);
-    local_rot = fquat(rot);
-}
-/*!
  * Construct a \c WorldObject with no mesh at \p position and rotation defined by \p euler_angles.
  * @param position - the world position coordinate vector
- * @param euler_angles - the rotation of the object expressed in euler angles
+ * @param center - the world quaternion rotation of the object
  */
 WorldObject::WorldObject(Mesh *mesh, glm::fvec3 &position, glm::fvec3 &euler_angles)
         : WorldObject(mesh, position)
 {
     rot = glm::fquat(euler_angles);
+}
+/*!
+ * Construct a \c WorldObject with no mesh at \p position and rotation defined by \p quaternion.
+ *
+ * @param position - the world position coordinate vector
+ * @param quaternion - the world quaternion rotation of the object
+ */
+WorldObject::WorldObject(Mesh *mesh, glm::fvec3 &position, glm::fquat &quaternion)
+        : WorldObject(mesh, position)
+{
+    rot = fquat(quaternion);
+    local_rot = fquat(1.0f, 0.0f, 0.0f, 0.0f);
 }
 /*!
  * Render this object.
@@ -78,7 +79,7 @@ void WorldObject::render() {
     glMultMatrixf(glm::value_ptr(rot_mat));
     glTranslatef(local_pos.x, local_pos.y, local_pos.z);
     glMultMatrixf(glm::value_ptr(local_rot_mat));
-    mesh->render();
+    mesh->render(render_mode);
     while( next != nullptr ) {
         glPushMatrix(); // separates rendering for each child.
         next->render();
@@ -264,8 +265,8 @@ WorldObject WorldObject::getNextSibling() {
  * Get reference to mesh.
  * @return \code Polygon** \endcode
  */
-Mesh WorldObject::getMesh() {
-    return *mesh;
+Mesh * WorldObject::getMesh() {
+    return mesh;
 }
 /*!
  * Set reference of mesh
@@ -281,4 +282,11 @@ void WorldObject::setMesh(Mesh &mesh) {
 WorldObject * WorldObject::duplicate() {
     WorldObject *copy = new WorldObject(mesh, position, rot);
     return copy;
+}
+/*!
+ * Set vertex render mode.
+ * @param mode - \c RenderMode - the vertex render mode
+ */
+void WorldObject::setRenderMode(RenderMode mode) {
+    render_mode = mode;
 }

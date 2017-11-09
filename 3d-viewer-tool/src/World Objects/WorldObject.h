@@ -35,6 +35,7 @@
 class WorldObject {
 protected:
     std::string name = "";
+    RenderMode render_mode = polygon;
     glm::fvec3 position;
     glm::fvec3 local_pos;
     glm::fquat rot = glm::fquat(1.0f, 0.0f, 0.0f, 0.0f);
@@ -68,9 +69,10 @@ public:
     void setLocalRotation(glm::fquat &rot);
     WorldObject getPrevSibling();
     WorldObject getNextSibling();
-    Mesh getMesh();
+    Mesh * getMesh();
     void setMesh(Mesh &mesh);
     WorldObject * duplicate();
+    void setRenderMode(RenderMode mode);
 };
 
 

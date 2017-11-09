@@ -88,7 +88,6 @@ public:
 
 class Mesh {
 protected:
-    RenderMode render_mode = polygon;
     Polygon* first_polygon = nullptr;
     Polygon* last_polygon = nullptr;
 private:
@@ -98,9 +97,8 @@ public:
     Mesh();
     ~Mesh();
     Mesh(Polygon* first_polygon);
-    void render();
+    void render(RenderMode render_mode = polygon);
     void addPolygon(Polygon *poly);
-    void setRenderMode(RenderMode mode = polygon);
 };
 
 class RectangularPrismMesh : public Mesh {
