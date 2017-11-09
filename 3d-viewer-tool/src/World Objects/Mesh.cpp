@@ -33,7 +33,7 @@ Mesh::Mesh(Polygon *first_polygon) {
 /*!
  * Renders mesh using current render mode.
  */
-void Mesh::render() {
+void Mesh::render(RenderMode render_mode) {
     auto next_poly = first_polygon;
     while(next_poly != nullptr) {
         next_poly->draw(render_mode);
@@ -59,13 +59,6 @@ void Mesh::addPolygon(Polygon *poly) {
         poly->setPrevPolygon(last_polygon);
         last_polygon = poly;
     }
-}
-/*!
- * Set vertex render mode.
- * @param mode - \c RenderMode - the vertex render mode
- */
-void Mesh::setRenderMode(RenderMode mode) {
-    render_mode = mode;
 }
 /*!
  * Constructs rectangular prism mesh.

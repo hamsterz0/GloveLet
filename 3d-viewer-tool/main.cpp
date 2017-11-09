@@ -5,7 +5,8 @@
 #include <glm/glm.hpp>
 #include <glm/gtc/type_ptr.hpp>
 
-#include "src/WorldObject.h"
+//#include "src/World Objects/WorldObject.h"
+#include "src/Template Objects/TemplateObjects.h"
 
 #ifndef TEST_OBJ_SZ
 #define TEST_OBJ_SZ 7
@@ -26,7 +27,6 @@ bool downKeyPressed = false;
 bool leftKeyPressed = false;
 bool rightKeyPressed = false;
 glm::vec3 obj_pos(0.0f, 0.0f, 0.0f);
-glm::vec3 child_pos(1.8f, 0.0f, 0.0f);
 glm::vec2 mouse_prev(0.0f, 0.0f);
 glm::vec2 mouse_chg(0.0f, 0.0f);
 glm::vec2 mouse_pos(0.0f, 0.0f);
@@ -167,8 +167,8 @@ void mouseMotionHandler(int x, int y) {
     else if(mouse_chg.y <= 0)
         mouse_pos.y -= 0.025f;
 
-    vec3 euler_angles(mouse_chg.y * 0.025f, mouse_chg.x * 0.025f, 0.0f);
-    fquat rot = fquat(euler_angles);
+    fvec3 euler_angles(mouse_chg.y * 0.025f, mouse_chg.x * 0.025f, 0.0f);
+    auto rot = fquat(euler_angles);
 
     // The below order of multiplication will result in the world rotation transform.
     // Reversing the order to (q * rot) results in the local transform.
@@ -181,12 +181,11 @@ void mouseMotionHandler(int x, int y) {
 }
 
 void createTestObject(WorldObject * obj[], size_t sz) {
-    fvec3 pos = fvec3(0.0f, 0.0f, 0.0f);
-    obj[0] = new WorldObject(new CubeMesh(1.0f), pos);
+    auto pos = fvec3(0.0f, 0.0f, 0.0f);
+    obj[0] = (WorldObject*)new Cube(1.0f, pos);
     auto rot = fquat(fvec3(0.0f, 0.0f, 0.0f));
     pos = fvec3(0.0f, 0.0f, 0.0f);
-    obj[1] = new WorldObject(
-            new RectangularPrismMesh(0.75f, 0.25f, 0.25f),
+    obj[1] = (WorldObject*)new RectangularPrism(0.75f, 0.25f, 0.25f,
             pos, rot);
     pos = fvec3(2.5f, 0.0f, 0.0f);
     obj[1]->setLocalPosition(pos);
@@ -203,10 +202,11 @@ void createTestObject(WorldObject * obj[], size_t sz) {
     obj[3]->setLocalPosition(pos);
     obj[3]->setLocalRotation(rot);
 
-    rot = fquat(fvec3(0.0f, radians(180.0f), 0.0));
+    rot = fquat(fvec3(180.0f, radians(180.0f), 0.0));
     pos = fvec3(-2.5f, 0.0f, 0.0f);
     obj[4] = obj[1]->duplicate();
     obj[4]->setLocalPosition(pos);
+    obj[4]->setLocalRotation(rot);
 
     obj[5] = nullptr;
     obj[6] = nullptr;
@@ -215,5 +215,5 @@ void createTestObject(WorldObject * obj[], size_t sz) {
         obj[0]->addChild(*obj[i]);
     }
 
-//    obj[0]->getMesh().setRenderMode(wireframe);
+//    obj[0]->setRenderMode(wireframe);
 }
