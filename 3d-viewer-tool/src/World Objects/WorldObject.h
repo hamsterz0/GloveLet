@@ -22,8 +22,12 @@
 
 #endif // GLM_GTC_QUATERNION_H
 
-#ifndef MESH_H
-#include "Mesh.h"
+#ifndef AXIS_H
+#include "Axis.h"
+#endif // AXIS_H
+
+#ifndef DEFAULT_AXIS_LEN
+#define DEFAULT_AXIS_LEN 1.0f
 #endif
 
 #ifndef WORLDOBJECT_H
@@ -35,6 +39,9 @@
 class WorldObject {
 protected:
     std::string name = "";
+    bool doRenderAxis = false;
+    float axis_length = 1.0f;
+    Axis* axis = nullptr;
     RenderMode render_mode = polygon;
     glm::fvec3 position;
     glm::fvec3 local_pos;
@@ -73,6 +80,8 @@ public:
     void setMesh(Mesh &mesh);
     WorldObject * duplicate();
     void setRenderMode(RenderMode mode);
+    void doAxisRender(bool b);
+    void setAxisLength(float len);
 };
 
 
