@@ -32,8 +32,8 @@ Polygon::Polygon(Vertex &start) {
 }
 /*!
  * Construct \c Polygon with \p start as the starting vertex and RGB color \p color
- * @param start - starting vertex
- * @param color
+ * @param start - \c Vertex - starting vertex
+ * @param color - \c glm::fvec3 - RGB color vector
  */
 Polygon::Polygon(Vertex &start, glm::fvec3 &color) {
     start_vertex = &start;
@@ -47,11 +47,12 @@ Polygon::Polygon(Vertex &start, glm::fvec3 &color) {
  * \attention
  * \c Vertex arguments must be passed in counter-clockwise order. Polygon rendering makes the
  * assumption that vertices are in counter-clockwise order. Doing otherwise will produce unexpected results.
- * @param n_vert number of \c Vertex objects
- * @param v \c Vertex object
- * @param ... any number of \c Vertex objects
+ * @param color - \c glm::fvec3 - RGB color vector
+ * @param n_vert - \c size_t - number of \c Vertex objects
+ * @param v - \c Vertex - starting vertex
+ * @param ... - \c Vertex - any number of \c Vertex objects
  */
-Polygon::Polygon(size_t n_vert, Vertex &v, ...) {
+Polygon::Polygon(glm::fvec3 &color, size_t n_vert, Vertex &v, ...) {
 // TODO define
 }
 /*!
@@ -87,18 +88,12 @@ void Polygon::addVertex(Vertex &v) {
 
     end_vertex->setNextVertex(*start_vertex);
 }
-/*TODO!
- *
- * @return
- */
-const Vertex* Polygon::getStartVertex() {
+// TODO doc
+Vertex * Polygon::getStartVertex() {
     // TODO define
 }
-/*TODO!
- *
- * @return
- */
-const Vertex* Polygon::getEndVertex() {
+// TODO doc
+Vertex * Polygon::getEndVertex() {
     // TODO define
 }
 /*!
@@ -124,13 +119,11 @@ Polygon *Polygon::getNextPolygon() {
 Polygon *Polygon::getPrevPolygon() {
     return prev_polygon;
 }
-
+// TODO doc
 void Polygon::setNextPolygon(Polygon *poly) {
     next_polygon = poly;
 }
-
+// TODO doc
 void Polygon::setPrevPolygon(Polygon *poly) {
     prev_polygon = poly;
 }
-
-

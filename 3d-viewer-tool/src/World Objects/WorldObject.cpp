@@ -18,7 +18,6 @@ WorldObject::~WorldObject() {
             next_sibling->prev_sibling = nullptr;
         }
     }
-
     if(first_child) {
         WorldObject* next = first_child;
         while(next != nullptr) {
@@ -75,16 +74,30 @@ void WorldObject::render() {
     mat4 rot_mat = mat4_cast(rot);
     mat4 local_rot_mat = mat4_cast(local_rot);
     auto next = first_child;
+    // put relative transformations on the stack
     glTranslatef(position.x, position.y, position.z);
     glMultMatrixf(glm::value_ptr(rot_mat));
+    // render axis before local transformations
+    // put local transformations on the stack
     glTranslatef(local_pos.x, local_pos.y, local_pos.z);
     glMultMatrixf(glm::value_ptr(local_rot_mat));
+    // render this object's mesh
     mesh->render(render_mode);
+    // render children of this object
     while( next != nullptr ) {
         glPushMatrix(); // separates rendering for each child.
         next->render();
         glPopMatrix();
         next = next->next_sibling;
+    }
+
+    if(doRenderAxis) {
+        glDisable(GL_DEPTH_TEST);
+        glClear(GL_DEPTH_BUFFER_BIT);
+        axis->setAxisLength(axis_length);
+        axis->render(lines);
+        axis->setAxisLength(DEFAULT_AXIS_LEN);
+        glEnable(GL_DEPTH_TEST);
     }
 }
 /*!
@@ -285,8 +298,24 @@ WorldObject * WorldObject::duplicate() {
 }
 /*!
  * Set vertex render mode.
- * @param mode - \c RenderMode - the vertex render mode
+ * @param renderMode - \c RenderMode - the vertex render mode
  */
-void WorldObject::setRenderMode(RenderMode mode) {
-    render_mode = mode;
+void WorldObject::setRenderMode(RenderMode renderMode) {
+    render_mode = renderMode;
+}
+/*!
+ * When \c true, the local axis for this object will be rendered.
+ * @param b - \c bool
+ */
+void WorldObject::doAxisRender(bool b) {
+    doRenderAxis = b;
+    if(doRenderAxis) axis = new Axis(axis_length);
+    else delete axis;
+}
+/*!
+ * The length of the axis lines.
+ * @param len - \c float
+ */
+void WorldObject::setAxisLength(float len) {
+    axis_length = len;
 }

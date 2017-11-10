@@ -202,7 +202,7 @@ void createTestObject(WorldObject * obj[], size_t sz) {
     obj[3]->setLocalPosition(pos);
     obj[3]->setLocalRotation(rot);
 
-    rot = fquat(fvec3(180.0f, radians(180.0f), 0.0));
+    rot = fquat(fvec3(radians(180.0f), radians(180.0f), 0.0));
     pos = fvec3(-2.5f, 0.0f, 0.0f);
     obj[4] = obj[1]->duplicate();
     obj[4]->setLocalPosition(pos);
@@ -214,6 +214,6 @@ void createTestObject(WorldObject * obj[], size_t sz) {
     for(int i = 1; i < TEST_OBJ_SZ; i++) {
         obj[0]->addChild(*obj[i]);
     }
-
+    obj[0]->doAxisRender(true);
 //    obj[0]->setRenderMode(wireframe);
 }

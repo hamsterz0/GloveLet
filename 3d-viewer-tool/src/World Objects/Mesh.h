@@ -32,7 +32,7 @@
 #define MESH_H
 
 typedef enum RenderMode {
-    polygon=GL_POLYGON, wireframe=GL_LINE_LOOP, lines=GL_LINES,
+    polygon=GL_POLYGON, wireframe=GL_LINE_LOOP, lines=GL_LINES, line_strip=GL_LINE_STRIP,
     triangles=GL_TRIANGLES, triangle_strip=GL_TRIANGLE_STRIP
 };
 
@@ -64,6 +64,7 @@ protected:
     Vertex* end_vertex = nullptr;
     Polygon* next_polygon = nullptr;
     Polygon* prev_polygon = nullptr;
+    glm::fvec3 normal = glm::fvec3(0.0f, 0.0f, 0.0f);
     glm::fvec3 color = glm::fvec3(1.0f, 1.0f, 1.0f);
 private:
     void setNextPolygon(Polygon* poly);
@@ -76,11 +77,11 @@ public:
     ~Polygon();
     Polygon(Vertex &start);
     Polygon(Vertex &start, glm::fvec3 &color);
-    Polygon(size_t n_vert, Vertex &v, ...);
+    Polygon(glm::fvec3 &color, size_t n_vert, Vertex &v, ...);
     void draw(RenderMode mode = polygon);
     void addVertex(Vertex &v);
-    const Vertex *getStartVertex();
-    const Vertex *getEndVertex();
+    Vertex * getStartVertex();
+    Vertex * getEndVertex();
     void setColor(glm::fvec3 &c);
     Polygon* getNextPolygon();
     Polygon* getPrevPolygon();
