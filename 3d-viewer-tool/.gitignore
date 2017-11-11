@@ -1,5 +1,6 @@
 cmake-build-debug/*
 cmake-build-debug/*.cbp
+cmake-build-debug/*.exe
 CMakeCache.txt
 CMakeFiles/
 .idea/
@@ -7,3 +8,4 @@ cmake-build-debug/
 Makefile
 cmake_install.cmake
 *.cbp
+*.exe
