@@ -23,8 +23,16 @@ Mesh::~Mesh() {
     last_polygon = nullptr;
 }
 /*!
- * Constructs mesh and sets reference to first polygon,
- * with default render mode of \c polygon.
+ * Constructs mesh
+ * @param polygons
+ */
+Mesh::Mesh(std::vector<Polygon *> polygons) {
+    for(Polygon* p : polygons) {
+        addPolygon(p);
+    }
+}
+/*!
+ * Constructs mesh and sets reference to first polygon.
  */
 Mesh::Mesh(Polygon *first_polygon) {
     this->first_polygon = first_polygon;
@@ -36,7 +44,7 @@ Mesh::Mesh(Polygon *first_polygon) {
 void Mesh::render(RenderMode render_mode) {
     auto next_poly = first_polygon;
     while(next_poly != nullptr) {
-        next_poly->draw(render_mode);
+        next_poly->render(render_mode);
         next_poly = next_poly->getNextPolygon();
     }
 }
@@ -68,112 +76,82 @@ void Mesh::addPolygon(Polygon *poly) {
  */
 RectangularPrismMesh::RectangularPrismMesh(float length, float width, float depth) {
     Polygon* p;
-    glm::fvec3 v;
-    Vertex* v1;
-    Vertex* v2;
-    Vertex* v3;
-    Vertex* v4;
+    Vertex *v1, *v2, *v3, *v4, *v5, *v6, *v7, *v8;
+    std::vector<Vertex*> vertices;
     glm::fvec3 color;
+    // instantiate
+    v1 = new Vertex(glm::fvec3(-length, -width, -depth));
+    v2 = new Vertex(glm::fvec3(length, -width, -depth));
+    v3 = new Vertex(glm::fvec3(length, width, -depth));
+    v4 = new Vertex(glm::fvec3(-length, width, -depth));
+    v5 = new Vertex(glm::fvec3(-length, -width, depth));
+    v6 = new Vertex(glm::fvec3(-length, width, depth));
+    v7 = new Vertex(glm::fvec3(length, width, depth));
+    v8 = new Vertex(glm::fvec3(length, -width, depth));
 
     // FRONT
-    v = glm::fvec3(-length,-width,-depth);
-    v1 = new Vertex(v);
-    v = glm::fvec3(length,-width,-depth);
-    v2 = new Vertex(v);
-    v = glm::fvec3(length,width,-depth);
-    v3 = new Vertex(v);
-    v = glm::fvec3(-length,width,-depth);
-    v4 = new Vertex(v);
-
-    p = new Polygon(*v1);
-    p->addVertex(*v2);
-    p->addVertex(*v3);
-    p->addVertex(*v4);
+    vertices.push_back(v1);
+    vertices.push_back(v2);
+    vertices.push_back(v3);
+    vertices.push_back(v4);
+    p = new Polygon(vertices);
+    vertices.clear();
     color = glm::fvec3(1.0f, 1.0f, 1.0f);
     p->setColor(color);
     this->addPolygon(p);
     // BACK
-    v = glm::fvec3(-length,-width,depth);
-    v1 = new Vertex(v);
-    v = glm::fvec3(-length,width,depth);
-    v2 = new Vertex(v);
-    v = glm::fvec3(length,width,depth);
-    v3 = new Vertex(v);
-    v = glm::fvec3(length,-width,depth);
-    v4 = new Vertex(v);
+    vertices.push_back(v5);
+    vertices.push_back(v6);
+    vertices.push_back(v7);
+    vertices.push_back(v8);
 
-    p = new Polygon(*v1);
-    p->addVertex(*v2);
-    p->addVertex(*v3);
-    p->addVertex(*v4);
+    p = new Polygon(vertices);
+    vertices.clear();
     color = glm::fvec3(1.0f, 0.0f, 1.0f);
     p->setColor(color);
     this->addPolygon(p);
     // RIGHT
-    v = glm::fvec3(length,-width,-depth);
-    v1 = new Vertex(v);
-    v = glm::fvec3(length,-width,depth);
-    v2 = new Vertex(v);
-    v = glm::fvec3(length,width,depth);
-    v3 = new Vertex(v);
-    v = glm::fvec3(length,width,-depth);
-    v4 = new Vertex(v);
+    vertices.push_back(v2);
+    vertices.push_back(v8);
+    vertices.push_back(v7);
+    vertices.push_back(v3);
 
-    p = new Polygon(*v1);
-    p->addVertex(*v2);
-    p->addVertex(*v3);
-    p->addVertex(*v4);
+    p = new Polygon(vertices);
+    vertices.clear();
     color = glm::fvec3(1.0f, 0.0f, 0.0f);
     p->setColor(color);
     this->addPolygon(p);
     // LEFT
-    v = glm::fvec3(-length,-width,-depth);
-    v1 = new Vertex(v);
-    v = glm::fvec3(-length,width,-depth);
-    v2 = new Vertex(v);
-    v = glm::fvec3(-length,width,depth);
-    v3 = new Vertex(v);
-    v = glm::fvec3(-length,-width,depth);
-    v4 = new Vertex(v);
+    vertices.push_back(v1);
+    vertices.push_back(v4);
+    vertices.push_back(v6);
+    vertices.push_back(v5);
 
-    p = new Polygon(*v1);
-    p->addVertex(*v2);
-    p->addVertex(*v3);
-    p->addVertex(*v4);
+
+    p = new Polygon(vertices);
+    vertices.clear();
     color = glm::fvec3(0.0f, 0.0f, 1.0f);
     p->setColor(color);
     this->addPolygon(p);
     // TOP
-    v = glm::fvec3(-length,width,-depth);
-    v1 = new Vertex(v);
-    v = glm::fvec3(-length,width,depth);
-    v2 = new Vertex(v);
-    v = glm::fvec3(length,width,depth);
-    v3 = new Vertex(v);
-    v = glm::fvec3(length,width,-depth);
-    v4 = new Vertex(v);
+    vertices.push_back(v4);
+    vertices.push_back(v3);
+    vertices.push_back(v7);
+    vertices.push_back(v6);
 
-    p = new Polygon(*v1);
-    p->addVertex(*v2);
-    p->addVertex(*v3);
-    p->addVertex(*v4);
+    p = new Polygon(vertices);
+    vertices.clear();
     color = glm::fvec3(0.0f, 1.0f, 0.0f);
     p->setColor(color);
     this->addPolygon(p);
     // BOTTOM
-    v = glm::fvec3(-length,-width,-depth);
-    v1 = new Vertex(v);
-    v = glm::fvec3(length,-width,-depth);
-    v2 = new Vertex(v);
-    v = glm::fvec3(length,-width,depth);
-    v3 = new Vertex(v);
-    v = glm::fvec3(-length,-width,depth);
-    v4 = new Vertex(v);
+    vertices.push_back(v2);
+    vertices.push_back(v1);
+    vertices.push_back(v5);
+    vertices.push_back(v8);
 
-    p = new Polygon(*v1);
-    p->addVertex(*v2);
-    p->addVertex(*v3);
-    p->addVertex(*v4);
+    p = new Polygon(vertices);
+    vertices.clear();
     color = glm::fvec3(0.0f, 1.0f, 0.0f);
     p->setColor(color);
     this->addPolygon(p);

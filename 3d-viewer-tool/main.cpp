@@ -44,7 +44,7 @@ int main(int argc, char* argv[]) {
     glutInitDisplayMode(GLUT_DOUBLE | GLUT_RGB | GLUT_DEPTH);
     glutInitWindowPosition(500,250);
     glutInitWindowSize(1000,500);
-    glutCreateWindow("Glut Test");
+    glutCreateWindow("3D Viewer Tool - TEST PROGRAM");
     glEnable(GL_TEXTURE_2D);
     glEnable(GL_DEPTH_TEST);
     glShadeModel(GL_SMOOTH);
@@ -193,8 +193,8 @@ void createTestObject(WorldObject * obj[], size_t sz) {
     rot = fquat(fvec3(0.0f, 0.0f, radians(90.0f)));
     pos = fvec3(0.0f, 2.5f, 0.0f);
     obj[2] = obj[1]->duplicate();
-    obj[2]->setLocalRotation(rot);
     obj[2]->setLocalPosition(pos);
+    obj[2]->setLocalRotation(rot);
 
     rot = fquat(fvec3(0.0f, 0.0f, radians(-90.0f)));
     pos = fvec3(0.0f, -2.5f, 0.0f);

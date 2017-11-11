@@ -76,9 +76,9 @@ public:
     void setLocalRotation(glm::fquat &rot);
     WorldObject getPrevSibling();
     WorldObject getNextSibling();
-    Mesh * getMesh();
+    Mesh* getMesh();
     void setMesh(Mesh &mesh);
-    WorldObject * duplicate();
+    WorldObject* duplicate();
     void setRenderMode(RenderMode mode);
     void doAxisRender(bool b);
     void setAxisLength(float len);
