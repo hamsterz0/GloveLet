@@ -9,24 +9,23 @@
 
 #ifndef STDARG_H
 #define STDARG_H
-
 #include <stdarg.h>
-
-#endif //STDARG_H
+#endif // STDARG_H
 
 #ifndef CSTDDEF_H
 #define CSTDDEF_H
-
 #include <cstddef>
-
-#endif //CSTDDEF_H
+#endif // CSTDDEF_H
 
 #ifndef GLM_GLM_H
 #define GLM_GLM_H
-
 #include <glm/glm.hpp>
-
 #endif // GLM_GLM_H
+
+#ifndef STD_VECTOR_H
+#define STD_VECTOR_H
+#include <vector>
+#endif // STD_VECTOR_H
 
 #ifndef MESH_H
 #define MESH_H
@@ -40,33 +39,48 @@ class Polygon;
 class Vertex;
 
 class Vertex {
+    friend class Polygon;
 protected:
-    Vertex *next_vertex = nullptr;
+    /*!
+     * List of pointers to \c Polygons this vertex is apart of.
+     * Allows one vertex to be referenced by many polygons, reducing overhead.
+     */
+    std::vector<Polygon*> polygons;
+    /*! position vector */
     glm::fvec3 pos;
+    /*! the vertex normal, used in lighting */
+    glm::fvec3 normal;
+private:
+    void addPolygonReference(Polygon* poly);
+    void removePolygonReference(Polygon* poly);
+    size_t getPolyReferenceCount();
+    void updateNormal();
 public:
     Vertex();
-    Vertex(glm::fvec3 &position);
-    Vertex(Vertex &v);
+    Vertex(glm::fvec3 position);
     glm::fvec3 getPos();
-    Vertex* getNextVertex();
-    void setPos(glm::fvec3 &position);
-    void setNextVertex(Vertex &next);
+    void setPos(glm::fvec3 position);
+    glm::fvec3 getNormal();
     // OPERATIONS
     bool operator== (const Vertex &v2);
     bool operator!= (const Vertex &v2);
 };
 
-
 class Polygon {
     friend class Mesh;
 protected:
-    Vertex* start_vertex = nullptr;
-    Vertex* end_vertex = nullptr;
     Polygon* next_polygon = nullptr;
     Polygon* prev_polygon = nullptr;
+    std::vector<Vertex*> vertices;
     glm::fvec3 normal = glm::fvec3(0.0f, 0.0f, 0.0f);
     glm::fvec3 color = glm::fvec3(1.0f, 1.0f, 1.0f);
 private:
+    friend void Vertex::addPolygonReference(Polygon* poly);
+    friend void Vertex::removePolygonReference(Polygon *poly);
+    friend size_t Vertex::getPolyReferenceCount();
+    friend void Vertex::updateNormal();
+    bool updateNormal = true;
+    glm::fvec3 computeNormal();
     void setNextPolygon(Polygon* poly);
     void setPrevPolygon(Polygon* poly);
 public:
@@ -75,16 +89,16 @@ public:
      */
     Polygon() {};
     ~Polygon();
-    Polygon(Vertex &start);
-    Polygon(Vertex &start, glm::fvec3 &color);
-    Polygon(glm::fvec3 &color, size_t n_vert, Vertex &v, ...);
-    void draw(RenderMode mode = polygon);
-    void addVertex(Vertex &v);
-    Vertex * getStartVertex();
-    Vertex * getEndVertex();
+    Polygon(std::vector<Vertex*> vertices, glm::fvec3 color);
+    Polygon(std::vector<Vertex*> vertices);
+    void render(RenderMode mode = polygon);
+    void addVertex(Vertex *v);
     void setColor(glm::fvec3 &c);
     Polygon* getNextPolygon();
     Polygon* getPrevPolygon();
+    glm::fvec3 getNormal();
+    /*! add vertex operator */
+    void operator<<(Vertex* vertex);
 };
 
 class Mesh {
@@ -97,6 +111,7 @@ private:
 public:
     Mesh();
     ~Mesh();
+    Mesh(std::vector<Polygon*> polygons);
     Mesh(Polygon* first_polygon);
     void render(RenderMode render_mode = polygon);
     void addPolygon(Polygon *poly);
@@ -117,4 +132,4 @@ public:
     CubeMesh(float side);
 };
 
-#endif //MESH_H
+#endif // MESH_H
