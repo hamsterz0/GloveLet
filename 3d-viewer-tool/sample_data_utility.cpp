@@ -10,6 +10,7 @@
 #include <GL/gl.h>
 #include <GL/glut.h>
 #include <glm/glm.hpp>
+#include <glm/geometric.hpp>
 #include "src/Template Objects/TemplateObjects.h"
 #include "src/utility/MadgwickAHRS/MadgwickAHRS.h"
 //#include "src/utility/MahonyAHRS/MahonyAHRS.h"
@@ -39,6 +40,8 @@ unsigned int sample_rate = 100;
 float inv_sample_rate = 1.0f / (float)sample_rate;
 WorldObject* obj = new RectangularPrism(1.0f, 0.25f, 1.0);
 glm::fvec3 velocity = glm::fvec3(0.0f, 0.0f, 0.0f);
+float g = 0.0f;
+
 
 int main(int argc, char* argv[]) {
     on_exit(prgm_exit, nullptr);
@@ -129,8 +132,15 @@ void timer(int value) {
 
         glm::fquat quat;
         quat = glm::fquat(glm::fvec3(data[0], data[1], data[2]) * 0.01f);
-        glm::fvec3 acc = (glm::fvec3(data[3], data[5] - 352, data[4]) * inv_sample_rate);
-        velocity = acc;
+        glm::fvec3 a = glm::fvec3(data[3], data[5], data[4]);
+        glm::fvec3 a_norm = glm::normalize(a);
+        if(g == 0) {
+            // Compute acceleration due to gravity.
+            // Assumes IMU isn't moving in first sample.
+            g = glm::sqrt(a.x * a.x + a.y * a.y + a.z * a.z);
+        }
+        glm::fvec3 v = ((a - (a_norm * g)) * 0.002f);
+        velocity = v;
 // MADGWICK AHRS ALGORITHM
 //        MadgwickAHRSupdate(data[0] * 0.1f, data[1] * 0.1f, data[2] * 0.1f,
 //                           data[3], data[4], data[5],
