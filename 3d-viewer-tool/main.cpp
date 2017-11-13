@@ -4,8 +4,6 @@
 #include <GL/glut.h>
 #include <glm/glm.hpp>
 #include <glm/gtc/type_ptr.hpp>
-
-//#include "src/World Objects/WorldObject.h"
 #include "src/Template Objects/TemplateObjects.h"
 
 #ifndef TEST_OBJ_SZ
@@ -71,7 +69,7 @@ void draw(void) {
     // reset transformations
     glMatrixMode(GL_PROJECTION);
     glLoadIdentity();
-    glFrustum(-2.67, 2.67, -1.5, 1.5, 6.0, 600.0);
+    glFrustum(-2.67, 2.67, -1.5, 1.5, 5.0, 600.0);
     glMatrixMode(GL_MODELVIEW);
     glLoadIdentity();
     glTranslatef(0.0f,0.0f,-15.0f);
@@ -213,7 +211,14 @@ void createTestObject(WorldObject * obj[], size_t sz) {
 
     for(int i = 1; i < TEST_OBJ_SZ; i++) {
         obj[0]->addChild(*obj[i]);
+        if(obj[i]) {
+            obj[i]->getMesh()->showPolygonNormals(true);
+            obj[i]->getMesh()->showVertexNormals(true);
+//            obj[i]->setRenderMode(wireframe);
+        }
     }
     obj[0]->doAxisRender(true);
+    obj[0]->getMesh()->showPolygonNormals(true);
+    obj[0]->getMesh()->showVertexNormals(true);
 //    obj[0]->setRenderMode(wireframe);
 }

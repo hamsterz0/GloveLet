@@ -5,10 +5,22 @@
 
 /*!
  * Constructs \c Vertex object with \c position as the position vector.
- * @param position the position vector
+ * @param position - \c glm::fvec3 - the position vector
  */
 Vertex::Vertex(glm::fvec3 position) {
     pos = position;
+}
+/*!
+ * Renders the normal vector of the \c Vertex as a cyan line.
+ */
+void Vertex::renderNormal() {
+    glPushMatrix();
+    glBegin(lines);
+    glColor3f(0.0f, 1.0f, 1.0f);
+    glVertex3f(pos.x, pos.y, pos.z);
+    glVertex3f(pos.x - 0.25f*normal.x, pos.y - 0.25f*normal.y, pos.z - 0.25f*normal.z);
+    glEnd();
+    glPopMatrix();
 }
 /*!
  * Get position vector.
@@ -43,7 +55,6 @@ Vertex::Vertex() {}
  */
 void Vertex::addPolygonReference(Polygon *poly) {
     polygons.push_back(poly);
-    updateNormal();
 }
 /*!
  * Removes the \c Polygon pointer to this vertex's list of polygons.
@@ -52,7 +63,7 @@ void Vertex::addPolygonReference(Polygon *poly) {
  * @param poly - \c Polygon*
  */
 void Vertex::removePolygonReference(Polygon *poly) {
-    std::vector<Polygon*> new_polygons = std::vector<Polygon*>();
+    auto new_polygons = std::vector<Polygon*>();
     for(Polygon* p : polygons) {
         if(p != poly) new_polygons.push_back(p);
     }
@@ -66,14 +77,9 @@ size_t Vertex::getPolyReferenceCount() {
  * Update the normal of this vertex.
  */
 void Vertex::updateNormal() {
-    glm::fvec3 norm = glm::fvec3(0.0f, 0.0f, 0.0f);
-    int count = 0;
-    for(Polygon* p : polygons) {
-        if(p->getNormal().length() != 0) {
-            norm += p->getNormal();
-            count += 1;
-        }
-    }
+    normal = glm::fvec3(0.0f, 0.0f, 0.0f);
+    for(auto p : polygons) normal += p->getNormal();
+    normal = glm::normalize(normal);
 }
 /*!
  * Compares reference addresses.

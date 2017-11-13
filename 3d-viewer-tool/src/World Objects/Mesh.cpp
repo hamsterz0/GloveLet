@@ -18,13 +18,12 @@ Mesh::~Mesh() {
         delete last_polygon;
         last_polygon = next;
     }
-
     first_polygon = nullptr;
     last_polygon = nullptr;
 }
 /*!
- * Constructs mesh
- * @param polygons
+ * Constructs mesh from list of polygons
+ * @param polygons - \c std::vector
  */
 Mesh::Mesh(std::vector<Polygon *> polygons) {
     for(Polygon* p : polygons) {
@@ -43,8 +42,9 @@ Mesh::Mesh(Polygon *first_polygon) {
  */
 void Mesh::render(RenderMode render_mode) {
     auto next_poly = first_polygon;
+    if(showVertNorms) for(auto v : vertices) v->renderNormal();
     while(next_poly != nullptr) {
-        next_poly->render(render_mode);
+        next_poly->render(render_mode, showPolyNorms);
         next_poly = next_poly->getNextPolygon();
     }
 }
@@ -67,6 +67,25 @@ void Mesh::addPolygon(Polygon *poly) {
         poly->setPrevPolygon(last_polygon);
         last_polygon = poly;
     }
+
+    for(Vertex* v : poly->vertices) {
+        vertices.insert(v);
+        v->updateNormal();
+    }
+}
+/*!
+ * When \c true, the normal vectors of the mesh's polygons will be rendered as yellow lines.
+ * @param b - \c bool
+ */
+void Mesh::showPolygonNormals(bool b) {
+    showPolyNorms = b;
+}
+/*!
+ * When \c true, the normal vectors of the mesh's vertices will be rendered as cyan lines.
+ * @param b - \c bool
+ */
+void Mesh::showVertexNormals(bool b) {
+    showVertNorms = b;
 }
 /*!
  * Constructs rectangular prism mesh.
@@ -80,14 +99,14 @@ RectangularPrismMesh::RectangularPrismMesh(float length, float width, float dept
     std::vector<Vertex*> vertices;
     glm::fvec3 color;
     // instantiate
-    v1 = new Vertex(glm::fvec3(-length, -width, -depth));
-    v2 = new Vertex(glm::fvec3(length, -width, -depth));
-    v3 = new Vertex(glm::fvec3(length, width, -depth));
-    v4 = new Vertex(glm::fvec3(-length, width, -depth));
-    v5 = new Vertex(glm::fvec3(-length, -width, depth));
-    v6 = new Vertex(glm::fvec3(-length, width, depth));
-    v7 = new Vertex(glm::fvec3(length, width, depth));
-    v8 = new Vertex(glm::fvec3(length, -width, depth));
+    v1 = new Vertex(glm::fvec3(-length, -width, -depth) * 0.5f);
+    v2 = new Vertex(glm::fvec3(length, -width, -depth) * 0.5f);
+    v3 = new Vertex(glm::fvec3(length, width, -depth) * 0.5f);
+    v4 = new Vertex(glm::fvec3(-length, width, -depth) * 0.5f);
+    v5 = new Vertex(glm::fvec3(-length, -width, depth) * 0.5f);
+    v6 = new Vertex(glm::fvec3(-length, width, depth) * 0.5f);
+    v7 = new Vertex(glm::fvec3(length, width, depth) * 0.5f);
+    v8 = new Vertex(glm::fvec3(length, -width, depth) * 0.5f);
 
     // FRONT
     vertices.push_back(v1);
@@ -156,6 +175,5 @@ RectangularPrismMesh::RectangularPrismMesh(float length, float width, float dept
     p->setColor(color);
     this->addPolygon(p);
 }
-
 
 CubeMesh::CubeMesh(float side) : RectangularPrismMesh(side, side , side) {}
