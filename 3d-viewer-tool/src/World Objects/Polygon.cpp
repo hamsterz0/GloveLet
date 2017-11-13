@@ -2,6 +2,7 @@
 // Created by joseph on 11/4/17.
 //
 #include <GL/gl.h>
+#include <glm/gtc/quaternion.hpp>
 #include "Mesh.h"
 
 Polygon::~Polygon() {
@@ -21,7 +22,6 @@ Polygon::~Polygon() {
 Polygon::Polygon(std::vector<Vertex*> vertices, glm::fvec3 color) {
     this->color = color;
     for(Vertex* v : vertices) addVertex(v);
-    if(this->normal.length() == 0.0f) getNormal(); // dummy call to getNormal to update the normal vector for this polygon.
 }
 /*!
  * Constructs \c Polygon with the vertices passed as arguments.
@@ -35,12 +35,22 @@ Polygon::Polygon(std::vector<Vertex*> vertices)
 /*!
  * Draws the polygon.
  * @param mode - \c RenderMode - *optional* sets the render mode.
+ * @param showNormal - \c bool - *optional* displays polygon normal vector when \c true
  */
-void Polygon::render(RenderMode mode) {
+void Polygon::render(RenderMode mode, bool showNormal) {
     glBegin(mode);
     glColor3f(color.x, color.y, color.z);
-    for(Vertex* v : vertices) glVertex3f(v->getPos().x, v->getPos().y, v->getPos().z);
+    for(Vertex* v : vertices) {
+        glVertex3f(v->getPos().x, v->getPos().y, v->getPos().z);
+    }
     glEnd();
+    if(showNormal) {
+        glBegin(lines);
+        glColor3f(1.0f, 1.0f, 0.0f);
+        glVertex3f(centroid.x, centroid.y, centroid.z);
+        glVertex3f(centroid.x - 0.5f*normal.x, centroid.y - 0.5f*normal.y, centroid.z - 0.5f*normal.z);
+        glEnd();
+    }
 }
 /*!
  * Add a vertex to the polygon.
@@ -50,8 +60,9 @@ void Polygon::render(RenderMode mode) {
  * @param v - \c Vertex*
  */
 void Polygon::addVertex(Vertex* v) {
-    if(vertices.size() < 3) updateNormal = true; // when getNormal is next called, the polygon's normal will be recomputed.
     vertices.push_back(v);
+    computeNormal();
+    computeCentroid();
     vertices.back()->addPolygonReference(this);
 }
 /*!
@@ -87,27 +98,48 @@ void Polygon::setPrevPolygon(Polygon *poly) {
 }
 // TODO doc
 glm::fvec3 Polygon::getNormal() {
-    if(updateNormal && vertices.size() > 2) {
-        normal = computeNormal();
-        updateNormal = false;
-    }
     return normal;
 }
 // TODO doc
-glm::fvec3 Polygon::computeNormal() {
+void Polygon::computeNormal() {
     // Polygon must have at least 3 vertices to compute normal.
     if(vertices.size() < 3)
-        return glm::fvec3(0.0f, 0.0f, 0.0f);
+        return;
 
-    glm::vec3 a, b;
+    glm::fvec3 a, b;
     a = vertices[0]->getPos() - vertices[1]->getPos();
     b = vertices[0]->getPos() - vertices[2]->getPos();
 
     glm::fvec3 norm = glm::cross(a, b);
 
-    return glm::normalize(norm);
+    normal = glm::normalize(norm);
 }
-
+/*!
+ * Computes the centroid of the polygon.
+ * \attention
+ * Algorithm derived based barycenter of the boundary. Referenced the link below:<br><br>
+ * https://stackoverflow.com/questions/18305712/how-to-compute-the-center-of-a-polygon-in-2d-and-3d-space
+ */
+void Polygon::computeCentroid() {
+    float sx = 0.0f, sy = 0.0f, sz = 0.0f, sL = 0.0f;
+    size_t N = vertices.size();
+    for(size_t i = 0; i < N; i++) {
+        auto v1 = vertices[N - 1 - i];
+        auto v2 = vertices[i];
+        auto L = glm::pow(v1->getPos().x - v2->getPos().x, 2) +
+                glm::pow(v1->getPos().y - v2->getPos().y, 2) +
+                glm::pow(v1->getPos().z - v2->getPos().z, 2);
+        L = glm::sqrt(L);
+        sx += (v1->getPos().x + v2->getPos().x)/2.0f * L;
+        sy += (v1->getPos().y + v2->getPos().y)/2.0f * L;
+        sz += (v1->getPos().z + v2->getPos().z)/2.0f * L;
+        sL += L;
+    }
+    centroid.x = sx / sL;
+    centroid.y = sy / sL;
+    centroid.z = sz / sL;
+}
+// TODO doc
 void Polygon::operator<<(Vertex* vertex) {
     addVertex(vertex);
 }

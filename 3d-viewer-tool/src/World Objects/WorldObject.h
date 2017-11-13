@@ -3,8 +3,8 @@
 //
 #pragma once
 
-#ifndef STRING_H
-#define STRING_H
+#ifndef STD_STRING_H
+#define STD_STRING_H
 #include <string>
 #endif // STRING_H
 

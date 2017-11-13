@@ -27,6 +27,11 @@
 #include <vector>
 #endif // STD_VECTOR_H
 
+#ifndef STD_SET_H
+#define STD_SET_H
+#include <set>
+#endif // STD_SET_H
+
 #ifndef MESH_H
 #define MESH_H
 
@@ -40,6 +45,7 @@ class Vertex;
 
 class Vertex {
     friend class Polygon;
+    friend class Mesh;
 protected:
     /*!
      * List of pointers to \c Polygons this vertex is apart of.
@@ -58,6 +64,7 @@ private:
 public:
     Vertex();
     Vertex(glm::fvec3 position);
+    void renderNormal();
     glm::fvec3 getPos();
     void setPos(glm::fvec3 position);
     glm::fvec3 getNormal();
@@ -69,18 +76,22 @@ public:
 class Polygon {
     friend class Mesh;
 protected:
+    // protected attributes
+    std::vector<Vertex*> vertices;
     Polygon* next_polygon = nullptr;
     Polygon* prev_polygon = nullptr;
-    std::vector<Vertex*> vertices;
     glm::fvec3 normal = glm::fvec3(0.0f, 0.0f, 0.0f);
+    glm::fvec3 centroid = glm::fvec3(0.0f, 0.0f, 0.0f);
     glm::fvec3 color = glm::fvec3(1.0f, 1.0f, 1.0f);
 private:
+    // private friend functions
     friend void Vertex::addPolygonReference(Polygon* poly);
     friend void Vertex::removePolygonReference(Polygon *poly);
     friend size_t Vertex::getPolyReferenceCount();
     friend void Vertex::updateNormal();
-    bool updateNormal = true;
-    glm::fvec3 computeNormal();
+    // private functions
+    void computeNormal();
+    void computeCentroid();
     void setNextPolygon(Polygon* poly);
     void setPrevPolygon(Polygon* poly);
 public:
@@ -91,7 +102,7 @@ public:
     ~Polygon();
     Polygon(std::vector<Vertex*> vertices, glm::fvec3 color);
     Polygon(std::vector<Vertex*> vertices);
-    void render(RenderMode mode = polygon);
+    void render(RenderMode mode = polygon, bool showNormal = false);
     void addVertex(Vertex *v);
     void setColor(glm::fvec3 &c);
     Polygon* getNextPolygon();
@@ -103,11 +114,17 @@ public:
 
 class Mesh {
 protected:
+    std::set<Vertex*> vertices;
     Polygon* first_polygon = nullptr;
     Polygon* last_polygon = nullptr;
 private:
+    // private attributes
+    bool showPolyNorms = false;
+    bool showVertNorms = false;
+    // private friend functions
     friend void Polygon::setNextPolygon(Polygon *poly);
     friend void Polygon::setPrevPolygon(Polygon *poly);
+    friend void Vertex::updateNormal();
 public:
     Mesh();
     ~Mesh();
@@ -115,6 +132,8 @@ public:
     Mesh(Polygon* first_polygon);
     void render(RenderMode render_mode = polygon);
     void addPolygon(Polygon *poly);
+    void showPolygonNormals(bool b);
+    void showVertexNormals(bool b);
 };
 
 class RectangularPrismMesh : public Mesh {
