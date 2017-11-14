@@ -9,6 +9,7 @@
 #include <vector>
 #include <GL/gl.h>
 #include <GL/glut.h>
+#include <glm/gtc/quaternion.hpp>
 #include <glm/glm.hpp>
 #include <glm/geometric.hpp>
 #include "src/Template Objects/TemplateObjects.h"
@@ -28,6 +29,8 @@ void idle(void);
 void render(void);
 void timer(int value);
 void prgm_exit(int value, void *arg);
+
+using namespace glm;
 
 // OTHER FUNCTIONS
 bool parseArguments(int argc, char **argv);
@@ -129,9 +132,16 @@ void timer(int value) {
         for(auto val : data) std::cout << val << " ";
         std::cout << std::endl;
 
-
-        glm::fquat quat;
-        quat = glm::fquat(glm::fvec3(data[0], data[1], data[2]) * 0.01f);
+        float rot_scale = 0.001953125f;
+        glm::fquat gyro;
+        glm::fvec3 gyro_euler = glm::fvec3(data[0]*rot_scale, data[1]*rot_scale, data[2]*rot_scale);
+        gyro = glm::fquat(gyro_euler);
+        glm::fquat magnet;
+        glm::fvec3 magnet_euler = glm::fvec3(data[6], data[7], data[8]) * rot_scale;
+        magnet = glm::fquat(magnet_euler);
+        glm::fquat rotation = (gyro * magnet);
+        rotation = normalize(rotation);
+        // acceleration
         glm::fvec3 a = glm::fvec3(data[3], data[5], data[4]);
         glm::fvec3 a_norm = glm::normalize(a);
         if(g == 0) {
@@ -139,17 +149,9 @@ void timer(int value) {
             // Assumes IMU isn't moving in first sample.
             g = glm::sqrt(a.x * a.x + a.y * a.y + a.z * a.z);
         }
-        glm::fvec3 v = ((a - (a_norm * g)) * 0.002f);
+        glm::fvec3 v = ((a - (a_norm * g)) * 0.001953125f);
         velocity = v;
-// MADGWICK AHRS ALGORITHM
-//        MadgwickAHRSupdate(data[0] * 0.1f, data[1] * 0.1f, data[2] * 0.1f,
-//                           data[3], data[4], data[5],
-//                           data[6], data[7], data[8], sample_rate);
-//        quat.w = q0;
-//        quat.x = q1;
-//        quat.y = q2;
-//        quat.z = q3;
-        obj->setLocalRotation(quat);
+        obj->setLocalRotation(rotation);
         obj->move(velocity);
     }
 
