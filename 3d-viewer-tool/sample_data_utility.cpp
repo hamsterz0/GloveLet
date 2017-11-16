@@ -132,9 +132,10 @@ void timer(int value) {
         for(auto val : data) std::cout << val << " ";
         std::cout << std::endl;
 
-        float rot_scale = 0.001953125f;
+//        float rot_scale = 0.001953125f;
+        float rot_scale = 0.008f;
         glm::fquat gyro;
-        glm::fvec3 gyro_euler = glm::fvec3(data[0]*rot_scale, data[1]*rot_scale, data[2]*rot_scale);
+        glm::fvec3 gyro_euler = glm::fvec3(data[0], data[1], data[2]) * rot_scale;
         gyro = glm::fquat(gyro_euler);
         glm::fquat magnet;
         glm::fvec3 magnet_euler = glm::fvec3(data[6], data[7], data[8]) * rot_scale;
@@ -147,10 +148,14 @@ void timer(int value) {
         if(g == 0) {
             // Compute acceleration due to gravity.
             // Assumes IMU isn't moving in first sample.
-            g = glm::sqrt(a.x * a.x + a.y * a.y + a.z * a.z);
+            g = glm::length(a);
         }
-        glm::fvec3 v = ((a - (a_norm * g)) * 0.001953125f);
-        velocity = v;
+        glm::fvec3 v = (a - (a_norm * g));
+        velocity = v ;
+        float v_len = glm::length(v);
+        float v_ln = glm::log(v_len);
+        // Come back to this!
+        std::cout << v_len << " " << v_ln << std::endl;
         obj->setLocalRotation(rotation);
         obj->move(velocity);
     }
