@@ -59,3 +59,55 @@ Cube::Cube(float side, glm::fvec3 &position) : RectangularPrism(side, side, side
  */
 Cube::Cube(float side, glm::fvec3 &position, glm::fquat &rotation)
         : RectangularPrism(side, side, side, position, rotation) {}
+/*!
+ * Constructs a \c WorldObject that is a simple 3-dimensional line.
+ * @param point1 - \c glm::fvec3
+ * @param point2 - \c glm::fvec3
+ * @param color - \c glm::fvec3 - RGB color vector
+ */
+Line::Line(glm::fvec3 point1, glm::fvec3 point2, glm::fvec3 color) {
+    this->point1 = new Vertex(point1);
+    this->point2 = new Vertex(point2);
+    std::vector<Vertex*> vertices;
+    vertices.push_back(this->point1);
+    vertices.push_back(this->point2);
+    Polygon* p = new Polygon(vertices);
+    p->setColor(color);
+    this->mesh = new Mesh(p);
+    render_mode = lines;
+}
+/*!
+ * Constructs a \c WorldObject that is a simple 3-dimensional line.
+ * @param point1 - \c glm::fvec3
+ * @param point2 - \c glm::fvec3
+ */
+Line::Line(glm::fvec3 point1, glm::fvec3 point2)
+        : Line(point1, point2, glm::fvec3(1.0f, 1.0f, 1.0f)) {}
+/*!
+ * Get first point of line.
+ * @return \code glm::fvec3 \endcode
+ */
+glm::fvec3 Line::getPoint1() {
+    return point1->getPos();
+}
+/*!
+ * Set first point of line.
+ * @param point - \c glm::fvec3
+ */
+void Line::setPoint1(glm::fvec3 point) {
+    this->point1->setPos(point);
+}
+/*!
+ * Get second point of line.
+ * @return \code glm::fvec3 \endcode
+ */
+glm::fvec3 Line::getPoint2() {
+    return point2->getPos();
+}
+/*!
+ * Set second point of line.
+ * @param point - \c glm::fvec3
+ */
+void Line::setPoint2(glm::fvec3 point) {
+    this->point2->setPos(point);
+}

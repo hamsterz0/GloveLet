@@ -11,8 +11,8 @@
 #include <GL/glut.h>
 #include <glm/gtc/quaternion.hpp>
 #include <glm/glm.hpp>
-#include <glm/geometric.hpp>
 #include "src/Template Objects/TemplateObjects.h"
+#include "src/utility/debug.h"
 #include "src/utility/MadgwickAHRS/MadgwickAHRS.h"
 //#include "src/utility/MahonyAHRS/MahonyAHRS.h"
 
@@ -34,6 +34,7 @@ using namespace glm;
 
 // OTHER FUNCTIONS
 bool parseArguments(int argc, char **argv);
+bool debug = false;
 WorldObject* construct3DObject();
 std::string getRuntimeDirectory();
 
@@ -41,9 +42,11 @@ std::string getRuntimeDirectory();
 std::ifstream stream;
 unsigned int sample_rate = 100;
 float inv_sample_rate = 1.0f / (float)sample_rate;
+float g = 0.0f;
 WorldObject* obj = new RectangularPrism(1.0f, 0.25f, 1.0);
 glm::fvec3 velocity = glm::fvec3(0.0f, 0.0f, 0.0f);
-float g = 0.0f;
+glm::fvec3 grav3 = glm::fvec3(0.0f, 0.0f, 0.0f);
+glm::fvec4 gravity = glm::fvec4(0.0f, 0.0f, 0.0f, 0.0f);
 
 
 int main(int argc, char* argv[]) {
@@ -51,6 +54,8 @@ int main(int argc, char* argv[]) {
     int displayWidth = 0, displayHeight = 0,
             windowWidth = 0, windowHeight = 0,
             windowPosX = 0, windowPosY = 0;
+//    obj->addChild(*gravVector);
+    obj->doAxisRender(true);
 
     glutInit(&argc, argv);
     if(!parseArguments(argc, argv))
@@ -114,6 +119,7 @@ void render(void) {
 
     // do rendering
     obj->render();
+    draw_vector(2.0f*glm::normalize(grav3) + obj->getPosition(), obj->getPosition());
 
     // flush and swap buffers
     glFlush();
@@ -126,36 +132,47 @@ void render(void) {
  */
 void timer(int value) {
     float data[9];
+    float time_interval = 0.008f;
     char buf[256];
     if(!std::cin.eof()) {
         for(int i = 0; i < 9; i++) std::cin >> data[i];
-        for(auto val : data) std::cout << val << " ";
-        std::cout << std::endl;
 
-//        float rot_scale = 0.001953125f;
-        float rot_scale = 0.008f;
-        glm::fquat gyro;
-        glm::fvec3 gyro_euler = glm::fvec3(data[0], data[1], data[2]) * rot_scale;
-        gyro = glm::fquat(gyro_euler);
-        glm::fquat magnet;
-        glm::fvec3 magnet_euler = glm::fvec3(data[6], data[7], data[8]) * rot_scale;
-        magnet = glm::fquat(magnet_euler);
-        glm::fquat rotation = (gyro * magnet);
-        rotation = normalize(rotation);
-        // acceleration
         glm::fvec3 a = glm::fvec3(data[3], data[5], data[4]);
         glm::fvec3 a_norm = glm::normalize(a);
-        if(g == 0) {
+        if(glm::length(gravity) == 0.0f) {
             // Compute acceleration due to gravity.
             // Assumes IMU isn't moving in first sample.
             g = glm::length(a);
+            gravity = glm::fvec4(a, 0);
         }
-        glm::fvec3 v = (a - (a_norm * g));
-        velocity = v ;
-        float v_len = glm::length(v);
-        float v_ln = glm::log(v_len);
-        // Come back to this!
-        std::cout << v_len << " " << v_ln << std::endl;
+        glm::fquat gyro_quat;
+        glm::fvec3 gyro_euler = glm::fvec3(data[0], data[1], data[2]) * time_interval;
+        gyro_quat = glm::fquat(gyro_euler);
+        glm::fquat magnet_quat;
+        glm::fvec3 magnet_euler = glm::fvec3(data[6], data[7], data[8]) * time_interval;
+        magnet_quat = glm::fquat(magnet_euler);
+        glm::fquat rotation = (magnet_quat * gyro_quat);
+        glm::fquat grav_rotation = glm::inverse(rotation);
+        glm::mat4 rot_mat = glm::mat4_cast(rotation);
+        glm::mat4 inv_rot = glm::mat4_cast(grav_rotation);
+        gravity = gravity * inv_rot * rot_mat;
+        grav3 = -glm::fvec3(gravity);
+        glm::fvec3 acceleration = a + grav3;
+        float accel_len = glm::length(acceleration);
+        // acceleration
+        float accel_log = glm::log(accel_len) / glm::log(8.0f);
+        if(accel_log < 1.0f) {
+            accel_log = 1.0f;
+        }
+        else accel_log = 1.0f / accel_log;
+        acceleration *= 2.0f * time_interval * accel_log;
+        accel_len = time_interval * accel_log;
+        velocity = acceleration;
+        if(debug) {
+            for(auto val : data) std::cout << val << " ";
+            std::cout << std::endl;
+            std::cout << accel_len << " " << accel_log << std::endl;
+        }
         obj->setLocalRotation(rotation);
         obj->move(velocity);
     }
@@ -201,36 +218,39 @@ bool parseArguments(int argc, char **argv) {
             if(argv[i][0] == '-') {
                 std::string option(argv[i]);
                 std::string value;
-                try {
-                    value = std::string(argv[++i]); // the following option here will be value associated with previous option option
-                } catch (std::logic_error e) {
-                    std::cerr << "ERR: Expecting value following \'" << option << "\' option." << std::endl
-                         << "Enter \'-h\' or \'--help\' to view help options." << std::endl;
-                    result = false;
-                }
-                if(option.compare("-i") == 0 || option.compare("--input") == 0) {
-                    std::string cmd;
-                    std::string currentPath = getRuntimeDirectory();
-                    cmd += currentPath + "/datalog-file-converter " + value + " ./temp.data";
-                    if(system(cmd.c_str())) // creates temp.data file when successful
-                        result = false;
-                    stream = std::ifstream("temp.data");
-                    std::cin.rdbuf(stream.rdbuf()); // redirect standard input read buffer
-                    if(!stream) {
-                        std::cerr << "Was unable to open the file \'" << value << "\'." << std::endl;
+                if(option.compare("-d") == 0) debug = true;
+                else {
+                    try {
+                        value = std::string(argv[++i]); // the following option here will be value associated with previous option option
+                    } catch (std::logic_error e) {
+                        std::cerr << "ERR: Expecting value following \'" << option << "\' option." << std::endl
+                                  << "Enter \'-h\' or \'--help\' to view help options." << std::endl;
                         result = false;
                     }
-                } else if(option.compare("--hz") == 0) {
-                    try {
-                        sample_rate = (unsigned int)std::stoi(value);
-                        std::cout << "Sample rate set to " << sample_rate << " Hz." << std::endl;
-                        inv_sample_rate = 1.0f / (float)sample_rate;
-                    } catch (std::invalid_argument e) {
-                        std::cerr << "ERR: There must be a positive integer value following \'" << option << "\'." << std::endl;
-                        result = false;
-                    } catch (std::system_error e) {
-                        std::cerr << e.what() << std::endl;
-                        result = false;
+                    if(option.compare("-i") == 0 || option.compare("--input") == 0) {
+                        std::string cmd;
+                        std::string currentPath = getRuntimeDirectory();
+                        cmd += currentPath + "/datalog-file-converter " + value + " ./temp.data";
+                        if(system(cmd.c_str())) // creates temp.data file when successful
+                            result = false;
+                        stream = std::ifstream("temp.data");
+                        std::cin.rdbuf(stream.rdbuf()); // redirect standard input read buffer
+                        if(!stream) {
+                            std::cerr << "Was unable to open the file \'" << value << "\'." << std::endl;
+                            result = false;
+                        }
+                    } else if(option.compare("--hz") == 0) {
+                        try {
+                            sample_rate = (unsigned int)std::stoi(value);
+                            std::cout << "Sample rate set to " << sample_rate << " Hz." << std::endl;
+                            inv_sample_rate = 1.0f / (float)sample_rate;
+                        } catch (std::invalid_argument e) {
+                            std::cerr << "ERR: There must be a positive integer value following \'" << option << "\'." << std::endl;
+                            result = false;
+                        } catch (std::system_error e) {
+                            std::cerr << e.what() << std::endl;
+                            result = false;
+                        }
                     }
                 }
             }
@@ -255,4 +275,5 @@ void prgm_exit(int value, void *arg) {
 
 WorldObject* construct3DObject() {
     WorldObject* result = new RectangularPrism(1.0f, 0.25f, 1.0);
+    return result;
 }
