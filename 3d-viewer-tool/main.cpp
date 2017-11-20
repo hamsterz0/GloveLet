@@ -24,6 +24,8 @@ bool upKeyPressed = false;
 bool downKeyPressed = false;
 bool leftKeyPressed = false;
 bool rightKeyPressed = false;
+bool pageUpKeyPressed = false;
+bool pageDownKeyPressed = false;
 glm::vec3 obj_pos(0.0f, 0.0f, 0.0f);
 glm::vec2 mouse_prev(0.0f, 0.0f);
 glm::vec2 mouse_chg(0.0f, 0.0f);
@@ -33,9 +35,21 @@ glm::fquat q = fquat(fvec3(0.0f, 0.0f, radians(1.0f)));
 glm::fquat lq = fquat(fvec3(radians(1.0f), 0.0f, 0.0f));
 
 WorldObject* test_obj[TEST_OBJ_SZ];
+WorldObject* worldAxis;
+WorldObject* gravityVector;
 
 int main(int argc, char* argv[]) {
     createTestObject(test_obj, TEST_OBJ_SZ);
+    worldAxis = new Cube(0.01f);
+    worldAxis->setRenderMode(wireframe);
+    worldAxis->doAxisRender(true);
+    worldAxis->setAxisLength(5.0f);
+    auto v1 = glm::fvec3(-2.0f, -2.0f, 0.0f);
+    worldAxis->setLocalPosition(v1);
+    v1 = glm::fvec3(0.0f, 0.0f, 0.0f);
+    auto v2 = glm::fvec3(0.0f, -2.0f, 0.0f);
+    gravityVector = new Line(v1,v2);
+    test_obj[0]->addChild(*gravityVector);
 
     glutInit(&argc, argv);
     // Simple buffer
@@ -75,6 +89,7 @@ void draw(void) {
     glTranslatef(0.0f,0.0f,-15.0f);
 
     glPushMatrix();
+    worldAxis->render();
     test_obj[0]->render();
     glPopMatrix();
 
@@ -89,6 +104,8 @@ void idle() {
     if(downKeyPressed) mv.z -= 0.075f;
     if(rightKeyPressed) mv.x += 0.075f;
     if(leftKeyPressed) mv.x -= 0.075f;
+    if(pageUpKeyPressed) mv.y += 0.075f;
+    if(pageDownKeyPressed) mv.y -= 0.075f;
     test_obj[0]->move(mv);
 
     for(int i = 1; i < TEST_OBJ_SZ; i++) {
@@ -115,11 +132,11 @@ void specialKeys(int key, int x, int y) {
         case GLUT_KEY_UP:
             upKeyPressed = true;
             break;
-        case GLUT_KEY_HOME:
-            obj_pos.y += 0.5f;
+        case GLUT_KEY_PAGE_UP:
+            pageUpKeyPressed= true;
             break;
-        case GLUT_KEY_END:
-            obj_pos.y -= 0.5f;
+        case GLUT_KEY_PAGE_DOWN:
+            pageDownKeyPressed = true;
             break;
         default:
             break;
@@ -139,6 +156,12 @@ void specialUpKeys(int key, int x, int y) {
             break;
         case GLUT_KEY_UP:
             upKeyPressed = false;
+            break;
+        case GLUT_KEY_PAGE_UP:
+            pageUpKeyPressed = false;
+            break;
+        case GLUT_KEY_PAGE_DOWN:
+            pageDownKeyPressed = false;
             break;
         default:
             break;
@@ -166,13 +189,18 @@ void mouseMotionHandler(int x, int y) {
         mouse_pos.y -= 0.025f;
 
     fvec3 euler_angles(mouse_chg.y * 0.025f, mouse_chg.x * 0.025f, 0.0f);
-    auto rot = fquat(euler_angles);
+    auto rot_world = fquat(euler_angles);
 
     // The below order of multiplication will result in the world rotation transform.
-    // Reversing the order to (q * rot) results in the local transform.
+    // Reversing the order to (qL * rot_world) results in the local transform.
     // IE in the local transform, the rotation stays true to the object's origin axis,
     //      which the object's origin axis is changing relative to the world origin axis.
-    test_obj[0]->rotate(rot);
+    test_obj[0]->rotate(rot_world);
+    auto qw = test_obj[0]->getRotation();
+    auto inv = glm::inverse(qw);
+
+//    gravityVector->rotate(inv, true);
+    gravityVector->setLocalRotation(inv);
 
     mouse_prev.x = x;
     mouse_prev.y = y;
@@ -218,7 +246,7 @@ void createTestObject(WorldObject * obj[], size_t sz) {
         }
     }
     obj[0]->doAxisRender(true);
-    obj[0]->getMesh()->showPolygonNormals(true);
-    obj[0]->getMesh()->showVertexNormals(true);
+//    obj[0]->getMesh()->showPolygonNormals(true);
+//    obj[0]->getMesh()->showVertexNormals(true);
 //    obj[0]->setRenderMode(wireframe);
 }

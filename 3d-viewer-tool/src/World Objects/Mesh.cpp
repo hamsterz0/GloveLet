@@ -34,8 +34,7 @@ Mesh::Mesh(std::vector<Polygon *> polygons) {
  * Constructs mesh and sets reference to first polygon.
  */
 Mesh::Mesh(Polygon *first_polygon) {
-    this->first_polygon = first_polygon;
-    this->last_polygon = first_polygon;
+    addPolygon(first_polygon);
 }
 /*!
  * Renders mesh using current render mode.
@@ -56,8 +55,6 @@ void Mesh::addPolygon(Polygon *poly) {
     if(first_polygon == nullptr) {
         first_polygon = poly;
         last_polygon = poly;
-        first_polygon->setNextPolygon(last_polygon);
-        last_polygon->setPrevPolygon(first_polygon);
     } else if(first_polygon == last_polygon) {
         poly->setPrevPolygon(first_polygon);
         last_polygon = poly;

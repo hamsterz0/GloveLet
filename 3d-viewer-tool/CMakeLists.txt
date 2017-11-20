@@ -27,7 +27,7 @@ set(SAMPLE_DATA_VIEWER_SOURCE
         "src/Template Objects/TemplateObjects.cpp"
         "src/utility/MadgwickAHRS/MadgwickAHRS.cpp"
 #        "src/utility/MahonyAHRS/MahonyAHRS.cpp"
-        "src/utility/ahrs_common.h")
+        "src/utility/ahrs_common.h" src/utility/debug.cpp src/utility/debug.h)
 add_executable(sample-data-utility sample_data_utility.cpp ${SAMPLE_DATA_VIEWER_SOURCE})
 target_link_libraries(sample-data-utility -lGL -lglut)
 

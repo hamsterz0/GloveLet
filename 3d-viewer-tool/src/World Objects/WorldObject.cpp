@@ -74,6 +74,7 @@ void WorldObject::render() {
     mat4 rot_mat = mat4_cast(rot);
     mat4 local_rot_mat = mat4_cast(local_rot);
     auto next = first_child;
+    glPushMatrix();
     // put relative transformations on the stack
     glTranslatef(position.x, position.y, position.z);
     glMultMatrixf(glm::value_ptr(rot_mat));
@@ -99,6 +100,7 @@ void WorldObject::render() {
         axis->setAxisLength(DEFAULT_AXIS_LEN);
         glEnable(GL_DEPTH_TEST);
     }
+    glPopMatrix();
 }
 /*!
  * Moves the \c WorldObject by the amount in \p ds.
