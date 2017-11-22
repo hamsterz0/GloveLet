@@ -12,10 +12,10 @@ git checkout 3d-viewer-tool
 ```
 ### Prerequisites & Dependencies
 
-For building:
+For building:<br>
 - [CMake 3.6.x or higher](https://cmake.org/download/)
 
-Libraries:
+Libraries:<br>
 - [FreeGLUT - OpenGL Utility](https://sourceforge.net/projects/freeglut/)
 - [GLM - OpenGL Mathematics](https://github.com/g-truc/glm/tags) 
 
