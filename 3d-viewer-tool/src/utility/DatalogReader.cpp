@@ -21,7 +21,7 @@ DatalogReader::DatalogReader(std::string filePath) {
     std::regex_search(filePath,sm,extension_pattern);
     std::string extension = sm.str();
 
-    log_type logType = determine_log_type();
+    LogType logType = determine_log_type();
     switch (logType) {
         case LOG1:
             parser = new DatalogParserLog1();
@@ -40,10 +40,10 @@ DatalogReader::DatalogReader(std::string filePath) {
  * @param file_path - <code>string</code>
  * @return \code enum log_type \endcode
  */
-log_type DatalogReader::determine_log_type() {
+LogType DatalogReader::determine_log_type() {
     const std::regex extension_pattern("\\.\\w+$");
     std::smatch sm;
-    log_type log;
+    LogType log;
 
     std::regex_search(filePath,sm,extension_pattern);
     std::string extension = sm.str();
