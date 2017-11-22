@@ -15,8 +15,8 @@ set(HEADERS
         "src/World Objects/Axis.h"
         "src/World Objects/Mesh.h"
         "src/Template Objects/TemplateObjects.h")
-add_executable(3d-viewer-tool main.cpp ${SOURCE_FILES} ${HEADERS})
-target_link_libraries(3d-viewer-tool -lGL -lglut)
+add_executable(opengl-debugger opengl-debugger-utility.cpp ${SOURCE_FILES} ${HEADERS})
+target_link_libraries(opengl-debugger -lGL -lglut)
 
 set(SAMPLE_DATA_VIEWER_SOURCE
         "src/World Objects/Polygon.cpp"
@@ -28,8 +28,8 @@ set(SAMPLE_DATA_VIEWER_SOURCE
         "src/utility/MadgwickAHRS/MadgwickAHRS.cpp"
 #        "src/utility/MahonyAHRS/MahonyAHRS.cpp"
         "src/utility/ahrs_common.h" src/utility/debug.cpp src/utility/debug.h)
-add_executable(sample-data-utility sample_data_utility.cpp ${SAMPLE_DATA_VIEWER_SOURCE})
-target_link_libraries(sample-data-utility -lGL -lglut)
+add_executable(3d-viewer-utility 3d_viewer_utility.cpp ${SAMPLE_DATA_VIEWER_SOURCE})
+target_link_libraries(3d-viewer-utility -lGL -lglut)
 
 set(DATALOG_FILE_CONVERTER_SOURCE
         "src/utility/DatalogParser.cpp"
