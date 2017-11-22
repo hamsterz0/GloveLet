@@ -18,7 +18,7 @@ class DatalogReader {
 private:
     DatalogParser* parser;
     std::string filePath;
-    log_type determine_log_type();
+    LogType determine_log_type();
 public:
     ~DatalogReader();
     DatalogReader(std::string filePath);

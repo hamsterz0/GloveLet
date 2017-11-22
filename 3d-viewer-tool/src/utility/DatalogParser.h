@@ -10,7 +10,7 @@
 #ifndef DATALOG_PARSER_H
 #define DATALOG_PARSER_H
 
-enum log_type {LOG1, LOG2};
+enum LogType {LOG1, LOG2};
 
 class DatalogParser {
 protected:

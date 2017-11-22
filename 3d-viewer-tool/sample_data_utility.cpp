@@ -6,6 +6,7 @@
 #include <chrono>
 #include <iostream>
 #include <fstream>
+#include <sstream>
 #include <vector>
 #include <GL/gl.h>
 #include <GL/glut.h>
@@ -24,26 +25,28 @@
     #define GetCurrentDir getcwd
 #endif
 
+using namespace glm;
+
 // CALLBACK FUNCTIONS
 void idle(void);
 void render(void);
 void timer(int value);
 void prgm_exit(int value, void *arg);
 
-using namespace glm;
-
 // OTHER FUNCTIONS
 bool parseArguments(int argc, char **argv);
-bool debug = false;
+bool readDataLine(float * p_data[9]);
 WorldObject* construct3DObject();
 std::string getRuntimeDirectory();
 
+
 // APPLICATION PARAMETERS
-std::ifstream stream;
+bool debug = false;
 unsigned int sample_rate = 100;
 unsigned int sample_count = 0;
 float inv_sample_rate = 1.0f / (float)sample_rate;
 float g = 0.0f;
+std::ifstream stream;
 WorldObject* obj = new RectangularPrism(1.0f, 0.25f, 1.0);
 glm::fvec3 velocity = glm::fvec3(0.0f, 0.0f, 0.0f);
 glm::fvec3 grav3 = glm::fvec3(0.0f, 0.0f, 0.0f);
@@ -55,7 +58,6 @@ int main(int argc, char* argv[]) {
     int displayWidth = 0, displayHeight = 0,
             windowWidth = 0, windowHeight = 0,
             windowPosX = 0, windowPosY = 0;
-//    obj->addChild(*gravVector);
     obj->doAxisRender(true);
 
     glutInit(&argc, argv);
@@ -133,10 +135,10 @@ void render(void) {
  */
 void timer(int value) {
     float data[9];
+    float* p_data = data;
     float time_interval = 0.008f;
     char buf[256];
-    if(!std::cin.eof()) {
-        for(int i = 0; i < 9; i++) std::cin >> data[i];
+    if(readDataLine(&p_data)) {
         sample_count++;
         // get intial values of accelerometer and initial acceleration-due-to-gravity
         glm::fvec3 a = glm::fvec3(data[3], data[5], data[4]);
@@ -165,7 +167,6 @@ void timer(int value) {
         // subtract gravitational acceleration from total acceleration
         grav3 = -glm::fvec3(gravity);
         glm::fvec3 acceleration = a + grav3;
-        auto accel_preinvlog = glm::fvec3(acceleration.x, acceleration.y, acceleration.z);
         // Calculate the inverse log of the magnitude of the acceleration vector
         // derived above. This is in an effort to combat the exponential drift
         // caused by integration.
@@ -196,6 +197,7 @@ void timer(int value) {
         obj->setLocalRotation(rotation);
         // print debug information
         if(debug) {
+            auto accel_preinvlog = glm::fvec3(a + grav3);
             std::cout << "sample:  " << sample_count << std::endl;
             std::cout << "  raw data:  ";
             for(auto val : data) std::cout << val << " ";
@@ -310,5 +312,36 @@ void prgm_exit(int value, void *arg) {
 
 WorldObject* construct3DObject() {
     WorldObject* result = new RectangularPrism(1.0f, 0.25f, 1.0);
+    return result;
+}
+
+/*!
+ * Retrieves IMU data from standard input.
+ * \attention Input is expected to be in the specified format,
+ * enumerated by \c DatalogParser::LogType. If data is not in any defined
+ * format, unexpected results may occur.
+ * @param p_data - \c float** - pointer to \c float array of minimum size \c 9
+ * @return \code bool \endcode
+ * Returns \c true if IMU
+ */
+bool readDataLine(float * p_data[9]) {
+    float* data = *p_data;
+    bool result = true;
+    char buffer[1024];
+    if(!std::cin.eof()) {
+        std::cin.getline(buffer, 1024, '\n');
+        std::stringstream sstream(buffer);
+
+        int i = 0;
+        try {
+            while(i < 9 && sstream >> data[i]) i++;
+        }
+        catch (std::ifstream::failure e) {
+            std::cerr << e.what() << std::endl;
+            result = false;
+        }
+
+    } else result = false;
+
     return result;
 }
