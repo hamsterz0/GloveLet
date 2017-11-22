@@ -10,19 +10,20 @@ git clone https://bitbucket.org/piedpiperuta/imu-tracking
 git fetch
 git checkout 3d-viewer-tool
 ```
-### Prerequisites
+### Prerequisites & Dependencies
 
 For building:
-- cmake 3.6.x or higher
+- [CMake 3.6.x or higher](https://cmake.org/download/)
 
 Libraries:
-- GLUT (OpenGL utility)
-- GLM (OpenGL Mathematics)
+- [FreeGLUT - OpenGL Utility](https://sourceforge.net/projects/freeglut/)
+- [GLM - OpenGL Mathematics](https://github.com/g-truc/glm/tags) 
 
-Installing the dependencies on Linux:
+##### Installing the dependencies on Linux (*tested only for Ubuntu 16.04*):
 ```
 sudo apt-get install freeglut3-dev libglm-dev cmake
 ```
+##### Installing the dependencies on Windows (*tested only for Windows 10*):
 *No instructions for Windows yet...*
 
 ### Building
