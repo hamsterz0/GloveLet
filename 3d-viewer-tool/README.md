@@ -34,9 +34,9 @@ make
 ```
 This will build and compile the `3d-viewer-utility`, `datalog-file-converter`, & `opengl-debugger` object files.
 
-### Object Files
+## Object Files
 
-#### 3d-viewer-utility
+### 3d-viewer-utility
 ##### Description
 This utility program takes 9-DoF IMU data as input and displays a rectangular prism as the 3D model analog for the IMU. IMU sensor data should roughly translate to motion of the 3D object being displayed.
 ##### Use
@@ -45,7 +45,7 @@ Run the program via a command line or terminal. Use the `-h` or `--help` option 
 <Gyro Pitch>  <Gyro Roll>  <Gyro Yaw>  <Acc X>  <Acc Y>  <Acc Z>  <Mag X>  <Mag Y>  <Mag Z>
 ```
 Where Gyro is the gyroscope, Acc is accelerometer, and Mag is magnitometer. Spaces will be ignored. If data is not in this format, unexpected results may occur.
-#### datalog-file-converter
+### datalog-file-converter
 ##### Description
 A program meant to convert recorded IMU datalog files. So far only supports one format type of datalog file.
 ##### Use
@@ -53,7 +53,7 @@ Run the program via a command line or terminal. An input file path and output fi
 ```
 ./datalog-file-converter <input path> <output path> 
 ```
-#### opengl-debugger
+### opengl-debugger
 ##### Description
 This program is only for debugging OpenGL rendering logic and demonstration purposes.
 ##### Use
