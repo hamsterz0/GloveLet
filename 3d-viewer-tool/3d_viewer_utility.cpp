@@ -68,7 +68,7 @@ int main(int argc, char* argv[]) {
         return 1;
 
     // determine line delimiter character of input file
-    delim = determineLineDelimiter();
+//    delim = determineLineDelimiter();
 
     // if debug, display 3D object local axis
     if(debug) obj->doAxisRender(true);
@@ -267,7 +267,8 @@ bool parseArguments(int argc, char **argv) {
             if(argv[i][0] == '-') {
                 std::string option(argv[i]);
                 std::string value;
-                if(option.compare("-d") == 0) debug = true;
+                if(option.compare("-d") == 0)
+                    debug = true;
                 else {
                     try {
                         value = std::string(argv[++i]); // the following option here will be value associated with previous option option
@@ -342,11 +343,11 @@ bool readDataLine(float * p_data[9]) {
     char buffer[1024];
     if(!std::cin.eof()) {
         std::cin.getline(buffer, 1024, delim);
-        std::stringstream sstream(buffer);
+        std::stringstream stringstream(buffer);
 
         int i = 0;
         try {
-            while(i < 9 && sstream >> data[i]) i++;
+            while(i < 9 && stringstream >> data[i]) i++;
         }
         catch (std::ifstream::failure e) {
             std::cerr << e.what() << std::endl;
