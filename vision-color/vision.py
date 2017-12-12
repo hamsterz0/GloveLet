@@ -12,6 +12,7 @@ import tkinter
 import threading
 import pyautogui
 
+
 class VisionTracking(object):
  
     THRESHOLD_MAX = 255
@@ -28,6 +29,7 @@ class VisionTracking(object):
         self.posX = 0
         self.posY = 0
         self.camera = None
+        pyautogui.FAILSAFE = False
 
     def __callback(self, value):
         """
@@ -103,7 +105,7 @@ class VisionTracking(object):
         # TODO: For now using the default camera.
         self.camera = cv2.VideoCapture(0)
 
-    def __findScreenSize():
+    def __findScreenSize(self):
         root = tkinter.Tk()
         root.withdraw()
         self.width, self.height = root.winfo_screenwidth(), root.winfo_screenheight()
@@ -125,11 +127,14 @@ class VisionTracking(object):
         upper_threshold = np.array(self.threshold[3:])
         mask = cv2.inRange(frameHSV, lower_threshold, upper_threshold)
         frame = self.__frameOperations(mask)
+
+        # print('W: {}, H: {}'.format(frame.shape[1], frame.shape[0]))
         
         contours = cv2.findContours(frame, 1, 2)
         cnt = contours[0]
+        M = cv2.moments(cnt)
         """
-        Type of data returned. 
+        Type of data returned by cv2.moments. 
         {'nu12': 2.429873851311728e-06, 'mu12': 1381809220.850586, 'm11': 25132807395.0, 
         'm30': 57909074053770.0, 'm01': 60077235.0, 
         'mu11': 85381234.61649323, 'm21': 10519418922885.0, 'nu21': 5.220555276767182e-07, 
@@ -141,7 +146,6 @@ class VisionTracking(object):
          'm00': 797895.0, 'mu30': 4572032.8203125}
 
         """
-        M = cv2.moments(cnt)
         moment00 = M['m00']
         moment01 = M['m01']
         moment10 = M['m10']
@@ -149,17 +153,17 @@ class VisionTracking(object):
         if moment00 > 20000 and moment00 < 20000000:
             self.posX = moment10/moment00
             self.posY = moment01/moment00
-            self.__moveMouse()
+            self.__move_mouse(frame)
 
         print('PosX: {}, PosY: {}'.format(self.posX, self.posY))
 
         cv2.imshow("Mask", mask)
         cv2.imshow("Frame", frame)
 
-    def __moveMouse(self):
+    def __move_mouse(self, frame):
         pyautogui.moveTo(self.posX, self.posY)
 
-    def getCoordinates(self):
+    def get_coordinates(self):
         """
         Main function from where the tracking would begin.
         The main function that the public can call. 
@@ -172,7 +176,7 @@ class VisionTracking(object):
         # Calling the vision tracking process every x seconds
         while True:
             self.__track()
-            # threading.Timer(self.SCREEN_UPDATE_TIME, ).start()
+            # threading.Timer(self.SCREEN_UPDATE_TIME, self.__track).start()
             if cv2.waitKey(1) & 0xFF is ord('q'):
                 break
         cv2.destroyAllWindows()
