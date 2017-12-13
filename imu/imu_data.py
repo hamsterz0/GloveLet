@@ -24,8 +24,8 @@ class ArduinoConnection(object):
   
   def send_data(self):
     if self.arduino == None:
-        print('[-] Could not receive any data from Arduino')
-        return
+      print('[-] Could not receive any data from Arduino')
+      return
     while True:
       data = self.arduino.readline()[:-2]
       if data:
