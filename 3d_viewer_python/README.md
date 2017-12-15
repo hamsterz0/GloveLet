@@ -29,7 +29,9 @@ $ sudo usermod -a -G dialout $USER
 **Restart the computer for the changes to take effect**
 
 ## Optional: Setup Arduino code
-If you want to change and upload a new script to the arduino, the steps are:
+
+If you want to change and upload a new script to the arduino, the steps are
+
 1. Download the Arduino IDE
 2. Go into the source folder for the IDE and look for a folder named **libraries**
 3. Add the **I2Cdev** and **MPU6050** folders in there.
