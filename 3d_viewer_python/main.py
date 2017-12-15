@@ -3,15 +3,9 @@ from OpenGL.GLU import *
 import pygame
 from pygame.locals import *
 import serial
-
-SCREEN_WIDTH = 640
-SCREEN_HEIGHT = 480
-
-ax, ay, az = 0.0, 0.0, 0.0
-gx, gy, gz = 0.0, 0.0, 0.0
+import numpy as np
 
 arduino = serial.Serial('/dev/ttyACM0', 38400, timeout=1)
-
 
 def init():
     glShadeModel(GL_SMOOTH)
@@ -21,38 +15,37 @@ def init():
     glDepthFunc(GL_LEQUAL)
     glHint(GL_PERSPECTIVE_CORRECTION_HINT, GL_NICEST)
 
-def resize():
-    global SCREEN_HEIGHT
-    global SCREEN_WIDTH
-    if SCREEN_HEIGHT==0:
-        SCREEN_HEIGHT=1
-    glViewport(0, 0, SCREEN_WIDTH, SCREEN_HEIGHT)
+def resize(width, height):
+    if height==0:
+        height=1
+    glViewport(0, 0, width, height)
     glMatrixMode(GL_PROJECTION)
     glLoadIdentity()
-    gluPerspective(45, 1.0*SCREEN_WIDTH/SCREEN_HEIGHT, 0.1, 100.0)
+    gluPerspective(45, 1.0*width/height, 0.1, 100.0)
     glMatrixMode(GL_MODELVIEW)
     glLoadIdentity()
 
 def read_data():
-    global ax, ay, az
-    global gx, gy, gz
     line = arduino.readline().decode("utf-8")
     data = line.split(' ')
+    accel, gyro = [], []
     if len(data) == 6:
-        ax, ay, az = float(data[0]), float(data[1]), float(data[2])
-        gx, gy, gz = float(data[3]), float(data[4]), float(data[5])
-    print('{} {} {} {} {} {}'.format(ax, ay, ax, gx, gy, gz))
+        accel = [float(data[0]), float(data[1]), float(data[2])]
+        gyro = [float(data[3])-362.00, float(data[4])-318.00, float(data[5])+570.00]
+        print('{} {} {} {} {} {}'.format(*accel, *gyro))
+    return gyro
 
-def draw():
-    global ax, ay, az
-    global gx, gy, gz
+# @arnav: Joseph, you will have to update this part for getting a better
+#         OpenGL GUI
+def draw(gx, gy, gz):
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);	
     glLoadIdentity()
-    glTranslatef(0, 0.0, -7.0)
 
-    glRotatef(az, 0.0, 1.0, 0.0)
-    glRotatef(ay, 1.0, 0.0, 0.0)
-    glRotatef(-1*ax, 0.0, 0.0, 1.0)
+    # Test the rotational transform here. 
+    glTranslatef(0, 0.0, -7.0)
+    glRotatef(gz, 0.0, 1.0, 0.0)
+    glRotatef(gy, 1.0, 0.0, 0.0)
+    glRotatef(-1*gx, 0.0, 0.0, 1.0)
 
     glBegin(GL_QUADS)	
     glColor3f(0.0,1.0,0.0)
@@ -93,15 +86,20 @@ def draw():
     glEnd()	 
 
 if __name__ == '__main__':
-    global SCREEN_WIDTH
-    global SCREEN_HEIGHT
+    width = 640
+    height = 480
+    ax, ay, az = 0.0, 0.0, 0.0
+    gx, gy, gz = 0.0, 0.0, 0.0
     pygame.init()
-    screen = pygame.display.set_mode((SCREEN_WIDTH, SCREEN_HEIGHT), OPENGL|DOUBLEBUF)
-    resize()
+    screen = pygame.display.set_mode((width, height), OPENGL|DOUBLEBUF)
+    resize(width, height)
     init()
     ticks = pygame.time.get_ticks()
     while True:
-        read_data()
-        draw()
+        gyro = read_data()
+        if len(gyro) != 3:
+            continue
+        [gx, gy, gz] = gyro #unpacking
+        draw(gx, gy, gz)
         pygame.display.flip()
 
