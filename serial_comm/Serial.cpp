@@ -1,4 +1,7 @@
-
+/*
+ * @author: Arnav Garg
+ * @date: December 15, 2017
+ */
 #include "Serial.h"
 #include <iostream>
 #include <string.h>
