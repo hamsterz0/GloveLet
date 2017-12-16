@@ -7,7 +7,13 @@
 
 int main() {
     Serial ser;
+    std::string line("");
     while(true) {
-        std::cout << ser.readData() << std::endl;
+        line = ser.read_data();
+        if (line.empty()) {
+            break;
+        } else {
+            std::cout << ser.read_data() << std::endl;
+        }
     }
 }
