@@ -8,10 +8,11 @@ class Serial {
 public:
     Serial();
     ~Serial();
-    std::string readData();
+    std::string read_data();
 
 private:
     int fd;
+    int data_count;
     int imu_check = 0;
     int flush_init();
 };

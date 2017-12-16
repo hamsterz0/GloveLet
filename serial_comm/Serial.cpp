@@ -11,6 +11,7 @@
 #include <unistd.h>
 
 Serial::Serial() {
+    this->data_count = 0;
     this->fd = open("/dev/ttyACM0", O_RDWR | O_NOCTTY | O_NDELAY);
     if (this->fd == -1) {
         perror("Error opening the port.");
@@ -40,19 +41,20 @@ int Serial::flush_init() {
     return (buffer[0] == '@') ? 1 : 0;
 }
 
-std::string Serial::readData() {
+std::string Serial::read_data() {
     std::string line("");
     if(this->fd == -1 || this->imu_check == 0) {
         perror("Cannot read any data.");
         return line;
     } else {
-        char* buffer = (char*) malloc(0x1 * sizeof(char));
+        char* buffer = (char*) calloc(1, sizeof(char));
         read(fd, buffer, 1);
-        while(buffer[0] != '*') {
+        while(buffer[0] != '\n') {
             line += buffer[0];
             memset(buffer, 0, sizeof buffer);
             read(this->fd, buffer, 1);
         }
+        this->data_count++;
     }
     return line;
 }
