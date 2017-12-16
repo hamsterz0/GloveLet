@@ -10,7 +10,7 @@ int main() {
     std::string line("");
     while(true) {
         line = ser.read_data();
-        if (line.size() < 1) {
+        if (line.empty()) {
             break;
         } else {
             std::cout << ser.read_data() << std::endl;
