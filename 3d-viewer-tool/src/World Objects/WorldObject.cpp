@@ -71,6 +71,9 @@ WorldObject::WorldObject(Mesh *mesh, glm::fvec3 &position, glm::fquat &quaternio
  * Render this object.
  */
 void WorldObject::render() {
+    GLfloat white[] = {1.0, 1.0, 1.0, 1.0};
+    glMaterialfv(GL_FRONT, GL_SPECULAR, white);
+
     mat4 rot_mat = mat4_cast(rot);
     mat4 local_rot_mat = mat4_cast(local_rot);
     auto next = first_child;
@@ -87,6 +90,7 @@ void WorldObject::render() {
     // render children of this object
     while( next != nullptr ) {
         glPushMatrix(); // separates rendering for each child.
+        glShadeModel(GL_SMOOTH);
         next->render();
         glPopMatrix();
         next = next->next_sibling;
@@ -94,11 +98,13 @@ void WorldObject::render() {
 
     if(doRenderAxis) {
         glDisable(GL_DEPTH_TEST);
+        glDisable(GL_LIGHTING);
         glClear(GL_DEPTH_BUFFER_BIT);
         axis->setAxisLength(axis_length);
         axis->render(lines);
         axis->setAxisLength(DEFAULT_AXIS_LEN);
         glEnable(GL_DEPTH_TEST);
+        glEnable(GL_LIGHTING);
     }
     glPopMatrix();
 }

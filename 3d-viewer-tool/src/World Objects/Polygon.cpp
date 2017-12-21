@@ -38,8 +38,12 @@ Polygon::Polygon(std::vector<Vertex*> vertices)
  * @param showNormal - \c bool - *optional* displays polygon normal vector when \c true
  */
 void Polygon::render(RenderMode mode, bool showNormal) {
+    GLfloat matColor[] = {color.x, color.y, color.z, 1.0};
     glBegin(mode);
     glColor3f(color.x, color.y, color.z);
+    glMaterialfv(GL_FRONT, GL_AMBIENT, matColor);
+    glMaterialfv(GL_FRONT, GL_DIFFUSE, matColor);
+    glMaterialf(GL_FRONT, GL_SHININESS, 60.0);
     for(Vertex* v : vertices) {
         glVertex3f(v->getPos().x, v->getPos().y, v->getPos().z);
     }

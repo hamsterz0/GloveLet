@@ -63,6 +63,17 @@ int main(int argc, char* argv[]) {
     glDepthFunc(GL_LEQUAL);     // Instructs GL functions to render depth, not orthogonal
     glHint(GL_PERSPECTIVE_CORRECTION_HINT, GL_NICEST);
     glutSetKeyRepeat(GLUT_KEY_REPEAT_OFF);
+    // Set up lighting
+    glLightModeli(GL_LIGHT_MODEL_LOCAL_VIEWER, GL_TRUE);
+    glEnable(GL_LIGHTING);
+    glEnable(GL_LIGHT0);
+    // Set lighting intensity and color
+    GLfloat ambientLight[] = {0.1, 0.1, 0.1, 1.0};
+    GLfloat diffuseLight[] = {0.9, 0.9, 0.9, 1.0};
+    GLfloat specularLight[] = {1.0, 1.0, 1.0, 1.0};
+    glLightfv(GL_LIGHT0, GL_AMBIENT, ambientLight);
+    glLightfv(GL_LIGHT0, GL_DIFFUSE, diffuseLight);
+    glLightfv(GL_LIGHT0, GL_SPECULAR, specularLight);
     // Callback to the drawing function
     glutDisplayFunc(draw);
     // Callback to special key handler function
@@ -80,18 +91,25 @@ void draw(void) {
     // Background color
     glClear(GL_COLOR_BUFFER_BIT|GL_DEPTH_BUFFER_BIT);
 
+    glEnable(GL_DEPTH_TEST);
+
     // reset transformations
     glMatrixMode(GL_PROJECTION);
     glLoadIdentity();
     glFrustum(-2.67, 2.67, -1.5, 1.5, 5.0, 600.0);
     glMatrixMode(GL_MODELVIEW);
     glLoadIdentity();
+    GLfloat lightPosition[] = {0.0f, 5.0f, -15.0f, 1.0f};
+    glLightfv(GL_LIGHT0, GL_POSITION, lightPosition);
     glTranslatef(0.0f,0.0f,-15.0f);
 
+    //    glDisable(GL_LIGHTING);
     glPushMatrix();
     worldAxis->render();
     test_obj[0]->render();
     glPopMatrix();
+//    glEnable(GL_LIGHTING);
+
 
     // Draw order
     glFlush();

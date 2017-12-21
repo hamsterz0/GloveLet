@@ -3,6 +3,8 @@ project(3d-viewer-tool)
 
 set(CMAKE_CXX_STANDARD 11)
 
+set(CXX_PROPERTIES "-fPIC")
+set(CMAKE_CXX_FLAGS "${CMAKE_COMPILE_FLAGS} ${CXX_PROPERTIES}")
 set(SOURCE_FILES
         "src/World Objects/Polygon.cpp"
         "src/World Objects/Vertex.cpp"
@@ -15,8 +17,10 @@ set(HEADERS
         "src/World Objects/Axis.h"
         "src/World Objects/Mesh.h"
         "src/Template Objects/TemplateObjects.h")
-add_executable(opengl-debugger opengl-debugger-utility.cpp ${SOURCE_FILES} ${HEADERS})
+add_executable(opengl-debugger opengl_debugger_utility.cpp ${SOURCE_FILES} ${HEADERS})
+set_target_properties(opengl-debugger PROPERTIES COMPILE_FLAGS ${CXX_PROPERTIES})
 target_link_libraries(opengl-debugger -lGL -lglut)
+
 
 set(SAMPLE_DATA_VIEWER_SOURCE
         "src/World Objects/Polygon.cpp"

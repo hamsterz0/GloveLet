@@ -32,7 +32,6 @@
 
 #ifndef WORLDOBJECT_H
 #define WORLDOBJECT_H
-
 /*!
  * Provides generic, extensible 3-dimensional object class.
  */
