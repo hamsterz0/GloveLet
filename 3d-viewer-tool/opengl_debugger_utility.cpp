@@ -3,6 +3,7 @@
 #include <iostream>
 #include <GL/glut.h>
 #include <glm/glm.hpp>
+#include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/type_ptr.hpp>
 #include "src/Template Objects/TemplateObjects.h"
 
@@ -30,6 +31,9 @@ glm::vec3 obj_pos(0.0f, 0.0f, 0.0f);
 glm::vec2 mouse_prev(0.0f, 0.0f);
 glm::vec2 mouse_chg(0.0f, 0.0f);
 glm::vec2 mouse_pos(0.0f, 0.0f);
+glm::mat4 view = glm::lookAt(glm::vec3(0.0f, 0.0f, 15.0f),
+                             glm::vec3(0.0f, 0.0f, 0.0f),
+                             glm::vec3(0.0f, 1.0f, 0.0f));
 
 glm::fquat q = fquat(fvec3(0.0f, 0.0f, radians(1.0f)));
 glm::fquat lq = fquat(fvec3(radians(1.0f), 0.0f, 0.0f));
@@ -65,11 +69,10 @@ int main(int argc, char* argv[]) {
     glutSetKeyRepeat(GLUT_KEY_REPEAT_OFF);
     // Set up lighting
     glLightModeli(GL_LIGHT_MODEL_LOCAL_VIEWER, GL_TRUE);
-    glEnable(GL_LIGHTING);
     glEnable(GL_LIGHT0);
     // Set lighting intensity and color
-    GLfloat ambientLight[] = {0.1, 0.1, 0.1, 1.0};
-    GLfloat diffuseLight[] = {0.9, 0.9, 0.9, 1.0};
+    GLfloat ambientLight[] = {0.0, 0.0, 0.0, 1.0};
+    GLfloat diffuseLight[] = {1.0, 1.0, 1.0, 1.0};
     GLfloat specularLight[] = {1.0, 1.0, 1.0, 1.0};
     glLightfv(GL_LIGHT0, GL_AMBIENT, ambientLight);
     glLightfv(GL_LIGHT0, GL_DIFFUSE, diffuseLight);
@@ -96,20 +99,20 @@ void draw(void) {
     // reset transformations
     glMatrixMode(GL_PROJECTION);
     glLoadIdentity();
-    glFrustum(-2.67, 2.67, -1.5, 1.5, 5.0, 600.0);
+    glFrustum(-3.17, 3.17, -1.78, 1.78, 8.0, 600.0);
     glMatrixMode(GL_MODELVIEW);
     glLoadIdentity();
     GLfloat lightPosition[] = {0.0f, 5.0f, -15.0f, 1.0f};
     glLightfv(GL_LIGHT0, GL_POSITION, lightPosition);
-    glTranslatef(0.0f,0.0f,-15.0f);
-
-    //    glDisable(GL_LIGHTING);
+    glEnable(GL_LIGHTING);
     glPushMatrix();
+    glMultMatrixf(glm::value_ptr(view));
+
+//    glDisable(GL_LIGHTING);
+//    glPushMatrix();
     worldAxis->render();
     test_obj[0]->render();
     glPopMatrix();
-//    glEnable(GL_LIGHTING);
-
 
     // Draw order
     glFlush();
@@ -268,3 +271,5 @@ void createTestObject(WorldObject * obj[], size_t sz) {
 //    obj[0]->getMesh()->showVertexNormals(true);
 //    obj[0]->setRenderMode(wireframe);
 }
+
+

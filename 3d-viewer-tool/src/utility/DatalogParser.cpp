@@ -34,14 +34,14 @@ std::vector<std::vector<float>> DatalogParserLog1::parse(std::string file_path) 
             if(regex_match(str, data_line_expr)) {
                 std::vector<float> m = get_data_line(str);
                 std::vector<float> d(9);
-                // Gyroscope
-                d[0] = m[7]; // Gyro Pitch
-                d[1] = m[8]; // Gyro Roll
-                d[2] = m[9]; // Gyro Yaw
                 // Accelerometer
-                d[3] = m[4]; // AccX
-                d[4] = m[5]; // AccY
-                d[5] = m[6]; // AccZ
+                d[0] = m[4]; // AccX
+                d[1] = m[5]; // AccY
+                d[2] = m[6]; // AccZ
+                // Gyroscope
+                d[3] = m[7]; // Gyro Pitch
+                d[4] = m[8]; // Gyro Roll
+                d[5] = m[9]; // Gyro Yaw
                 // Magnetometer
                 d[6] = m[1]; // MagX
                 d[7] = m[2]; // MagY

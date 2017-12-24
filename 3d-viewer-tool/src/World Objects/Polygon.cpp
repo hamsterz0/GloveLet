@@ -49,11 +49,14 @@ void Polygon::render(RenderMode mode, bool showNormal) {
     }
     glEnd();
     if(showNormal) {
+        bool isLightEnabled = glIsEnabled(GL_LIGHTING);
+        if(isLightEnabled) glDisable(GL_LIGHTING);
         glBegin(lines);
         glColor3f(1.0f, 1.0f, 0.0f);
         glVertex3f(centroid.x, centroid.y, centroid.z);
         glVertex3f(centroid.x - 0.5f*normal.x, centroid.y - 0.5f*normal.y, centroid.z - 0.5f*normal.z);
         glEnd();
+        if(isLightEnabled) glEnable(GL_LIGHTING);
     }
 }
 /*!

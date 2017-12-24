@@ -98,13 +98,11 @@ void WorldObject::render() {
 
     if(doRenderAxis) {
         glDisable(GL_DEPTH_TEST);
-        glDisable(GL_LIGHTING);
         glClear(GL_DEPTH_BUFFER_BIT);
         axis->setAxisLength(axis_length);
         axis->render(lines);
         axis->setAxisLength(DEFAULT_AXIS_LEN);
         glEnable(GL_DEPTH_TEST);
-        glEnable(GL_LIGHTING);
     }
     glPopMatrix();
 }

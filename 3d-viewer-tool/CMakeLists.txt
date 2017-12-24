@@ -31,7 +31,11 @@ set(SAMPLE_DATA_VIEWER_SOURCE
         "src/Template Objects/TemplateObjects.cpp"
         "src/utility/MadgwickAHRS/MadgwickAHRS.cpp"
 #        "src/utility/MahonyAHRS/MahonyAHRS.cpp"
-        "src/utility/ahrs_common.h" src/utility/debug.cpp src/utility/debug.h)
+        "src/utility/ahrs_common.h"
+        src/utility/debug.cpp
+        src/utility/debug.h
+        src/utility/Serial.cpp
+        src/utility/Serial.h)
 add_executable(3d-viewer-utility 3d_viewer_utility.cpp ${SAMPLE_DATA_VIEWER_SOURCE})
 target_link_libraries(3d-viewer-utility -lGL -lglut)
 
@@ -39,3 +43,8 @@ set(DATALOG_FILE_CONVERTER_SOURCE
         "src/utility/DatalogParser.cpp"
         "src/utility/DatalogReader.cpp")
 add_executable(datalog-file-converter datalog_file_converter.cpp ${DATALOG_FILE_CONVERTER_SOURCE})
+
+set(SERIAL_TEST_SOURCE
+        src/utility/Serial.cpp
+        src/utility/Serial.h)
+add_executable(serial-test serial_test.cpp ${SERIAL_TEST_SOURCE})

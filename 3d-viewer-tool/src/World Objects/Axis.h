@@ -20,6 +20,7 @@ private:
 public:
     Axis(float axis_length);
     Axis();
+    virtual void render(RenderMode renderMode = polygon);
     void setAxisLength(float axis_length);
 };
 

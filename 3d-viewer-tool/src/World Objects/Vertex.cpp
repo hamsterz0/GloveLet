@@ -14,6 +14,8 @@ Vertex::Vertex(glm::fvec3 position) {
  * Renders the normal vector of the \c Vertex as a cyan line.
  */
 void Vertex::renderNormal() {
+    bool isLightEnabled = glIsEnabled(GL_LIGHTING);
+    if(isLightEnabled) glDisable(GL_LIGHTING);
     glPushMatrix();
     glBegin(lines);
     glColor3f(0.0f, 1.0f, 1.0f);
@@ -21,6 +23,7 @@ void Vertex::renderNormal() {
     glVertex3f(pos.x - 0.25f*normal.x, pos.y - 0.25f*normal.y, pos.z - 0.25f*normal.z);
     glEnd();
     glPopMatrix();
+    if(isLightEnabled) glEnable(GL_LIGHTING);
 }
 /*!
  * Get position vector.

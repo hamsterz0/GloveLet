@@ -56,6 +56,7 @@ protected:
     glm::fvec3 pos;
     /*! the vertex normal, used in lighting */
     glm::fvec3 normal;
+    unsigned int vbo;
 private:
     void addPolygonReference(Polygon* poly);
     void removePolygonReference(Polygon* poly);
@@ -77,6 +78,7 @@ class Polygon {
     friend class Mesh;
 protected:
     // protected attributes
+    unsigned int vbo;
     std::vector<Vertex*> vertices;
     Polygon* next_polygon = nullptr;
     Polygon* prev_polygon = nullptr;
@@ -114,13 +116,12 @@ public:
 
 class Mesh {
 protected:
+    bool showPolyNorms = false;
+    bool showVertNorms = false;
     std::set<Vertex*> vertices;
     Polygon* first_polygon = nullptr;
     Polygon* last_polygon = nullptr;
 private:
-    // private attributes
-    bool showPolyNorms = false;
-    bool showVertNorms = false;
     // private friend functions
     friend void Polygon::setNextPolygon(Polygon *poly);
     friend void Polygon::setPrevPolygon(Polygon *poly);
@@ -130,7 +131,7 @@ public:
     ~Mesh();
     Mesh(std::vector<Polygon*> polygons);
     Mesh(Polygon* first_polygon);
-    void render(RenderMode render_mode = polygon);
+    virtual void render(RenderMode render_mode = polygon);
     void addPolygon(Polygon *poly);
     void showPolygonNormals(bool b);
     void showVertexNormals(bool b);

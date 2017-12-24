@@ -71,3 +71,17 @@ void Axis::setAxisLength(float axis_length) {
     y_axis->setPos(y);
     z_axis->setPos(z);
 }
+/*!
+ * Renders mesh using current render mode.
+ */
+void Axis::render(RenderMode render_mode) {
+    bool isLightEnabled = glIsEnabled(GL_LIGHTING);
+    if(isLightEnabled) glDisable(GL_LIGHTING);
+    auto next_poly = first_polygon;
+    if(showVertNorms) for(auto v : vertices) v->renderNormal();
+    while(next_poly != nullptr) {
+        next_poly->render(render_mode, showPolyNorms);
+        next_poly = next_poly->getNextPolygon();
+    }
+    if(isLightEnabled) glEnable(GL_LIGHTING);
+}
