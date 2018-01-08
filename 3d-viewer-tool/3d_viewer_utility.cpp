@@ -24,8 +24,28 @@
     #define GetCurrentDir _getcwd
 #else
     #include <unistd.h>
-    #define GetCurrentDir getcwd
+#define GetCurrentDir getcwd
 #endif
+
+#ifndef SAMPLE01
+#define SAMPLE01_DOF 9
+#define SAMPLE01_ACC_BITWIDTH 12
+#define SAMPLE01_ACC_VREF 3.3f
+#define SAMPLE01_ACC_VZEROGX 1.5f
+#define SAMPLE01_ACC_VZEROGY 1.5f
+#define SAMPLE01_ACC_VZEROGZ 1.5f
+#define SAMPLE01_ACC_SENSITIVITY 4096
+#endif //SAMPLE01
+
+#ifndef MPU6050
+#define MPU6050_DOF 6
+#define MPU6050_ACC_BITWIDTH 16
+#define MPU6050_ACC_VREF 1.71f
+#define MPU6050_ACC_VZEROGX 1.5625f
+#define MPU6050_ACC_VZEROGY 1.5625f
+#define MPU6050_ACC_VZEROGZ 2.5f
+#define MPU6050_ACC_SENSITIVITY 16384.0f
+#endif //MPU6050
 
 using namespace glm;
 namespace chrono = std::chrono;
@@ -39,7 +59,6 @@ void prgm_exit(int value, void *arg);
 
 // OTHER FUNCTIONS
 void process_data(float data[]);
-char determineLineDelimiter();
 bool parseArguments(int argc, char **argv);
 bool readDataLine(float * p_data[]);
 WorldObject* construct3DObject();
@@ -49,7 +68,14 @@ std::string getRuntimeDirectory();
 bool debug = false;
 bool isSerial = false;
 unsigned int sample_rate = 125;
-unsigned short dof = 9;
+unsigned short dof = SAMPLE01_DOF;
+unsigned short adc_bit_width = SAMPLE01_ACC_BITWIDTH;
+float vref = SAMPLE01_ACC_VREF;
+float vzerogx = SAMPLE01_ACC_VZEROGX;
+float vzerogy = SAMPLE01_ACC_VZEROGY;
+float vzerogz = SAMPLE01_ACC_VZEROGZ;
+float sensitivity = SAMPLE01_ACC_SENSITIVITY;
+
 
 // PROGRAM GLOBALS
 char delim = '\n';
@@ -76,9 +102,6 @@ int main(int argc, char* argv[]) {
     if(!parseArguments(argc, argv))
         return 1;
 
-    // determine line delimiter character of input file
-//    delim = determineLineDelimiter();
-
     // if debug, display 3D object local axis
     if(debug) obj->doAxisRender(true);
 
@@ -94,8 +117,8 @@ int main(int argc, char* argv[]) {
     displayWidth = glutGet(GLUT_SCREEN_WIDTH);
     displayHeight = glutGet(GLUT_SCREEN_HEIGHT);
     // Fixes an issue on where the display width/height of a multi-monitor setup
-    // is calculated as a total of the width/height of all display monitors. Without the below,
-    // the result is a window with an aspect ratio stretched across multiple monitors.
+    // is calculated as a total of the width/height of all display monitors.
+    // Without the below, the result is a window with an aspect ratio stretched across multiple monitors.
     if((int)(displayWidth * height_aspect) > displayHeight) displayWidth = (int)(displayHeight * width_aspect);
     else if((int)(displayHeight * width_aspect) > displayWidth) displayHeight = (int)(displayWidth * width_aspect);
 
@@ -195,6 +218,50 @@ void timer(int value) {
 }
 
 void process_data(float data[]) {
+    if(initial == nullptr) {
+        initial = new chrono::system_clock::time_point;
+        current = new chrono::system_clock::time_point;
+        *initial = chrono::system_clock::now();
+        *current = *initial;
+    } else *current = chrono::system_clock::now();
+    chrono::duration<float> time_diff = *current - *initial;
+    float time_interval = inv_sample_rate;
+    if(isSerial) time_interval = time_diff.count();\
+    // calc IMU accelerometer values
+    glm::fvec3 a = glm::fvec3(data[0], data[1], data[2]);
+    int bit_width = (1 << adc_bit_width) - 1;
+    a.x = ((data[0] * vref / bit_width) - vzerogx) / sensitivity;
+    a.y = ((data[0] * vref / bit_width) - vzerogy) / sensitivity;
+    a.z = ((data[0] * vref / bit_width) - vzerogz) / sensitivity;
+    glm::fvec3 a_norm = glm::normalize(a);
+    if(glm::length(gravity) == 0.0f) {
+        // Compute acceleration due to gravity.
+        // Assumes IMU isn't moving in the first sample
+        g = glm::length(a);
+        gravity = glm::fvec4(a, 1.0f);
+    }
+    // FIXME Put in computation for rotation and heading.
+    glm::fvec3 acceleration = a - gravity;
+    if(debug) {
+        auto accel_preinvlog = glm::fvec3(a + grav3);
+        std::cout << "sample:  " << sample_count << std::endl;
+        std::cout << "  raw data:  ";
+        for(size_t i = 0; i < dof; i++) {
+            std::cout << data[i] << " ";
+        }
+        std::cout << std::endl;
+        std::cout << "  acceleration:  " <<
+                  acceleration.x << " " <<
+                  acceleration.y << " " <<
+                  acceleration.z << std::endl;
+        std::cout << "  accel_preinvlog:  " <<
+                  accel_preinvlog.x << " " <<
+                  accel_preinvlog.y << " " <<
+                  accel_preinvlog.z << std::endl;
+    }
+}
+
+void process_data_OLD(float data[]) {
     if(initial == nullptr) {
         initial = new chrono::system_clock::time_point;
         current = new chrono::system_clock::time_point;
@@ -383,6 +450,28 @@ bool parseArguments(int argc, char **argv) {
                         } catch (std::system_error e) {
                             std::cerr << e.what() << std::endl;
                             result = false;
+                        }
+                    } else if(option.compare("--imu") == 0) {
+                        if(value.compare("sample01") == 0) {
+                            dof = SAMPLE01_DOF;
+                            adc_bit_width = SAMPLE01_ACC_BITWIDTH;
+                            vref = SAMPLE01_ACC_VREF;
+                            vzerogx = SAMPLE01_ACC_VZEROGX;
+                            vzerogy = SAMPLE01_ACC_VZEROGY;
+                            vzerogz = SAMPLE01_ACC_VZEROGZ;
+                            sensitivity = SAMPLE01_ACC_SENSITIVITY;
+                        } else if(value.compare("mpu6050")) {
+                            dof = MPU6050_DOF;
+                            adc_bit_width = MPU6050_ACC_BITWIDTH;
+                            vref = MPU6050_ACC_VREF;
+                            vzerogx = MPU6050_ACC_VZEROGX;
+                            vzerogy = MPU6050_ACC_VZEROGY;
+                            vzerogz = MPU6050_ACC_VZEROGZ;
+                            sensitivity = MPU6050_ACC_SENSITIVITY;
+                        } else {
+                            std::cerr << "ERR: Available options for IMU are: " << std::endl
+                                      << "sample01" << std::endl
+                                      << "mpu6050" << std::endl;
                         }
                     }
                 }
