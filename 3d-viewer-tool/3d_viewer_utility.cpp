@@ -16,6 +16,7 @@
 #include "src/Template Objects/TemplateObjects.h"
 #include "src/utility/Serial.h"
 #include "src/utility/debug.h"
+#include "src/utility/DataTimeSeries.h"
 //#include "src/utility/MadgwickAHRS/MadgwickAHRS.h"
 //#include "src/utility/MahonyAHRS/MahonyAHRS.h"
 
@@ -34,18 +35,26 @@
 #define SAMPLE01_ACC_VZEROGX 1.5f
 #define SAMPLE01_ACC_VZEROGY 1.5f
 #define SAMPLE01_ACC_VZEROGZ 1.5f
-#define SAMPLE01_ACC_SENSITIVITY 4096
+#define SAMPLE01_ACC_SENSITIVITY 4096.0f
 #endif //SAMPLE01
 
 #ifndef MPU6050
 #define MPU6050_DOF 6
 #define MPU6050_ACC_BITWIDTH 16
-#define MPU6050_ACC_VREF 1.71f
-#define MPU6050_ACC_VZEROGX 1.5625f
-#define MPU6050_ACC_VZEROGY 1.5625f
-#define MPU6050_ACC_VZEROGZ 2.5f
+//#define MPU6050_ACC_VREF 1.71f
+#define MPU6050_ACC_VREF 3.46f
+#define MPU6050_ACC_VZEROGX 1.09375f
+#define MPU6050_ACC_VZEROGY 1.09375f
+#define MPU6050_ACC_VZEROGZ 1.875f
 #define MPU6050_ACC_SENSITIVITY 16384.0f
+//#define MPU6050_ACC_SENSITIVITY 8192.0f
+//#define MPU6050_ACC_SENSITIVITY 4096.0f
+//#define MPU6050_ACC_SENSITIVITY 2048.0f
 #endif //MPU6050
+
+#ifndef SERIES_SIZE
+#define SERIES_SIZE 64
+#endif //SERIES_SIZE
 
 using namespace glm;
 namespace chrono = std::chrono;
@@ -57,7 +66,7 @@ void serial_timer(int value);
 void idle(void);
 void prgm_exit(int value, void *arg);
 
-// OTHER FUNCTIONS
+// OTHER FUNCTIONSdd
 void process_data(float data[]);
 bool parseArguments(int argc, char **argv);
 bool readDataLine(float * p_data[]);
@@ -81,15 +90,18 @@ float sensitivity = SAMPLE01_ACC_SENSITIVITY;
 char delim = '\n';
 unsigned int sample_count = 0;
 float inv_sample_rate = 1.0f / (float)sample_rate;
-float g = 0.0f;
+float g_mag = 0.0f;
 std::ifstream stream;
 Serial *serial;
+DataTimeSeries<glm::fvec3, SERIES_SIZE> accTimeSeries = DataTimeSeries<glm::fvec3, SERIES_SIZE>();
+DataTimeSeries<glm::fvec3, SERIES_SIZE> gyroTimeSeries = DataTimeSeries<glm::fvec3, SERIES_SIZE>();
 WorldObject* obj = new RectangularPrism(1.0f, 0.25f, 1.0);
 glm::fvec3 velocity = glm::fvec3(0.0f, 0.0f, 0.0f);
 glm::fvec3 grav3 = glm::fvec3(0.0f, 0.0f, 0.0f);
 glm::fvec4 gravity = glm::fvec4(0.0f, 0.0f, 0.0f, 0.0f);
 chrono::time_point<chrono::system_clock> *initial = nullptr;
 chrono::time_point<chrono::system_clock> *current = nullptr;
+int count = 0;
 
 int main(int argc, char* argv[]) {
     // on-exit callback function
@@ -166,7 +178,7 @@ void render(void) {
     // Reset model transformation
     glMatrixMode(GL_MODELVIEW);
     glLoadIdentity();
-//    glTranslatef(0.0f,-10.0f,-70.0f);
+    glTranslatef(0.0f,-10.0f,-70.0f);
 
     // do rendering
     obj->render();
@@ -184,19 +196,14 @@ void serial_timer(int value) {
     if(!line.empty()) {
         size_t i = 0;
         try {
-//            if(debug) std::cout << line << std::endl;
             while(i < dof && stringstream >> data[i]) {
-//                if(debug) std::cout << data[i] << " ";
                 i++;
             }
-//            if(debug) std::cout << std::endl;
         }
         catch (std::ifstream::failure e) {
             std::cerr << e.what() << std::endl;
         }
         process_data(data);
-    } else {
-        std::cout << "WTF?!" << std::endl;
     }
     glutTimerFunc((unsigned int)value, serial_timer, value);
     glutPostRedisplay();
@@ -218,6 +225,7 @@ void timer(int value) {
 }
 
 void process_data(float data[]) {
+    count++;
     if(initial == nullptr) {
         initial = new chrono::system_clock::time_point;
         current = new chrono::system_clock::time_point;
@@ -226,38 +234,64 @@ void process_data(float data[]) {
     } else *current = chrono::system_clock::now();
     chrono::duration<float> time_diff = *current - *initial;
     float time_interval = inv_sample_rate;
-    if(isSerial) time_interval = time_diff.count();\
-    // calc IMU accelerometer values
-    glm::fvec3 a = glm::fvec3(data[0], data[1], data[2]);
+    if(isSerial) time_interval = time_diff.count();
+    // convert raw IMU accelerometer values & add to accelerometer time series
+    glm::fvec3 a = glm::fvec3(0, 0, 0);
     int bit_width = (1 << adc_bit_width) - 1;
-    a.x = ((data[0] * vref / bit_width) - vzerogx) / sensitivity;
-    a.y = ((data[0] * vref / bit_width) - vzerogy) / sensitivity;
-    a.z = ((data[0] * vref / bit_width) - vzerogz) / sensitivity;
-    glm::fvec3 a_norm = glm::normalize(a);
-    if(glm::length(gravity) == 0.0f) {
-        // Compute acceleration due to gravity.
-        // Assumes IMU isn't moving in the first sample
-        g = glm::length(a);
-        gravity = glm::fvec4(a, 1.0f);
-    }
-    // FIXME Put in computation for rotation and heading.
-    glm::fvec3 acceleration = a - gravity;
-    if(debug) {
-        auto accel_preinvlog = glm::fvec3(a + grav3);
-        std::cout << "sample:  " << sample_count << std::endl;
-        std::cout << "  raw data:  ";
-        for(size_t i = 0; i < dof; i++) {
-            std::cout << data[i] << " ";
+    a.x = ((data[0] * vref) - vzerogx) / sensitivity;
+    a.y = ((data[2] * vref) - vzerogy) / sensitivity;
+    a.z = ((data[1] * vref * 8) - vzerogz) / sensitivity;
+    accTimeSeries.add(a);
+    // convert raw IMU gyroscope values & add to gyroscope time series
+    glm::fvec3 rot_euler = glm::fvec3(0, 0, 0);
+    int k = (1 << adc_bit_width);
+    rot_euler.x = ((data[3] * vref) - vzerogx) / sensitivity;
+    rot_euler.y = ((data[4] * vref) - vzerogy) / sensitivity;
+    rot_euler.z = ((data[5] * vref) - vzerogz) / sensitivity;
+    gyroTimeSeries.add(rot_euler);
+    if(count > SERIES_SIZE) {
+        // acceleration pre-processing
+        glm::fvec3 acceleration = accTimeSeries.calcEWMA();
+        glm::fvec3 a_norm = glm::normalize(acceleration);
+        if(glm::length(gravity) == 0.0f && count >= 10) {
+            // Compute acceleration due to gravity.
+            // Assumes IMU isn't moving in the first sample
+            g_mag = glm::length(acceleration);
+            gravity = glm::fvec4(acceleration, 0.0f);
         }
-        std::cout << std::endl;
-        std::cout << "  acceleration:  " <<
-                  acceleration.x << " " <<
-                  acceleration.y << " " <<
-                  acceleration.z << std::endl;
-        std::cout << "  accel_preinvlog:  " <<
-                  accel_preinvlog.x << " " <<
-                  accel_preinvlog.y << " " <<
-                  accel_preinvlog.z << std::endl;
+        acceleration -= glm::fvec3(gravity);
+        acceleration *= time_interval * 10;
+        // rotation pre-processing
+        rot_euler = gyroTimeSeries.calcEWMA();
+        rot_euler *= time_interval * 2;
+        glm::fquat rot = glm::fquat( rot_euler );
+        // calculate velocity
+        velocity = acceleration; // assumes velocity is initially zero
+        // update 3D object's position and rotation
+        obj->move(velocity);
+        obj->rotate(rot);
+        *initial = chrono::system_clock::now();
+        if (debug) {
+//          std::cout << a.x << " " << a.y << " " << a.z << std::endl;
+//            std::cout << velocity.x << " " << velocity.y << " " << velocity.z << std::endl;
+            std::cout << acceleration.x << " " << acceleration.y << " " << acceleration.z << std::endl;
+//            std::cout << rot_euler.x << " " << rot_euler.y << " " << rot_euler.z << std::endl;
+//          auto accel_preinvlog = glm::fvec3(a + grav3);
+//          std::cout << "sample:  " << sample_count << std::endl;
+//          std::cout << "  raw data:  ";
+//          for(size_t i = 0; i < dof; i++) {
+//                std::cout << data[i] << " ";
+//          }
+//          std::cout << std::endl;
+//          std::cout << "  acceleration:  " <<
+//                  acceleration.x << " " <<
+//                  acceleration.y << " " <<
+//                  acceleration.z << std::endl;
+//          std::cout << "  accel_preinvlog:  " <<
+//                  accel_preinvlog.x << " " <<
+//                  accel_preinvlog.y << " " <<
+//                  accel_preinvlog.z << std::endl;
+        }
     }
 }
 
@@ -277,7 +311,7 @@ void process_data_OLD(float data[]) {
     if(glm::length(gravity) == 0.0f) {
         // Compute acceleration due to gravity.
         // Assumes IMU isn't moving in first sample.
-        g = glm::length(a);
+        g_mag = glm::length(a);
         gravity = glm::fvec4(a, 1.0f);
     }
     // get quaternion from gyroscope data
@@ -460,7 +494,8 @@ bool parseArguments(int argc, char **argv) {
                             vzerogy = SAMPLE01_ACC_VZEROGY;
                             vzerogz = SAMPLE01_ACC_VZEROGZ;
                             sensitivity = SAMPLE01_ACC_SENSITIVITY;
-                        } else if(value.compare("mpu6050")) {
+                        } else if(value.compare("mpu6050") == 0) {
+                            isSerial = true;
                             dof = MPU6050_DOF;
                             adc_bit_width = MPU6050_ACC_BITWIDTH;
                             vref = MPU6050_ACC_VREF;

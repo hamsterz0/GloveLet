@@ -22,7 +22,7 @@ set_target_properties(opengl-debugger PROPERTIES COMPILE_FLAGS ${CXX_PROPERTIES}
 target_link_libraries(opengl-debugger -lGL -lglut)
 
 
-set(SAMPLE_DATA_VIEWER_SOURCE
+set(3D_VIEWER_UTILITY_SOURCE
         "src/World Objects/Polygon.cpp"
         "src/World Objects/Vertex.cpp"
         "src/World Objects/WorldObject.cpp"
@@ -35,8 +35,10 @@ set(SAMPLE_DATA_VIEWER_SOURCE
         src/utility/debug.cpp
         src/utility/debug.h
         src/utility/Serial.cpp
-        src/utility/Serial.h)
-add_executable(3d-viewer-utility 3d_viewer_utility.cpp ${SAMPLE_DATA_VIEWER_SOURCE})
+        src/utility/Serial.h
+        src/utility/DataTimeSeries.cpp
+        src/utility/DataTimeSeries.h)
+add_executable(3d-viewer-utility 3d_viewer_utility.cpp ${3D_VIEWER_UTILITY_SOURCE})
 target_link_libraries(3d-viewer-utility -lGL -lglut)
 
 set(DATALOG_FILE_CONVERTER_SOURCE
