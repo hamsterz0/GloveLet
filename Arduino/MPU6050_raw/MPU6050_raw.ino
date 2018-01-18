@@ -33,8 +33,8 @@ THE SOFTWARE.
 
 // I2Cdev and MPU6050 must be installed as libraries, or else the .cpp/.h files
 // for both classes must be in the include path of your project
-#include "I2Cdev.h"
-#include "MPU6050.h"
+#include <I2Cdev.h>
+#include <MPU6050.h>
 
 // Arduino Wire library is required if I2Cdev I2CDEV_ARDUINO_WIRE implementation
 // is used in I2Cdev.h
@@ -80,7 +80,7 @@ void setup() {
     // initialize serial communication
     // (38400 chosen because it works as well at 8MHz as it does at 16MHz, but
     // it's really up to you depending on your project)
-    Serial.begin(38400);
+    Serial.begin(115200);
 
     // initialize device
     Serial.println("Initializing I2C devices...");
@@ -144,7 +144,7 @@ void loop() {
         Serial.write((uint8_t)(gz >> 8)); Serial.write((uint8_t)(gz & 0xFF));
     #endif
 
-    delay(100); //milliseconds
+    delay(8); //milliseconds
 
     // blink LED to indicate activity
     blinkState = !blinkState;

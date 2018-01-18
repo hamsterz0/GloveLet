@@ -45,15 +45,15 @@
 #define MPU6050_ACC_VREF 3.46f
 #define MPU6050_ACC_VZEROGX 1.09375f
 #define MPU6050_ACC_VZEROGY 1.09375f
-#define MPU6050_ACC_VZEROGZ 1.875f
-#define MPU6050_ACC_SENSITIVITY 16384.0f
+#define MPU6050_ACC_VZEROGZ 1.09375f
+//#define MPU6050_ACC_SENSITIVITY 16384.0f
 //#define MPU6050_ACC_SENSITIVITY 8192.0f
-//#define MPU6050_ACC_SENSITIVITY 4096.0f
+#define MPU6050_ACC_SENSITIVITY 4096.0f
 //#define MPU6050_ACC_SENSITIVITY 2048.0f
 #endif //MPU6050
 
 #ifndef SERIES_SIZE
-#define SERIES_SIZE 64
+#define SERIES_SIZE 1024
 #endif //SERIES_SIZE
 
 using namespace glm;
@@ -93,8 +93,8 @@ float inv_sample_rate = 1.0f / (float)sample_rate;
 float g_mag = 0.0f;
 std::ifstream stream;
 Serial *serial;
-DataTimeSeries<glm::fvec3, SERIES_SIZE> accTimeSeries = DataTimeSeries<glm::fvec3, SERIES_SIZE>();
-DataTimeSeries<glm::fvec3, SERIES_SIZE> gyroTimeSeries = DataTimeSeries<glm::fvec3, SERIES_SIZE>();
+DataTimeSeries<glm::fvec3, SERIES_SIZE> accTimeSeries = DataTimeSeries<glm::fvec3, SERIES_SIZE>(20);
+DataTimeSeries<glm::fvec3, SERIES_SIZE> gyroTimeSeries = DataTimeSeries<glm::fvec3, SERIES_SIZE>(20);
 WorldObject* obj = new RectangularPrism(1.0f, 0.25f, 1.0);
 glm::fvec3 velocity = glm::fvec3(0.0f, 0.0f, 0.0f);
 glm::fvec3 grav3 = glm::fvec3(0.0f, 0.0f, 0.0f);
@@ -178,7 +178,7 @@ void render(void) {
     // Reset model transformation
     glMatrixMode(GL_MODELVIEW);
     glLoadIdentity();
-    glTranslatef(0.0f,-10.0f,-70.0f);
+    glTranslatef(0.0f,-10.0f, -70.0f);
 
     // do rendering
     obj->render();
@@ -238,33 +238,40 @@ void process_data(float data[]) {
     // convert raw IMU accelerometer values & add to accelerometer time series
     glm::fvec3 a = glm::fvec3(0, 0, 0);
     int bit_width = (1 << adc_bit_width) - 1;
-    a.x = ((data[0] * vref) - vzerogx) / sensitivity;
-    a.y = ((data[2] * vref) - vzerogy) / sensitivity;
-    a.z = ((data[1] * vref * 8) - vzerogz) / sensitivity;
+    glm::fvec3 acc_raw = glm::ivec3(data[0], data[2], data[1]);
+    a.x = (data[0] - vzerogx) / sensitivity;
+    a.y = (data[2] - vzerogy) / sensitivity;
+    a.z = -((data[1] * 20) - vzerogz) / sensitivity;
     accTimeSeries.add(a);
     // convert raw IMU gyroscope values & add to gyroscope time series
     glm::fvec3 rot_euler = glm::fvec3(0, 0, 0);
     int k = (1 << adc_bit_width);
-    rot_euler.x = ((data[3] * vref) - vzerogx) / sensitivity;
-    rot_euler.y = ((data[4] * vref) - vzerogy) / sensitivity;
-    rot_euler.z = ((data[5] * vref) - vzerogz) / sensitivity;
+    rot_euler.x = ((data[3]) - vzerogx) / sensitivity;
+    rot_euler.y = ((data[4]) - vzerogy) / sensitivity;
+    rot_euler.z = ((data[5]) - vzerogz) / sensitivity;
     gyroTimeSeries.add(rot_euler);
     if(count > SERIES_SIZE) {
         // acceleration pre-processing
-        glm::fvec3 acceleration = accTimeSeries.calcEWMA();
+//        glm::fvec3 acceleration = accTimeSeries.calcEWMA();
+        glm::fvec3 acceleration = accTimeSeries.calcSMA();
         glm::fvec3 a_norm = glm::normalize(acceleration);
         if(glm::length(gravity) == 0.0f && count >= 10) {
             // Compute acceleration due to gravity.
             // Assumes IMU isn't moving in the first sample
             g_mag = glm::length(acceleration);
-            gravity = glm::fvec4(acceleration, 0.0f);
+            gravity = glm::fvec4(acceleration, 1.0f);
         }
-        acceleration -= glm::fvec3(gravity);
-        acceleration *= time_interval * 10;
         // rotation pre-processing
-        rot_euler = gyroTimeSeries.calcEWMA();
-        rot_euler *= time_interval * 2;
+        rot_euler = gyroTimeSeries.calcSMA();
+        rot_euler *= time_interval;
         glm::fquat rot = glm::fquat( rot_euler );
+        // gravity
+        glm::fmat4 grav_rot = glm::mat4_cast(glm::inverse(rot));
+        glm::fmat4 rot_mat = glm::mat4_cast(rot);
+        gravity = gravity * grav_rot * rot_mat;
+        grav3 = -glm::fvec3(gravity);
+        acceleration -= glm::fvec3(gravity);
+        acceleration *= time_interval;
         // calculate velocity
         velocity = acceleration; // assumes velocity is initially zero
         // update 3D object's position and rotation
@@ -274,23 +281,9 @@ void process_data(float data[]) {
         if (debug) {
 //          std::cout << a.x << " " << a.y << " " << a.z << std::endl;
 //            std::cout << velocity.x << " " << velocity.y << " " << velocity.z << std::endl;
-            std::cout << acceleration.x << " " << acceleration.y << " " << acceleration.z << std::endl;
-//            std::cout << rot_euler.x << " " << rot_euler.y << " " << rot_euler.z << std::endl;
-//          auto accel_preinvlog = glm::fvec3(a + grav3);
-//          std::cout << "sample:  " << sample_count << std::endl;
-//          std::cout << "  raw data:  ";
-//          for(size_t i = 0; i < dof; i++) {
-//                std::cout << data[i] << " ";
-//          }
-//          std::cout << std::endl;
-//          std::cout << "  acceleration:  " <<
-//                  acceleration.x << " " <<
-//                  acceleration.y << " " <<
-//                  acceleration.z << std::endl;
-//          std::cout << "  accel_preinvlog:  " <<
-//                  accel_preinvlog.x << " " <<
-//                  accel_preinvlog.y << " " <<
-//                  accel_preinvlog.z << std::endl;
+            std::cout << acceleration.x << " " << acceleration.y << " " << acceleration.z << " :: "
+                      << std::hex << acc_raw.x << " " << acc_raw.y << " " << acc_raw.z << std::endl;
+            std::cout << rot_euler.x << " " << rot_euler.y << " " << rot_euler.z << std::endl;
         }
     }
 }
@@ -338,7 +331,6 @@ void process_data_OLD(float data[]) {
     glm::fquat grav_rotation = glm::inverse(rotation);
     glm::mat4 rot_mat = glm::mat4_cast(rotation);
     glm::mat4 inv_rot = glm::mat4_cast(grav_rotation);
-    gravity = gravity * inv_rot * rot_mat;
     gravity = gravity * inv_rot * rot_mat;
     // subtract gravitational acceleration from total acceleration
     grav3 = -glm::fvec3(gravity);
