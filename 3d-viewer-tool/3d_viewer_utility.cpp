@@ -53,7 +53,7 @@
 #endif //MPU6050
 
 #ifndef SERIES_SIZE
-#define SERIES_SIZE 1024
+#define SERIES_SIZE 64
 #endif //SERIES_SIZE
 
 using namespace glm;
@@ -89,7 +89,7 @@ float sensitivity = SAMPLE01_ACC_SENSITIVITY;
 // PROGRAM GLOBALS
 char delim = '\n';
 unsigned int sample_count = 0;
-float inv_sample_rate = 1.0f / (float)sample_rate;
+float inv_sample_rate;
 float g_mag = 0.0f;
 std::ifstream stream;
 Serial *serial;
@@ -104,6 +104,8 @@ chrono::time_point<chrono::system_clock> *current = nullptr;
 int count = 0;
 
 int main(int argc, char* argv[]) {
+    if(sample_rate > 0) inv_sample_rate = 1.0f / (float)sample_rate;
+
     // on-exit callback function
     on_exit(prgm_exit, nullptr);
 
@@ -152,15 +154,36 @@ int main(int argc, char* argv[]) {
 
     // Set GLUT callback functions
     glutDisplayFunc(render);
-    if(!isSerial) glutTimerFunc((unsigned int)(inv_sample_rate * 1000.0f), timer, (unsigned int)(inv_sample_rate * 1000.0f));
+    if(!isSerial && sample_rate > 0) glutTimerFunc((unsigned int)(inv_sample_rate * 1000.0f), timer, (unsigned int)(inv_sample_rate * 1000.0f));
     else {
         serial = new Serial();
-//        glutIdleFunc(idle);
-        glutTimerFunc((unsigned int)(inv_sample_rate * 1000.0f), serial_timer, (unsigned int)(inv_sample_rate * 1000.0f));
+        if(sample_rate == 0)
+            glutIdleFunc(idle);
+        else
+            glutTimerFunc((unsigned int)(inv_sample_rate * 1000.0f), serial_timer, (unsigned int)(inv_sample_rate * 1000.0f));
     }
 
     // Start main loop
     glutMainLoop();
+}
+
+void idle(void) {
+    std::string line = (*serial).read_data();
+    std::stringstream stringstream(line);
+    float data[dof];
+    if(!line.empty()) {
+        size_t i = 0;
+        try {
+            while(i < dof && stringstream >> data[i]) {
+                i++;
+            }
+        }
+        catch (std::ifstream::failure e) {
+            std::cerr << e.what() << std::endl;
+        }
+        process_data(data);
+    }
+    glutPostRedisplay();
 }
 
 /*!
@@ -241,7 +264,7 @@ void process_data(float data[]) {
     glm::fvec3 acc_raw = glm::ivec3(data[0], data[2], data[1]);
     a.x = (data[0] - vzerogx) / sensitivity;
     a.y = (data[2] - vzerogy) / sensitivity;
-    a.z = -((data[1] * 20) - vzerogz) / sensitivity;
+    a.z = -(data[1] - vzerogz) / sensitivity;
     accTimeSeries.add(a);
     // convert raw IMU gyroscope values & add to gyroscope time series
     glm::fvec3 rot_euler = glm::fvec3(0, 0, 0);
@@ -253,7 +276,7 @@ void process_data(float data[]) {
     if(count > SERIES_SIZE) {
         // acceleration pre-processing
 //        glm::fvec3 acceleration = accTimeSeries.calcEWMA();
-        glm::fvec3 acceleration = accTimeSeries.calcSMA();
+        glm::fvec3 acceleration = accTimeSeries.calcEWMA();
         glm::fvec3 a_norm = glm::normalize(acceleration);
         if(glm::length(gravity) == 0.0f && count >= 10) {
             // Compute acceleration due to gravity.
@@ -262,7 +285,7 @@ void process_data(float data[]) {
             gravity = glm::fvec4(acceleration, 1.0f);
         }
         // rotation pre-processing
-        rot_euler = gyroTimeSeries.calcSMA();
+        rot_euler = gyroTimeSeries.calcEWMA();
         rot_euler *= time_interval;
         glm::fquat rot = glm::fquat( rot_euler );
         // gravity
@@ -282,108 +305,13 @@ void process_data(float data[]) {
 //          std::cout << a.x << " " << a.y << " " << a.z << std::endl;
 //            std::cout << velocity.x << " " << velocity.y << " " << velocity.z << std::endl;
             std::cout << acceleration.x << " " << acceleration.y << " " << acceleration.z << " :: "
-                      << std::hex << acc_raw.x << " " << acc_raw.y << " " << acc_raw.z << std::endl;
+                      << acc_raw.x << " " << acc_raw.y << " " << acc_raw.z << std::endl;
             std::cout << rot_euler.x << " " << rot_euler.y << " " << rot_euler.z << std::endl;
         }
     }
 }
 
-void process_data_OLD(float data[]) {
-    if(initial == nullptr) {
-        initial = new chrono::system_clock::time_point;
-        current = new chrono::system_clock::time_point;
-        *initial = chrono::system_clock::now();
-        *current = *initial;
-    } else *current = chrono::system_clock::now();
-    chrono::duration<float> time_diff = *current - *initial;
-    float time_interval = inv_sample_rate;
-    if(isSerial) time_interval = time_diff.count();
-    // get intial values of accelerometer and initial acceleration-due-to-gravity
-    glm::fvec3 a = glm::fvec3(data[0], data[1], data[2]);
-    glm::fvec3 a_norm = glm::normalize(a);
-    if(glm::length(gravity) == 0.0f) {
-        // Compute acceleration due to gravity.
-        // Assumes IMU isn't moving in first sample.
-        g_mag = glm::length(a);
-        gravity = glm::fvec4(a, 1.0f);
-    }
-    // get quaternion from gyroscope data
-    glm::fquat gyro_quat;
-    glm::fvec3 gyro_euler = glm::fvec3(data[3], data[4], data[5]) * time_interval;
-    gyro_quat = glm::fquat(gyro_euler);
-    // get quaternion for magnetometer (unsure this can even be interpreted as a "rotation")
-    glm::fquat magnet_quat;
-    glm::fvec3 magnet_euler;
-    if(dof == 9) {
-        magnet_euler = glm::fvec3(data[6], data[7], data[8]) * time_interval;
-    } else {
-        magnet_euler = glm::fvec3(0.0f, 0.0f, 0.0f);
-    }
-    magnet_quat = glm::fquat(magnet_euler);
-    // calculate rotation
-    glm::fquat rotation;
-    if(dof == 9) {
-        rotation = (gyro_quat * magnet_quat);
-    } else {
-        rotation = gyro_quat;
-    }
-    // calculate the new local orientation for the gravity vector
-    glm::fquat grav_rotation = glm::inverse(rotation);
-    glm::mat4 rot_mat = glm::mat4_cast(rotation);
-    glm::mat4 inv_rot = glm::mat4_cast(grav_rotation);
-    gravity = gravity * inv_rot * rot_mat;
-    // subtract gravitational acceleration from total acceleration
-    grav3 = -glm::fvec3(gravity);
-    glm::fvec3 acceleration = a + grav3;
-    // Calculate the inverse log of the magnitude of the acceleration vector
-    // derived above. This is in an effort to combat the exponential drift
-    // caused by integration.
-    float accel_len = glm::length(acceleration);
-    float accel_log = glm::log(accel_len) / glm::log(500.0f);
-//    if(accel_log < 1.0f) {
-//        accel_log = 1.0f;
-//    }
-//    else accel_log = 1.0f / accel_log;
-//    auto accel_sign = glm::fvec3(acceleration);
-//    // determine sign of components
-//    accel_sign.x /= glm::abs(accel_sign.x);
-//    accel_sign.y /= glm::abs(accel_sign.y);
-//    accel_sign.z /= glm::abs(accel_sign.z);
-//    // use inverse of natural log of the gravity vector magnitude
-//    acceleration.x = glm::pow(glm::abs(acceleration.x), accel_log) * -accel_sign.x;
-//    acceleration.y = glm::pow(glm::abs(acceleration.y), accel_log) * -accel_sign.y;
-//    acceleration.z = glm::pow(glm::abs(acceleration.z), accel_log) * -accel_sign.z;
-    // check for 'NAN' values and set to 0 if found
-    if(isnanf(acceleration.x)) acceleration.x = 0.0f;
-    if(isnanf(acceleration.y)) acceleration.y = 0.0f;
-    if(isnanf(acceleration.z)) acceleration.z = 0.0f;
-    // calculate velocity
-    acceleration *= time_interval;
-    velocity = acceleration; // assumes velocity is initially zero
-    // update 3D object's position and rotation
-    obj->move(velocity);
-    obj->setLocalRotation(rotation);
-    // print debug information
-    if(debug) {
-        auto accel_preinvlog = glm::fvec3(a + grav3);
-        std::cout << "sample:  " << sample_count << std::endl;
-        std::cout << "  raw data:  ";
-        for(size_t i = 0; i < dof; i++) {
-            std::cout << data[i] << " ";
-        }
-        std::cout << std::endl;
-        std::cout << "  accel_len= " << accel_len << ", accel_log= " << accel_log << std::endl;
-        std::cout << "  acceleration:  " <<
-                  acceleration.x << " " <<
-                  acceleration.y << " " <<
-                  acceleration.z << std::endl;
-        std::cout << "  accel_preinvlog:  " <<
-                  accel_preinvlog.x << " " <<
-                  accel_preinvlog.y << " " <<
-                  accel_preinvlog.z << std::endl;
-    }
-    *initial = chrono::system_clock::now();
-}
+
 
 /*!
  *

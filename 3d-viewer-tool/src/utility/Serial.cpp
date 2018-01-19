@@ -17,10 +17,10 @@ Serial::Serial() {
     if (this->fd == -1) {
         perror("Error opening the port.");
     } else {
-        tcgetattr(fd, &port_config);
-        cfsetspeed(&port_config, B115200);
+//        tcgetattr(fd, &port_config);
+//        cfsetspeed(&port_config, B115200);
+//        tcsetattr(fd, TCSAFLUSH, &port_config);
         fcntl(this->fd, F_SETFL, 0);
-        tcsetattr(fd, TCSAFLUSH, &port_config);
         std::cout << "Successfully connected to the port." << std::endl;
         this->imu_check = flush_init();
         if(imu_check == 0) {
