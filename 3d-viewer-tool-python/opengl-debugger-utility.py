@@ -91,31 +91,41 @@ def init_shaders():
 
 
 def init_window():
-    glut.glutInitWindowPosition(500, 250)
-    glut.glutInitWindowSize(1000, 500)
+    disp_w = glut.glutGet(glut.GLUT_SCREEN_WIDTH)
+    disp_h = glut.glutGet(glut.GLUT_SCREEN_HEIGHT)
+    width_aspect = 1920.0 / 1080.0
+    height_aspect = width_aspect**(-1)
+    # Fixes an issue on where the display width/height of a multi-monitor
+    # setup is calculated as a total of the width/height of all display
+    # monitors.
+    # Without the below, the result is a window with an aspect ratio
+    # stretched across multiple monitors.
+    if int(disp_w * height_aspect) > disp_h:
+        disp_w = int(disp_h * width_aspect)
+    elif int(disp_h * width_aspect) > disp_w:
+        disp_h = int(disp_w * height_aspect)
+    # Set the window position & size, and create the window.
+    width = int(disp_w / 2)
+    height = int(disp_h / 2)
+    win_x = width - int(width / 2)
+    win_y = height - int(height / 2)
+    glut.glutInitWindowSize(width, height)
+    glut.glutInitWindowPosition(win_x, win_y)
     glut.glutCreateWindow('3D Viewer Tool - TEST PROGRAM')
 
 
 def init_test_object():
     global _vao, _vbo
     gl.glEnableClientState(gl.GL_VERTEX_ARRAY)
-    verticies = np.ndarray((1, 9), gl.GLfloat,
-                           np.array([-0.5, -0.5, 0,
-                                     0.5, -0.5, 0,
-                                     0, 0.5, 0]))
-    arr = np.array([-0.5, -0.5, 0,
-                    0.5, -0.5, 0,
-                    0, 0.5, 0], dtype=gl.GLfloat)
-    verts = [-0.5, -0.5, 0,
-             0.5, -0.5, 0,
-             0, 0.5, 0]
-    array_type = (gl.GLfloat * len(verts))
+    verticies = np.array([[-0.5, -0.5, 0],
+                          [0.5, -0.5, 0],
+                          [0, 0.5, 0]], dtype=ctypes.c_float)
     _vao = gl.glGenVertexArrays(1)
     _vbo = gl.glGenBuffers(1)
     gl.glBindVertexArray(_vao)
     gl.glBindBuffer(gl.GL_ARRAY_BUFFER, _vbo)
     gl.glBufferData(gl.GL_ARRAY_BUFFER, verticies.nbytes,
-                    arr.data,
+                    verticies,
                     gl.GL_STATIC_DRAW)
     gl.glVertexAttribPointer(
         0, 3, gl.GL_FLOAT, False,
