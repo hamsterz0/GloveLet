@@ -1,7 +1,8 @@
 #!venv/bin/python
 
-import ctypes
+from ctypes import sizeof, c_void_p, c_float, c_uint
 import OpenGL.GL as gl
+from OpenGL.arrays import vbo
 import OpenGL.GLUT as glut
 import numpy as np
 import transforms3d as tf
@@ -10,9 +11,10 @@ import sys
 
 _vertex_shader_src = 'vertex_shader.glsl'
 _fragment_shader_src = 'fragment_shader.glsl'
-_shader_program = gl.GLuint(0)
-_vbo = 0
+_shader_program = 0
 _vao = 0
+_vbo = 0
+_ebo = 0
 _log_buf_sz = 512
 
 
@@ -26,11 +28,12 @@ def mouse_motion_handler(x, y):
 
 def draw():
     gl.glClear(gl.GL_COLOR_BUFFER_BIT | gl.GL_DEPTH_BUFFER_BIT)
-    init_test_object()
     gl.glUseProgram(_shader_program)
+    gl.glEnableClientState(gl.GL_VERTEX_ARRAY)
     gl.glBindVertexArray(_vao)
-    gl.glDrawArrays(gl.GL_TRIANGLES, 0, 3)
-    # gl.glDrawElements(gl.GL_TRIANGLES, 1, gl.GL_UNSIGNED_INT, 0)
+    gl.glEnableVertexAttribArray(0)
+    # gl.glDrawArrays(gl.GL_TRIANGLES, 0, 6)
+    gl.glDrawElements(gl.GL_TRIANGLES, 6, gl.GL_UNSIGNED_INT, None)
     gl.glFlush()
     glut.glutSwapBuffers()
 
@@ -116,20 +119,29 @@ def init_window():
 
 def init_test_object():
     global _vao, _vbo
-    gl.glEnableClientState(gl.GL_VERTEX_ARRAY)
-    verticies = np.array([[-0.5, -0.5, 0],
-                          [0.5, -0.5, 0],
-                          [0, 0.5, 0]], dtype=ctypes.c_float)
+    # gl.glEnableClientState(gl.GL_VERTEX_ARRAY)
+    vertices = np.array([[0.5, 0.5, 0.0],
+                         [0.5, -0.5, 0.0],
+                         [-0.5, -0.5, 0.0],
+                         [-0.5, 0.5, 0.0]], dtype=c_float)
+    indices = np.array([[0, 1, 3],
+                        [1, 2, 3]], dtype=c_uint)
+    # generate buffers
     _vao = gl.glGenVertexArrays(1)
     _vbo = gl.glGenBuffers(1)
+    _ebo = gl.glGenBuffers(1)
+    # bind Vertex Array Object
     gl.glBindVertexArray(_vao)
+    # bind Vertex Buffer Object
     gl.glBindBuffer(gl.GL_ARRAY_BUFFER, _vbo)
-    gl.glBufferData(gl.GL_ARRAY_BUFFER, verticies.nbytes,
-                    verticies,
-                    gl.GL_STATIC_DRAW)
+    gl.glBufferData(gl.GL_ARRAY_BUFFER, vertices, gl.GL_STATIC_DRAW)
+    # bind Element Buffer Object
+    gl.glBindBuffer(gl.GL_ELEMENT_ARRAY_BUFFER, _ebo)
+    gl.glBufferData(gl.GL_ELEMENT_ARRAY_BUFFER,
+                    indices, gl.GL_STATIC_DRAW)
     gl.glVertexAttribPointer(
-        0, 3, gl.GL_FLOAT, False,
-        3 * ctypes.sizeof(ctypes.c_float), ctypes.c_void_p(0))
+        0, vertices.shape[1], gl.GL_FLOAT, False,
+        vertices.shape[1] * sizeof(c_float), c_void_p(0))
     gl.glEnableVertexAttribArray(0)
     # Unbind the VAO so that other calls won't accidentally modify this VAO.
     # May be unnecessary, because another call will have to use
@@ -159,6 +171,7 @@ def main():
     # set idle callback function
     glut.glutIdleFunc(idle)
     # Begin main loop.
+    init_test_object()
     glut.glutMainLoop()
 
 
