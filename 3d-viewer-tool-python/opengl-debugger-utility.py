@@ -1,5 +1,4 @@
 #!venv/bin/python
-
 from ctypes import sizeof, c_void_p, c_float, c_uint
 import OpenGL.GL as gl
 from OpenGL.arrays import vbo
@@ -7,7 +6,10 @@ import OpenGL.GLUT as glut
 import numpy as np
 import transforms3d as tf
 import sys
+import time
+import math
 
+from shaders import Shader, ShaderProgram
 
 _vertex_shader_src = 'vertex_shader.glsl'
 _fragment_shader_src = 'fragment_shader.glsl'
@@ -28,68 +30,25 @@ def mouse_motion_handler(x, y):
 
 def draw():
     gl.glClear(gl.GL_COLOR_BUFFER_BIT | gl.GL_DEPTH_BUFFER_BIT)
+    # instruct to use shader program
     gl.glUseProgram(_shader_program)
-    gl.glEnableClientState(gl.GL_VERTEX_ARRAY)
+    # bind Vertex Array Object
     gl.glBindVertexArray(_vao)
     gl.glEnableVertexAttribArray(0)
-    # gl.glDrawArrays(gl.GL_TRIANGLES, 0, 6)
     gl.glDrawElements(gl.GL_TRIANGLES, 6, gl.GL_UNSIGNED_INT, None)
-    gl.glFlush()
     glut.glutSwapBuffers()
+    glut.glutPostRedisplay()
 
 
 def init_shaders():
-    global _shader_program
-    result = True
-    try:
-        # Load vertex shader source and compile.
-        f = open('shaders/' + _vertex_shader_src)
-        vertex_src = f.read()
-        f.close()
-        # create and compile
-        vertex_shader = gl.glCreateShader(gl.GL_VERTEX_SHADER)
-        gl.glShaderSource(vertex_shader, vertex_src)
-        gl.glCompileShader(vertex_shader)
-        # test for shader compile success
-        success = gl.glGetShaderiv(vertex_shader, gl.GL_COMPILE_STATUS)
-        if not success:
-            info_log = gl.glGetShaderInfoLog(vertex_shader)
-            print(info_log.decode('utf-8'))
-            result = False
-        # Load fragment shader source and compile
-        f = open('shaders/' + _fragment_shader_src)
-        fragment_src = f.read()
-        f.close()
-        # create and compile
-        fragment_shader = gl.glCreateShader(gl.GL_FRAGMENT_SHADER)
-        gl.glShaderSource(fragment_shader, fragment_src)
-        gl.glCompileShader(fragment_shader)
-        # test for shader compile success
-        success = gl.glGetShaderiv(fragment_shader, gl.GL_COMPILE_STATUS)
-        if not success:
-            info_log = gl.glGetShaderInfoLog(fragment_shader)
-            print(info_log.decode('utf-8'))
-            result = False
-    except IOError as e:
-        print(e.strerror)
-        return False
-    # create shader program
-    _shader_program = gl.glCreateProgram()
-    # attach shaders to the shader program
-    gl.glAttachShader(_shader_program, vertex_shader)
-    gl.glAttachShader(_shader_program, fragment_shader)
-    # link shader program
-    gl.glLinkProgram(_shader_program)
-    # check success of shader program linking
-    success = gl.glGetProgramiv(_shader_program, gl.GL_LINK_STATUS)
-    if not success:
-        info_log = gl.glGetProgramInfoLog(_shader_program)
-        print(info_log)
-        result = False
-    # free shader objects from GPU memory (no longer needed once they have been
-    # linked to the shader program)
-    gl.glDeleteShader(vertex_shader)
-    gl.glDeleteShader(fragment_shader)
+    global _shader_program, _vertex_shader_src, _fragment_shader_src
+    vertex_shader = Shader(gl.GL_VERTEX_SHADER, _vertex_shader_src)
+    fragment_shader = Shader(gl.GL_FRAGMENT_SHADER, _fragment_shader_src)
+    _shader_program = ShaderProgram((vertex_shader, fragment_shader), True)
+    print(vertex_shader.get_ID())
+    print(fragment_shader.get_ID())
+    result = _shader_program.is_linked()
+    _shader_program = _shader_program.get_ID()
     return result
 
 
@@ -118,14 +77,14 @@ def init_window():
 
 
 def init_test_object():
-    global _vao, _vbo
-    # gl.glEnableClientState(gl.GL_VERTEX_ARRAY)
-    vertices = np.array([[0.5, 0.5, 0.0],
-                         [0.5, -0.5, 0.0],
-                         [-0.5, -0.5, 0.0],
-                         [-0.5, 0.5, 0.0]], dtype=c_float)
-    indices = np.array([[0, 1, 3],
-                        [1, 2, 3]], dtype=c_uint)
+    global _vao, _vbo, _ebo
+    #                     positions      |      color
+    vertices = np.array([[0.5, 0.5, 0.0], [1.0, 0.0, 0.0],
+                         [0.5, -0.5, 0.0], [0.0, 1.0, 0.0],
+                         [-0.5, -0.5, 0.0], [1.0, 0.0, 0.0],
+                         [-0.5, 0.5, 0.0], [0.0, 0.0, 1.0]],
+                        dtype=c_float)
+    indices = np.array([[0, 1, 3], [1, 2, 3]], dtype=c_uint)
     # generate buffers
     _vao = gl.glGenVertexArrays(1)
     _vbo = gl.glGenBuffers(1)
@@ -137,12 +96,17 @@ def init_test_object():
     gl.glBufferData(gl.GL_ARRAY_BUFFER, vertices, gl.GL_STATIC_DRAW)
     # bind Element Buffer Object
     gl.glBindBuffer(gl.GL_ELEMENT_ARRAY_BUFFER, _ebo)
-    gl.glBufferData(gl.GL_ELEMENT_ARRAY_BUFFER,
-                    indices, gl.GL_STATIC_DRAW)
-    gl.glVertexAttribPointer(
-        0, vertices.shape[1], gl.GL_FLOAT, False,
-        vertices.shape[1] * sizeof(c_float), c_void_p(0))
+    gl.glBufferData(gl.GL_ELEMENT_ARRAY_BUFFER, indices, gl.GL_STATIC_DRAW)
+    vert_sz = vertices.shape[1]
+    # configure vertex attributes for position
+    gl.glVertexAttribPointer(0, vert_sz, gl.GL_FLOAT, False,
+                             2 * vert_sz * sizeof(c_float), c_void_p(0))
     gl.glEnableVertexAttribArray(0)
+    # configure vertex attributes for color
+    gl.glVertexAttribPointer(1, vert_sz, gl.GL_FLOAT, False,
+                             2 * vert_sz * sizeof(c_float),
+                             c_void_p(vert_sz * sizeof(c_float)))
+    gl.glEnableVertexAttribArray(1)
     # Unbind the VAO so that other calls won't accidentally modify this VAO.
     # May be unnecessary, because another call will have to use
     # glBindVertexArray to modify a VAO anyway.
@@ -167,9 +131,9 @@ def main():
     # set display callback function
     glut.glutDisplayFunc(draw)
     # set mouse motion callback funciton
-    glut.glutPassiveMotionFunc(mouse_motion_handler)
+    # glut.glutPassiveMotionFunc(mouse_motion_handler)
     # set idle callback function
-    glut.glutIdleFunc(idle)
+    # glut.glutIdleFunc(idle)
     # Begin main loop.
     init_test_object()
     glut.glutMainLoop()
