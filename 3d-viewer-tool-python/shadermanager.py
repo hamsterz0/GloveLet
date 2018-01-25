@@ -55,7 +55,8 @@ class ShaderProgramManager(ShaderProgram):
 
     def pop(self):
         """
-        Pops
+        Pops all matrices from the stack that  were pushed to the stack
+        from the time of the paired call to push().
         """
         start = self._start.pop()
         end = self._model_index
@@ -67,8 +68,7 @@ class ShaderProgramManager(ShaderProgram):
         The Model Transformation occurs prior to the View Transformation.\n
         Attention:
         \t
-        \tCall push() method prior to pushing
-        \tmatrices to the stack.
+        \tCall push() method prior to pushing matrices to the stack.
         \t
         \tOtherwise, matrices must be popped from the stack
         \tmanually with pop_model_mat4() method.
@@ -85,6 +85,8 @@ attempting to push a matrix.', file=stderr)
 
     def pop_model_mat4(self, count=1):
         self._model_index -= count
+        while len(self._start) > 0 and self._start[-1] <= self._model_index:
+            self._start.pop()
         if self._model_index < -1:
             self._model_index = -1
 
@@ -92,18 +94,18 @@ attempting to push a matrix.', file=stderr)
         self._push_uniform(color, 'color', uniform_type=_UNIFORM_TYPE_VEC4)
 
     def _push_uniform(self, data, uniform, uniform_type=_UNIFORM_TYPE_MAT4):
-        result=False
-        loc=gl.glGetUniformLocation(self._id, uniform)
+        result = False
+        loc = gl.glGetUniformLocation(self._id, uniform)
         if loc != -1:
             if uniform_type == _UNIFORM_TYPE_INT:
                 gl.glUniform1i(loc, data)
-                result=True
+                result = True
             elif uniform_type == _UNIFORM_TYPE_UINT:
                 gl.glUniform1ui(loc, data)
-                result=True
+                result = True
             elif uniform_type == _UNIFORM_TYPE_VEC4:
                 gl.glUniform4fv(loc, 1, data)
             elif uniform_type == _UNIFORM_TYPE_MAT4:
                 gl.glUniformMatrix4fv(loc, 1, False, data)
-                result=True
+                result = True
         return result
