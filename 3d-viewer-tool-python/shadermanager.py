@@ -20,6 +20,7 @@ class ShaderProgramManager(ShaderProgram):
         super().__init__(shaders, do_link)
 
     def use(self):
+        CURRENT_PROGRAM = self
         super().use()
 
     def set_projection(self, matrix):
