@@ -44,6 +44,7 @@ def draw():
     # tdelta = (datetime.now() - _time_dif).total_seconds()
     tdelta = time.time() - _time_dif
     gl.glClear(gl.GL_COLOR_BUFFER_BIT | gl.GL_DEPTH_BUFFER_BIT)
+    gl.glEnable(gl.GL_DEPTH_TEST)
     # use shader program
     _shader.use()
     # load GLSL transformation matrix uniform locations # FIXME: obsolete documentation
@@ -74,7 +75,6 @@ def draw():
     gl.glDrawElements(gl.GL_QUADS, 4, gl.GL_UNSIGNED_INT, c_void_p(sz * 16))
     _shader.color_vec4(np.array([0.0, 0.5, 0.0, 1.0]))
     gl.glDrawElements(gl.GL_QUADS, 4, gl.GL_UNSIGNED_INT, c_void_p(sz * 20))
-    # print(CURRENT_PROGRAM.get_ID())
     glut.glutSwapBuffers()
     _shader.pop()
     glut.glutPostRedisplay()
@@ -148,7 +148,8 @@ def init_test_object():
     gl.glBufferData(gl.GL_ELEMENT_ARRAY_BUFFER, indices, gl.GL_DYNAMIC_DRAW)
     # configure vertex attributes for position
     vert_sz = vertices.shape[1]
-    gl.glVertexAttribPointer(0, vert_sz, gl.GL_FLOAT, False, vert_sz * sizeof(c_float), c_void_p(0))
+    gl.glVertexAttribPointer(0, vert_sz, gl.GL_FLOAT, False,
+                             vert_sz * sizeof(c_float), c_void_p(0))
     gl.glEnableVertexAttribArray(0)
     # Unbind the VAO so that other calls won't accidentally modify this VAO.
     # May be unnecessary, because another call will have to use
