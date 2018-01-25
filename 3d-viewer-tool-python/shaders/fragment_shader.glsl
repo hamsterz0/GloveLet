@@ -1,7 +1,11 @@
 #version 330 core
+in vec4 debugColor;
 out vec4 fragColor;
-in vec3 vertexColor;
+
+uniform bool useColor = true;
+uniform vec4 color = {1.0, 1.0, 1.0, 1.0};
 
 void main() {
-  fragColor = vec4(vertexColor, 1.0);
+  if(useColor) fragColor = color;
+  else fragColor = debugColor;
 }

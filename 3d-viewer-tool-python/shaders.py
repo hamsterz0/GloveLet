@@ -1,14 +1,18 @@
 import OpenGL.GL as gl
-
+import numpy as np
+from ctypes import c_uint
+import glm
+from glm.gtc import quaternion as quat
 
 class Shader:
     _is_compiled = False
+    _failed_to_compile = False
     _type = None
-    _path = 'shaders/'
+    _path = str()
     _id = 0
 
     def __init__(self, shader_type, shader_source, do_compile=False):
-        self._path += shader_source
+        self._path = shader_source
         self._type = shader_type
         # create shader object and set source
         self._id = gl.glCreateShader(self._type)
@@ -37,11 +41,15 @@ class Shader:
         except IOError as e:
             print(e.strerror)
             result = False
+            self._failed_to_compile = True
         self._is_compiled = result
         return result
 
     def is_compiled(self):
         return self._is_compiled
+
+    def failed_compile(self):
+        return self._failed_to_compile
 
     def get_ID(self):
         return self._id
@@ -68,18 +76,19 @@ class ShaderProgram:
         else:
             for shader in shaders:
                 self._shaders[shader.get_ID()] = shader
+                self.attach_shader(shader)
         if do_link:
             self.link()
 
     def use(self):
         gl.glUseProgram(self._id)
 
-    def link(self, compile_all=True):
+    def link(self):
         result = True
         if self._is_linked:
             return result
         # compile and attach all shaders
-        self.attach_all_shaders()
+        self._attach_all_shaders()
         gl.glLinkProgram(self._id)
         # free shader objects from memory (no longer needed once they have been
         # compiled and attached to the shader program)
@@ -104,14 +113,12 @@ class ShaderProgram:
         # attach shaders to the shader program
         gl.glAttachShader(self._id, shader.get_ID())
 
-    def attach_all_shaders(self):
-        result = True
+    def _attach_all_shaders(self):
         if self.all_shaders_compiled():
-            return result
+            return
         for ID in self._shaders:
             if not self._shaders[ID].is_compiled():
                 self.attach_shader(self._shaders[ID])
-        return result
 
     def get_ID(self):
         return self._id
