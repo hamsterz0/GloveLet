@@ -15,8 +15,8 @@ from shadermanager import ShaderProgramManager
 from shadermanager import CURRENT_PROGRAM, _UNIFORM_TYPE_VEC4
 
 _SHADER_DIR = 'shaders/'
-_vertex_shader_src = 'vertex_shader.glsl'
-_fragment_shader_src = 'fragment_shader.glsl'
+_vertex_shader_src = 'vertex_shader130.glsl'
+_fragment_shader_src = 'fragment_shader130.glsl'
 _shader_program = None
 _shader = None
 _vao = 0

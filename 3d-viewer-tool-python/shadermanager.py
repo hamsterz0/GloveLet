@@ -75,8 +75,7 @@ class ShaderProgramManager(ShaderProgram):
         \tmanually with pop_model_mat4() method.
         """
         if len(self._start) == 0:
-            print('ERR: ShaderProgamManager.push() method was not called before \
-attempting to push a matrix.', file=stderr)
+            print('ERR: ShaderProgamManager.push() method was not called before attempting to push a matrix.')
             return
         self._model_index += 1
         uniform = 'model[' + str(self._model_index) + ']'

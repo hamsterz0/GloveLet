@@ -40,7 +40,7 @@ deactivate () {
 # unset irrelevant variables
 deactivate nondestructive
 
-VIRTUAL_ENV="/home/joseph/Projects/glovlet/3d-viewer-tool-python/venv"
+VIRTUAL_ENV="/home/joseph/Projects/imu-tracking/3d-viewer-tool-python/venv"
 export VIRTUAL_ENV
 
 _OLD_VIRTUAL_PATH="$PATH"

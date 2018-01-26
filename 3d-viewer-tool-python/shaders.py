@@ -89,6 +89,8 @@ class ShaderProgram:
             return result
         # compile and attach all shaders
         self._attach_all_shaders()
+        gl.glBindAttribLocation(self._id, 0, "aPos")
+        gl.glBindAttribLocation(self._id, 1, "debugColor")
         gl.glLinkProgram(self._id)
         # free shader objects from memory (no longer needed once they have been
         # compiled and attached to the shader program)
