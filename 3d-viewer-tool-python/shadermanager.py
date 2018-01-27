@@ -20,6 +20,7 @@ class ShaderProgramManager(ShaderProgram):
         super().__init__(shaders, do_link)
 
     def use(self):
+        global CURRENT_PROGRAM
         CURRENT_PROGRAM = self
         super().use()
 
