@@ -10,25 +10,28 @@ import time
 import glm
 from glm.gtc import quaternion as quat
 
-from shaders import Shader, ShaderProgram
+from shaders import Shader
 from shadermanager import ShaderProgramManager
-from shadermanager import CURRENT_PROGRAM, _UNIFORM_TYPE_VEC4
+from mesh import RectPrismMesh
+from worldobject import WorldObject
 
 _SHADER_DIR = 'shaders/'
 _vertex_shader_src = 'vertex_shader130.glsl'
 _fragment_shader_src = 'fragment_shader130.glsl'
 _shader_program = None
 _shader = None
-_vao = 0
-_vbo = 0
-_ebo = 0
+_test_object = None
 _log_buf_sz = 512
 _aspect_ratio = 1920.0 / 1080.0
 _projection = None
 _rotation = None
-_position = glm.vec3(0.0, 0.0, 0.0, dtype=c_float)
 _rot_mat4 = None
 _angle = 0.0
+_val = 0.0
+_eye = glm.vec3((0.0, 0.0, -4.0), dtype=c_float)
+_center = glm.vec3((0.0, 0.0, 0.0), dtype=c_float)
+_up = glm.vec3((0.0, 1.0, 0.0), dtype=c_float)
+_view_lookat = glm.lookAt(_eye, _center, _up)
 
 
 def idle():
@@ -39,8 +42,16 @@ def mouse_motion_handler(x, y):
     pass
 
 
+def key_down_handler():
+    pass
+
+
+def key_up_handler():
+    pass
+
+
 def draw():
-    global _angle, _rotation, _position, _rot_mat4, _time_dif
+    global _angle, _val, _rotation, _rot_mat4, _time_dif
     # tdelta = (datetime.now() - _time_dif).total_seconds()
     tdelta = time.time() - _time_dif
     gl.glClear(gl.GL_COLOR_BUFFER_BIT | gl.GL_DEPTH_BUFFER_BIT)
@@ -49,34 +60,17 @@ def draw():
     _shader.use()
     # load GLSL transformation matrix uniform locations # FIXME: obsolete documentation
     _shader.set_projection(_projection.value)
-    _shader.set_view_mat4(glm.translate(
-        glm.mat4(1.0), glm.vec3(0.0, 0.0, -4.0)).value)
+    _shader.set_lookat(_view_lookat.value)
     _rotation = glm.tquat(glm.vec3(0.0, 90.0 * tdelta, 0.0)) * _rotation
     _angle += 135.0 * tdelta
-    _position[0] = math.sin(_angle)
-    translate = glm.translate(glm.mat4(1.0), _position).value
-    _rot_mat4 = glm.mat4_cast(_rotation).value
+    _val = (math.sin(_angle)) * tdelta * 2
     _shader.push()
-    _shader.model_mat4(glm.mat4(1.0).value)
-    _shader.model_mat4(translate)
-    _shader.model_mat4(_rot_mat4)
-    # bind Vertex Array Object
-    gl.glBindVertexArray(_vao)
-    sz = sizeof(c_uint)
-    _shader.color_vec4(np.array([0.5, 0.0, 0.0, 1.0]))
-    gl.glDrawElements(gl.GL_QUADS, 4, gl.GL_UNSIGNED_INT, c_void_p(sz * 0))
-    _shader.color_vec4(np.array([0.0, 0.0, 1.0, 1.0]))
-    gl.glDrawElements(gl.GL_QUADS, 4, gl.GL_UNSIGNED_INT, c_void_p(sz * 4))
-    _shader.color_vec4(np.array([1.0, 0.0, 0.0, 1.0]))
-    gl.glDrawElements(gl.GL_QUADS, 4, gl.GL_UNSIGNED_INT, c_void_p(sz * 8))
-    _shader.color_vec4(np.array([0.0, 0.0, 0.5, 1.0]))
-    gl.glDrawElements(gl.GL_QUADS, 4, gl.GL_UNSIGNED_INT, c_void_p(sz * 12))
-    _shader.color_vec4(np.array([0.0, 1.0, 0.0, 1.0]))
-    gl.glDrawElements(gl.GL_QUADS, 4, gl.GL_UNSIGNED_INT, c_void_p(sz * 16))
-    _shader.color_vec4(np.array([0.0, 0.5, 0.0, 1.0]))
-    gl.glDrawElements(gl.GL_QUADS, 4, gl.GL_UNSIGNED_INT, c_void_p(sz * 20))
-    glut.glutSwapBuffers()
+    _test_object.move((_val, 0.0, 0.0))
+    _test_object.set_rotation(_rotation)
+    # render object
+    _test_object.render()
     _shader.pop()
+    glut.glutSwapBuffers()
     glut.glutPostRedisplay()
     _time_dif = time.time()
     # print('fps: ' + str(1 / _time_dif.total_seconds()) + '\r')
@@ -88,7 +82,6 @@ def init_shaders():
                            _SHADER_DIR + _vertex_shader_src)
     fragment_shader = Shader(gl.GL_FRAGMENT_SHADER,
                              _SHADER_DIR + _fragment_shader_src)
-    # _shader_program = ShaderProgram((vertex_shader, fragment_shader), True)
     _shader = ShaderProgramManager((vertex_shader, fragment_shader), True)
     return _shader.is_linked()
 
@@ -117,44 +110,15 @@ def init_window():
 
 
 def init_test_object():
-    global _vao, _vbo, _ebo
-    vertices = np.array([[-0.5, -0.5, -0.5],
-                         [-0.5, -0.5, 0.5],
-                         [-0.5, 0.5, 0.5],
-                         [-0.5, 0.5, -0.5],
-                         [0.5, 0.5, 0.5],
-                         [0.5, 0.5, -0.5],
-                         [0.5, -0.5, -0.5],
-                         [0.5, -0.5, 0.5]],
-                        dtype=c_float)
-    indices = np.array([[0, 1, 2, 3],   # left (-x)
-                        [1, 7, 4, 2],   # front (+z)
-                        [4, 5, 6, 7],   # right (+x)
-                        [6, 0, 3, 5],   # back (-z)
-                        [2, 4, 5, 3],   # top (+y)
-                        [0, 1, 7, 6]],  # bottom (-y)
-                       dtype=c_uint)
-    # generate buffers
-    _vao = gl.glGenVertexArrays(1)
-    _vbo = gl.glGenBuffers(1)
-    _ebo = gl.glGenBuffers(1)
-    # bind Vertex Array Object
-    gl.glBindVertexArray(_vao)
-    # bind Vertex Buffer Object
-    gl.glBindBuffer(gl.GL_ARRAY_BUFFER, _vbo)
-    gl.glBufferData(gl.GL_ARRAY_BUFFER, vertices, gl.GL_DYNAMIC_DRAW)
-    # bind Element Buffer Object
-    gl.glBindBuffer(gl.GL_ELEMENT_ARRAY_BUFFER, _ebo)
-    gl.glBufferData(gl.GL_ELEMENT_ARRAY_BUFFER, indices, gl.GL_DYNAMIC_DRAW)
-    # configure vertex attributes for position
-    vert_sz = vertices.shape[1]
-    gl.glVertexAttribPointer(0, vert_sz, gl.GL_FLOAT, False,
-                             vert_sz * sizeof(c_float), c_void_p(0))
-    gl.glEnableVertexAttribArray(0)
-    # Unbind the VAO so that other calls won't accidentally modify this VAO.
-    # May be unnecessary, because another call will have to use
-    # glBindVertexArray to modify a VAO anyway.
-    gl.glBindVertexArray(0)
+    global _test_object
+    color = np.array([[1.0, 0.0, 0.0, 1.0],
+                      [0.5, 0.0, 0.0, 1.0],
+                      [0.0, 1.0, 0.0, 1.0],
+                      [0.0, 0.5, 0.0, 1.0],
+                      [0.0, 0.0, 1.0, 1.0],
+                      [0.0, 0.0, 0.5, 1.0]], c_float)
+    mesh = RectPrismMesh(0.5, 0.1, 0.1, face_colors=color)
+    _test_object = WorldObject(mesh)
 
 
 def main():
