@@ -2,15 +2,11 @@ import OpenGL.GL as gl
 
 
 class Shader:
-    _is_compiled = False
-    _failed_to_compile = False
-    _type = None
-    _path = str()
-    _id = 0
-
     def __init__(self, shader_type, shader_source, do_compile=False):
         self._path = shader_source
         self._type = shader_type
+        self._is_compiled = False
+        self._failed_to_compile = False
         # create shader object and set source
         self._id = gl.glCreateShader(self._type)
         if do_compile:
@@ -62,12 +58,11 @@ class Shader:
 
 
 class ShaderProgram:
-    _is_linked = False
-    _id = 0
-    _shaders = dict()
 
     def __init__(self, shaders=[], do_link=False):
         self._id = gl.glCreateProgram()
+        self._is_linked = False
+        self._shaders = dict()
         if len(shaders) <= 0:
             do_link = False
         else:

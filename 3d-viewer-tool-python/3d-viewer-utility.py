@@ -16,6 +16,7 @@ _ASPECT_RATIO = 1920.0 / 1080.0
 _PROJECTION = None
 _OBJ = None
 
+
 def draw():
     pass
 
@@ -27,7 +28,7 @@ def init_shaders():
     fragment_shader = Shader(gl.GL_FRAGMENT_SHADER,
                              _SHADER_DIR + _FRAGMENT_SHADER_SOURCE)
     _SHADER = ShaderProgramManager((vertex_shader, fragment_shader), True)
-    return _shader.is_linked()
+    return _SHADER.is_linked()
 
 
 def init_window():
