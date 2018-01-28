@@ -60,7 +60,7 @@ class ShaderProgramManager(ShaderProgram):
         Pops all matrices from the stack that  were pushed to the stack
         from the time of the paired call to push().
         """
-        start = self._start.pop()
+        start = self._start[-1]
         end = self._model_index
         self.pop_model_mat4(end - start)
 
@@ -76,7 +76,8 @@ class ShaderProgramManager(ShaderProgram):
         \tmanually with pop_model_mat4() method.
         """
         if len(self._start) == 0:
-            print('ERR: ShaderProgamManager.push() method was not called before attempting to push a matrix.')
+            print('ERR: ShaderProgamManager.model_mat4() was called before calling' +
+                  ' ShaderProgramManager.model_mat4 a matrix.')
             return
         self._model_index += 1
         uniform = 'model[' + str(self._model_index) + ']'
@@ -86,9 +87,9 @@ class ShaderProgramManager(ShaderProgram):
 
     def pop_model_mat4(self, count=1):
         self._model_index -= count
-        while len(self._start) > 0 and self._start[-1] <= self._model_index:
+        while len(self._start) > 0 and (self._model_index - count) > self._start[-1]:
             self._start.pop()
-        if self._model_index < -1:
+        if self._model_index <= -1:
             self._model_index = -1
 
     def color_vec4(self, color):

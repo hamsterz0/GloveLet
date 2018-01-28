@@ -1,8 +1,5 @@
 import OpenGL.GL as gl
-import numpy as np
-from ctypes import c_uint
-import glm
-from glm.gtc import quaternion as quat
+
 
 class Shader:
     _is_compiled = False

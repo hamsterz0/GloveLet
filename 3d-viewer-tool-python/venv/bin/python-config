@@ -1,4 +1,4 @@
-#!/home/joseph/Projects/imu-tracking/3d-viewer-tool-python/venv/bin/python
+#!/home/joseph/Projects/glovlet/3d-viewer-tool-python/venv/bin/python
 
 import sys
 import getopt
