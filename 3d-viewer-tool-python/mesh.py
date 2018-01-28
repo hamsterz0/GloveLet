@@ -9,31 +9,22 @@ DEFAULT_COLOR = np.array([1.0, 1.0, 1.0, 1.0], c_float)
 
 
 class Mesh:
-    _vao = -1
-    _vbo = -1
-    _ebo = -1
-    _render_mode = DEFAULT_RENDER_MODE
-    _buffer_usage = DEFAULT_BUFFER_USAGE
-    _vert_sz = 3
-    _elem_sz = 3
-    _color = DEFAULT_COLOR
-    vertices = None
-    elements = None
-
     def __init__(self, vertices, elements,
                  render_mode=DEFAULT_RENDER_MODE,
                  buffer_usage=DEFAULT_BUFFER_USAGE,
                  color=DEFAULT_COLOR):
+        # generate buffers
+        self._vao = gl.glGenVertexArrays(1)
+        self._vbo = gl.glGenBuffers(1)
+        self._ebo = gl.glGenBuffers(1)
+        # set rendering flags
         self._render_mode = render_mode
         self._buffer_usage = buffer_usage
         self._vert_sz = vertices.shape[1]
         self._elem_sz = elements.shape[1]
         self.vertices = vertices
         self.elements = elements
-        # generate buffers
-        self._vao = gl.glGenVertexArrays(1)
-        self._vbo = gl.glGenBuffers(1)
-        self._ebo = gl.glGenBuffers(1)
+        self._color = color
         # bind Vertex Array Object
         gl.glBindVertexArray(self._vao)
         # bind Vertex Buffer Object
@@ -58,6 +49,12 @@ class Mesh:
         sz = self.elements.size
         gl.glBindVertexArray(self._vao)
         gl.glDrawElements(self._render_mode, sz, gl.GL_UNSIGNED_INT, None)
+
+    def set_render_mode(self, mode):
+        if type(mode) == gl.constant.IntConstant:
+            self._render_mode = mode
+        else:
+            print("ERR: Mesh.set_render_mode: argument must be an OpenGL constant.")
 
 
 class RectPrismMesh(Mesh):
@@ -97,14 +94,14 @@ class RectPrismMesh(Mesh):
         gl.glBindVertexArray(self._vao)
         sz = sizeof(c_uint)
         sm.CURRENT_PROGRAM.color_vec4(self._face_colors[0])
-        gl.glDrawElements(gl.GL_QUADS, 4, gl.GL_UNSIGNED_INT, c_void_p(sz * 0))
+        gl.glDrawElements(self._render_mode, 4, gl.GL_UNSIGNED_INT, c_void_p(sz * 0))
         sm.CURRENT_PROGRAM.color_vec4(self._face_colors[1])
-        gl.glDrawElements(gl.GL_QUADS, 4, gl.GL_UNSIGNED_INT, c_void_p(sz * 4))
+        gl.glDrawElements(self._render_mode, 4, gl.GL_UNSIGNED_INT, c_void_p(sz * 4))
         sm.CURRENT_PROGRAM.color_vec4(self._face_colors[2])
-        gl.glDrawElements(gl.GL_QUADS, 4, gl.GL_UNSIGNED_INT, c_void_p(sz * 8))
+        gl.glDrawElements(self._render_mode, 4, gl.GL_UNSIGNED_INT, c_void_p(sz * 8))
         sm.CURRENT_PROGRAM.color_vec4(self._face_colors[3])
-        gl.glDrawElements(gl.GL_QUADS, 4, gl.GL_UNSIGNED_INT, c_void_p(sz * 12))
+        gl.glDrawElements(self._render_mode, 4, gl.GL_UNSIGNED_INT, c_void_p(sz * 12))
         sm.CURRENT_PROGRAM.color_vec4(self._face_colors[4])
-        gl.glDrawElements(gl.GL_QUADS, 4, gl.GL_UNSIGNED_INT, c_void_p(sz * 16))
+        gl.glDrawElements(self._render_mode, 4, gl.GL_UNSIGNED_INT, c_void_p(sz * 16))
         sm.CURRENT_PROGRAM.color_vec4(self._face_colors[5])
-        gl.glDrawElements(gl.GL_QUADS, 4, gl.GL_UNSIGNED_INT, c_void_p(sz * 20))
+        gl.glDrawElements(self._render_mode, 4, gl.GL_UNSIGNED_INT, c_void_p(sz * 20))

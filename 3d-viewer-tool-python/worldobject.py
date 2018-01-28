@@ -3,7 +3,6 @@ import glm
 import numpy as np
 from ctypes import c_float
 
-import mesh
 import shadermanager as sm
 
 
@@ -20,9 +19,11 @@ def _convert2tquat(rot):
     """
     if type(rot) is glm.tquat:
         return rot
-    elif type(rot) is iter or type(rot) is iter or type(rot) is glm.tvec3 or type(rot) is np.ndarray:
+    elif type(rot) is iter or type(rot) is tuple or type(rot) is glm.tvec3 or type(rot) is np.ndarray:
         if len(rot) == 3:
-            return glm.tquat(glm.vec3((rot[0], rot[1], rot[2])), dtype=c_float)
+            return glm.tquat(glm.vec3((glm.radians(rot[0]),
+                                       glm.radians(rot[1]),
+                                       glm.radians(rot[2]))), dtype=c_float)
         elif len(rot) == 4:
             return glm.tquat(glm.vec3((rot[0], rot[1], rot[2], rot[3])), dtype=c_float)
     else:
@@ -30,35 +31,28 @@ def _convert2tquat(rot):
 
 
 class WorldObject:
-    _mesh = None
-    _do_axis_render = False     # TODO: Implement axis object
-    _axis = None                # TODO: Implement axis object
-    _axis_length = 1.0          # TODO: Implement axis object
-    _pos = None
-    _loc_pos = None
-    _rot = None
-    _loc_rot = None
-    _parent = None
-    _children = list()
 
-    def __init__(self, mesh_,
+    def __init__(self, mesh,
                  position=glm.vec3((0, 0, 0), dtype=c_float),
                  local_position=glm.vec3((0, 0, 0), dtype=c_float),
                  rotation=glm.tquat((0, 0, 0, 1), dtype=c_float),
                  local_rotation=glm.tquat((0, 0, 0, 1), dtype=c_float),
-                 parent=None, children=list()):
-        self._mesh = mesh_
-        self._pos = position
-        self._loc_pos = local_position
-        self._rot = rotation
-        self._loc_rot = local_rotation
+                 parent=None, children=[], axis=None):
+        # TODO: type check for 'mesh', 'parent', 'children', and 'axis' kwargs
+        self._axis = axis               # TODO: Implement axis object
+        self._mesh = mesh
+        self._pos = _convert2tvec3(position)
+        self._loc_pos = _convert2tvec3(local_position)
+        self._rot = _convert2tquat(rotation)
+        self._loc_rot = _convert2tquat(local_rotation)
         self._parent = parent
-        self._children = children
+        self._children = children.copy()
 
     def render(self):
-        trans_mat = glm.translate(glm.mat4(1.0, dtype=c_float), self._pos)
-        loc_trans_mat = glm.translate(
-            glm.mat4(1.0, dtype=c_float), self._loc_pos)
+        trans_mat = glm.mat4(1.0, dtype=c_float)
+        trans_mat = glm.translate(trans_mat, self._pos)
+        loc_trans_mat = glm.mat4(1.0, dtype=c_float)
+        loc_trans_mat = glm.translate(loc_trans_mat, self._loc_pos)
         rot_mat = glm.mat4_cast(self._rot)
         loc_rot_mat = glm.mat4_cast(self._loc_rot)
         # push transformations to stack
@@ -72,10 +66,12 @@ class WorldObject:
         # render children
         for i in range(len(self._children)):
             # pushing here separates the transformations of the children from the parent
-            sm.CURRENT_PROGRAM.push()
+            # sm.CURRENT_PROGRAM.push()
             self._children[i].render()
-            sm.CURRENT_PROGRAM.pop()
+            # sm.CURRENT_PROGRAM.pop()
         # pop transformations from stack
+        print(sm.CURRENT_PROGRAM._model_index)
+        print(sm.CURRENT_PROGRAM._start)
         sm.CURRENT_PROGRAM.pop()
 
     def move(self, vec):
@@ -144,10 +140,11 @@ class WorldObject:
         Adds the specified WorldObject to the children of this object.
         The 'set_parent' method of the child will be called.
         """
-        if child not in self._children:
+        if self is not child and child not in self._children:
             if child is not None and type(child) is WorldObject:
+                print(str(self._children is child._children))
                 self._children.append(child)
-                child.set_parent(child)
+                child.set_parent(self)
 
     def detach_child(self, child):
         """
@@ -166,11 +163,18 @@ class WorldObject:
         a parent, the 'detach_child' of the parent method is called
         to detach this child.
         """
-        if self._parent != parent:
+        if self._parent is not parent:
             if parent is None or type(parent) is WorldObject:
                 if self._parent is not None:
                     self._parent.detach_child(self)
                 self._parent = parent
+
+    def set_render_mode(self, mode):
+        """
+        Set the OpenGL render mode of this object.
+        :param mode:
+        """
+        self._mesh.set_render_mode(mode)
 
     def _count_childern(self):
         result = len(self._children)
