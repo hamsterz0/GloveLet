@@ -1,6 +1,5 @@
 from shaders import ShaderProgram
 import OpenGL.GL as gl
-from sys import stderr
 
 CURRENT_PROGRAM = None
 
@@ -12,12 +11,12 @@ _UNIFORM_TYPE_MAT4 = 3
 
 # TODO: Add support for switching shader programs
 class ShaderProgramManager(ShaderProgram):
-    _start = list()
-    _end = 0
-    _model_index = -1
 
-    def __init__(self, shaders=[], do_link=False):
+    def __init__(self, shaders=(), do_link=False):
         super().__init__(shaders, do_link)
+        self._start = list()
+        self._end = 0
+        self._model_index = -1
 
     def use(self):
         global CURRENT_PROGRAM
@@ -26,7 +25,7 @@ class ShaderProgramManager(ShaderProgram):
 
     def set_projection(self, matrix):
         """
-        Set the projection transformation matrix.
+        Set the projection transformation matrix    .
         """
         self._push_uniform(matrix, 'projection')
 
@@ -86,9 +85,9 @@ class ShaderProgramManager(ShaderProgram):
                            uniform_type=_UNIFORM_TYPE_INT)
 
     def pop_model_mat4(self, count=1):
-        self._model_index -= count
-        while len(self._start) > 0 and (self._model_index - count) > self._start[-1]:
+        if len(self._start) > 0 and (self._model_index - count) >= self._start[-1]:
             self._start.pop()
+        self._model_index -= count
         if self._model_index <= -1:
             self._model_index = -1
 
