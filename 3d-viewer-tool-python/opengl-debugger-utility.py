@@ -11,7 +11,6 @@ import glm
 from glm.gtc import quaternion as quat
 
 from shaders import Shader
-import shadermanager as sm
 from shadermanager import ShaderProgramManager
 from mesh import RectPrismMesh
 from worldobject import WorldObject
@@ -21,11 +20,11 @@ _vertex_shader_src = 'vertex_shader130.glsl'
 _fragment_shader_src = 'fragment_shader130.glsl'
 _shader_program = None
 _shader = None
-_test_object = None
 _log_buf_sz = 512
 _aspect_ratio = 1920.0 / 1080.0
 _projection = None
 _rotation = None
+_rot2 = glm.tquat(glm.vec3(0.0, 0.0, 0.0))
 _rot_mat4 = None
 _angle = 0.0
 _val = 0.0
@@ -33,6 +32,11 @@ _eye = glm.vec3((0.0, 0.0, -4.0), dtype=c_float)
 _center = glm.vec3((0.0, 0.0, 0.0), dtype=c_float)
 _up = glm.vec3((0.0, 1.0, 0.0), dtype=c_float)
 _view_lookat = glm.lookAt(_eye, _center, _up)
+_test_object = None
+_child1 = None
+_child2 = None
+_child3 = None
+_child4 = None
 
 
 def idle():
@@ -52,31 +56,35 @@ def key_up_handler():
 
 
 def draw():
-    global _angle, _val, _rotation, _rot_mat4, _time_dif, _test_object, _shader_program
-    obj = _test_object
+    global _angle, _val, _rotation, _time_dif, _test_object, _shader_program,\
+        _child1, _child2, _child3, _child4
     # tdelta = (datetime.now() - _time_dif).total_seconds()
     tdelta = time.time() - _time_dif
-    gl.glClear(gl.GL_COLOR_BUFFER_BIT | gl.GL_DEPTH_BUFFER_BIT)
-    gl.glEnable(gl.GL_DEPTH_TEST)
-    # use shader program
-    _shader.use()
-    # load GLSL transformation matrix uniform locations # FIXME: obsolete documentation
-    _shader.set_projection(_projection.value)
-    _shader.set_lookat(_view_lookat.value)
-    _rotation = glm.tquat(glm.vec3(0.0, 90.0 * tdelta, 0.0)) * _rotation
-    _angle += 135.0 * tdelta
-    _val = (math.sin(_angle)) * tdelta * 2
-    # _test_object.move((_val, 0.0, 0.0))
-    # _test_object.set_rotation(_rotation)
-    # render object
-    print(sm.CURRENT_PROGRAM._model_index)
-    print(sm.CURRENT_PROGRAM._start)
-    obj.render()
-    print('object rendered.')
+    if tdelta > 0.006944444:
+        gl.glClear(gl.GL_COLOR_BUFFER_BIT | gl.GL_DEPTH_BUFFER_BIT)
+        gl.glEnable(gl.GL_DEPTH_TEST)
+        # use shader program
+        _shader.use()
+        # load GLSL transformation matrix uniform locations # FIXME: obsolete documentation
+        _shader.set_projection(_projection.value)
+        _shader.set_lookat(_view_lookat.value)
+        _rotation = glm.tquat(glm.vec3(0.0, 2.0 * tdelta, 0.0)) * _rotation
+        a = 2.0 * tdelta
+        _test_object.set_rotation(_rotation)
+        _child1.rotate((0.0, 0.0, a))
+        _child2.rotate_local((a, 0.0, 0.0))
+        _child1.rotate_local((a, 0.0, 0.0))
+        _child2.rotate((0.0, 0.0, a))
+        _child3.rotate_local((a, 0, 0))
+        _child3.rotate((0.0, 0.0, a))
+        _child4.rotate_local((a, 0, 0))
+        _child4.rotate((0.0, 0.0, a))
+        # render object
+        _test_object.render()
+        _time_dif = time.time()
+        print('fps: ' + '{:.2f}'.format(1 / tdelta) + '\r')
     glut.glutSwapBuffers()
     glut.glutPostRedisplay()
-    _time_dif = time.time()
-    # print('fps: ' + str(1 / _time_dif.total_seconds()) + '\r')
 
 
 def init_shaders():
@@ -113,29 +121,33 @@ def init_window():
 
 
 def init_test_object():
-    global _test_object
+    global _test_object, _child1, _child2, _child3, _child4
     color = np.array([[1.0, 0.0, 0.0, 1.0],
                       [0.5, 0.0, 0.0, 1.0],
                       [0.0, 1.0, 0.0, 1.0],
                       [0.0, 0.5, 0.0, 1.0],
                       [0.0, 0.0, 1.0, 1.0],
                       [0.0, 0.0, 0.5, 1.0]], c_float)
-    long_rect = RectPrismMesh(0.25, 0.05, 0.05, face_colors=color)
-    child1 = WorldObject(long_rect, position=(1.25, 0.0, 0.0))
-    child2 = WorldObject(long_rect, position=(0.0, 1.25, 0.0))
-    child3 = WorldObject(long_rect, position=(-1.25, 0.0, 0.0))
-    child4 = WorldObject(long_rect, position=(0.0, -1.25, 0.0))
-    child1.set_rotation((0.0, 0.0, 0.0))
-    child2.set_rotation((0.0, 0.0, 90.0))
-    child3.set_rotation((0.0, 0.0, 180.0))
-    child4.set_rotation((0.0, 0.0, 270.0))
+    long_rect = RectPrismMesh(0.5, 0.1, 0.1, face_colors=color)
+    _child1 = WorldObject(long_rect)
+    _child2 = WorldObject(long_rect)
+    _child3 = WorldObject(long_rect)
+    _child4 = WorldObject(long_rect)
+    _child1.set_local_position((1.25, 0.0, 0.0))
+    _child2.set_local_position((0.0, 1.25, 0.0))
+    _child3.set_local_position((-1.25, 0.0, 0.0))
+    _child4.set_local_position((0.0, -1.25, 0.0))
+    _child1.set_local_rotation((0.0, 0.0, 0.0))
+    _child2.set_local_rotation((0.0, 0.0, glm.radians(90.0)))
+    _child3.set_local_rotation((0.0, 0.0, glm.radians(180.0)))
+    _child4.set_local_rotation((0.0, 0.0, glm.radians(270.0)))
     cube = RectPrismMesh(0.5, 0.5, 0.5, face_colors=color)
     _test_object = WorldObject(cube)
     _test_object.set_render_mode(gl.GL_LINE_LOOP)
-    _test_object.add_child(child1)
-    _test_object.add_child(child2)
-    _test_object.add_child(child3)
-    _test_object.add_child(child4)
+    _test_object.add_child(_child1)
+    _test_object.add_child(_child2)
+    _test_object.add_child(_child3)
+    _test_object.add_child(_child4)
 
 
 def main():

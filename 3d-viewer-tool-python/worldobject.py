@@ -21,9 +21,7 @@ def _convert2tquat(rot):
         return rot
     elif type(rot) is iter or type(rot) is tuple or type(rot) is glm.tvec3 or type(rot) is np.ndarray:
         if len(rot) == 3:
-            return glm.tquat(glm.vec3((glm.radians(rot[0]),
-                                       glm.radians(rot[1]),
-                                       glm.radians(rot[2]))), dtype=c_float)
+            return glm.tquat(glm.vec3(rot[0], rot[1], rot[2]), dtype=c_float)
         elif len(rot) == 4:
             return glm.tquat(glm.vec3((rot[0], rot[1], rot[2], rot[3])), dtype=c_float)
     else:
@@ -35,8 +33,8 @@ class WorldObject:
     def __init__(self, mesh,
                  position=glm.vec3((0, 0, 0), dtype=c_float),
                  local_position=glm.vec3((0, 0, 0), dtype=c_float),
-                 rotation=glm.tquat((0, 0, 0, 1), dtype=c_float),
-                 local_rotation=glm.tquat((0, 0, 0, 1), dtype=c_float),
+                 rotation=_convert2tquat((0, 0, 0)),
+                 local_rotation=_convert2tquat((0, 0, 0)),
                  parent=None, children=[], axis=None):
         # TODO: type check for 'mesh', 'parent', 'children', and 'axis' kwargs
         self._axis = axis               # TODO: Implement axis object
@@ -57,6 +55,7 @@ class WorldObject:
         loc_rot_mat = glm.mat4_cast(self._loc_rot)
         # push transformations to stack
         sm.CURRENT_PROGRAM.push()
+        # sm.CURRENT_PROGRAM.model_mat4(glm.mat4(1.0, dtype=c_float).value)
         sm.CURRENT_PROGRAM.model_mat4(trans_mat.value)
         sm.CURRENT_PROGRAM.model_mat4(rot_mat.value)
         sm.CURRENT_PROGRAM.model_mat4(loc_trans_mat.value)
@@ -70,8 +69,6 @@ class WorldObject:
             self._children[i].render()
             # sm.CURRENT_PROGRAM.pop()
         # pop transformations from stack
-        print(sm.CURRENT_PROGRAM._model_index)
-        print(sm.CURRENT_PROGRAM._start)
         sm.CURRENT_PROGRAM.pop()
 
     def move(self, vec):
@@ -118,7 +115,7 @@ class WorldObject:
         Rotate the object by the specified amount in local space.
         """
         # TODO: Complete parameter documentation
-        self._loc_rot = _convert2tquat(rot) * self._loc_rot
+        self._loc_rot = self._loc_rot * _convert2tquat(rot)
 
     def set_rotation(self, rot):
         """
@@ -142,7 +139,6 @@ class WorldObject:
         """
         if self is not child and child not in self._children:
             if child is not None and type(child) is WorldObject:
-                print(str(self._children is child._children))
                 self._children.append(child)
                 child.set_parent(self)
 
