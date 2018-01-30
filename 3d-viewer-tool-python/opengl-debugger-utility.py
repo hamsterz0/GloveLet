@@ -155,8 +155,8 @@ def main():
     # OpenGL initialization.
     glut.glutInit(sys.argv)
     # Initialize buffer and OpenGL settings.
-    # glut.glutInitDisplayMode(
-    #     glut.GLUT_DOUBLE | glut.GLUT_RGB | glut.GLUT_DEPTH)
+    glut.glutInitDisplayMode(
+        glut.GLUT_SINGLE | glut.GLUT_RGB | glut.GLUT_DEPTH)
     init_window()
     # Initialize shaders.
     success = init_shaders()
