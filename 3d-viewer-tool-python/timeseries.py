@@ -9,7 +9,7 @@ class DataTimeSeries:
         self._factor = factor
         self._dtype = dtype
         self._exp_weights = np.zeros((size), c_float)
-        self._weight = 2.0 / (N + 1)
+        self._weight = 1 - (2.0 / (N + 1))
         self._head = 0
         self._denom = 0.0
         self.data_series = np.zeros((size, dimensions), dtype)
