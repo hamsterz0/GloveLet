@@ -44,14 +44,14 @@ _ACC_SENSITIVITY = 16384
 _GYR_VZEROG = np.array([1.09375, 1.09375, 1.09375], c_float)
 _GYR_BITWIDTH = 16
 _GYR_VREF = 3.46
-_GYR_SENSITIVITY = 16384
+_GYR_SENSITIVITY = 131
 _MAG_BITWIDTH = 16
 _MAG_VREF = 3.46
 _MAG_SENSITIVITY = 16384
 # time series & pre-processing
 _UPDATE_TIME = time.time()
 _SERIES_SIZE = 10
-_ACC_TIME_SERIES = DataTimeSeries(size=_SERIES_SIZE, dimensions=3, N=100)
+_ACC_TIME_SERIES = DataTimeSeries(size=_SERIES_SIZE, dimensions=3)
 _GYR_TIME_SERIES = DataTimeSeries(size=_SERIES_SIZE, dimensions=3)
 _MAG_TIME_SERIES = DataTimeSeries(size=_SERIES_SIZE, dimensions=3)
 _GRAV_MAGNITUDE = 0.0
@@ -68,7 +68,7 @@ def draw():
     # pre-process data
     vel, rot = get_motion_data()
     _VELOCITY += vel
-    _OBJ.move(_VELOCITY)
+    # _OBJ.move(_VELOCITY)
     _OBJ.rotate(rot)
     tdelta = time.time() - _FRAME_TIME
     if tdelta > _MAX_TDELTA:
@@ -136,26 +136,34 @@ def get_motion_data():
     """
     global _UPDATE_TIME, _DOF, _GRAV_MAGNITUDE, _GRAV_VECTOR, _FRAME_TIME
     acc, gyr, mag = filter_imu_data()
-    acc_norm = np.linalg.norm(acc)
-    # print(acc_norm)
     tdelta = time.time() - _UPDATE_TIME
-    rotation = glm.tquat(glm.vec3(gyr * tdelta * 10))
-    grav_rot = glm.tquat(glm.vec3(gyr))
+    acc_norm = np.linalg.norm(acc)
+    print(acc_norm)
+    gyr_norm = np.linalg.norm(gyr)
+    # print(gyr_norm)
+    # velocity =
+    rotation = glm.tquat(glm.vec3((0, 0, 0), dtype=c_float))
+    if abs(gyr_norm - 0.34) > 5.453437:
+        rotation = glm.tquat(glm.vec3(gyr * tdelta))
     # grav_rot = rotation
     if _DOF == 9:
         # TODO: implement magnetometer rotation
         # 'rotation' quat multiplied by magnitometer rotation
         pass
-    inv_rotation = glm.inverse_quat(grav_rot)
-    _GRAV_VECTOR = _GRAV_VECTOR * inv_rotation * grav_rot
-    # acceleration = (acc - (_GRAV_VECTOR[:3] * _GRAV_MAGNITUDE)) * tdelta * 20
-    acceleration = acc * tdelta * 20
+    inv_rotation = glm.inverse_quat(rotation)
+    _GRAV_VECTOR = _GRAV_VECTOR * inv_rotation * rotation
+    acceleration = np.zeros((3), c_float)
+    if abs(acc_norm - 1.0) > 0.0361864:
+        acceleration = acc * tdelta
+    grav = np.ones((3), c_float)
+    grav[2] = _GRAV_MAGNITUDE
+    # acceleration -= grav
     # print(acceleration)
     velocity = acceleration
     velocity[1], velocity[2] = -velocity[2], velocity[1]
-    velocity[0] = 0
-    velocity[1] = 0
-    velocity[2] = 0
+    # velocity[0] = 0
+    # velocity[1] = 0
+    # velocity[2] = 0
     return velocity, rotation
 
 
