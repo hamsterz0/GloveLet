@@ -127,12 +127,15 @@ void loop() {
 
     #ifdef OUTPUT_READABLE_ACCELGYRO
         // display tab-separated accel/gyro x/y/z values
-        Serial.print(ax); Serial.print(" ");
-        Serial.print(ay); Serial.print(" ");
-        Serial.print(az); Serial.print(" ");
-        Serial.print(gx); Serial.print(" ");
-        Serial.print(gy); Serial.print(" ");
-        Serial.println(gz);
+        String output = "";
+        output += ax; output += " "; output += ay; output += " "; output += az; output += " ";
+        output += gx; output += " "; output += gy; output += " "; output += gz;
+//        Serial.print(ax); Serial.print(" ");
+//        Serial.print(ay); Serial.print(" ");
+//        Serial.print(az); Serial.print(" ");
+//        Serial.print(gx); Serial.print(" ");
+//        Serial.print(gy); Serial.print(" ");
+        Serial.println(output);
     #endif
 
     #ifdef OUTPUT_BINARY_ACCELGYRO
@@ -144,7 +147,7 @@ void loop() {
         Serial.write((uint8_t)(gz >> 8)); Serial.write((uint8_t)(gz & 0xFF));
     #endif
 
-    delay(8); //milliseconds
+//    delay(4); //milliseconds
 
     // blink LED to indicate activity
     blinkState = !blinkState;
