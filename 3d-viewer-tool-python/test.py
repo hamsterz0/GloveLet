@@ -44,6 +44,10 @@ data_sample = [
     [16,   244, 16388,  -552,    64,  -202]
 ]
 
+_ACC_VZEROG = np.array([1.09375, 1.09375, 1.09375], c_float)
+_ACC_SENSITIVITY = 16384  # 16384, 8192, 4096, 2048
+_GYR_VRO = np.array([0.2, 0.2, 4.0], c_float)
+_GYR_SENSITIVITY = 131
 _SERIAL = serial.Serial('/dev/ttyACM0', 115200, timeout=1)
 _CONNECTED = False
 
@@ -88,10 +92,15 @@ def serial_dts(exp_factor=1.0):
         data = read_data()
         if len(data) == 6:
             dts.add(data)
-            ewma = dts.calc_ewma()
+            data = dts.calc_ewma()
+            # convert raw accelerometer data
+            data[:3] = (data[:3] - _ACC_VZEROG) / _ACC_SENSITIVITY
+            # conver raw gyroscope data
+            data[3:6] = (data[3:6] - _GYR_VRO) / _GYR_SENSITIVITY
+            # print output
             o = str()
-            for i in range(ewma.shape[0]):
-                o += '{:.4f} '.format(ewma[i])
+            for i in range(data.shape[0]):
+                o += '{:.4f} '.format(data[i])
             print('[ ' + o + ']')
 
 
