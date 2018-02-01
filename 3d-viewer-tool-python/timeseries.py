@@ -46,6 +46,11 @@ class DataTimeSeries:
         if self._head >= self._size:
             self._head = 0
 
+
+    def get_tdelta(self):
+        return self._tdelta[self._head]
+
+
     def calc_ewma(self):
         result = np.zeros((self._dimensions), c_float)
         it = self._head
