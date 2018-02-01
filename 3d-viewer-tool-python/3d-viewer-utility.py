@@ -39,18 +39,18 @@ _ACC_VZEROG = np.array([1.09375, 1.09375, 1.09375], c_float)
 _ACC_BITWIDTH = 16
 _ACC_VREF = 3.46
 _PREV_DATA = None
-# 16384, 8192, 4096, 2048
-_ACC_SENSITIVITY = 16384
+_ACC_SENSITIVITY = 16384  # 16384, 8192, 4096, 2048
 _GYR_VRO = np.array([0.2, 0.2, 4.0], c_float)
 _GYR_BITWIDTH = 16
 _GYR_VREF = 3.46
-_GYR_SENSITIVITY = 131
+_GYR_SENSITIVITY = 65.5  # 131, 65.5, 32.8, 16.4
 _MAG_BITWIDTH = 16
 _MAG_VREF = 3.46
 _MAG_SENSITIVITY = 16384
 # time series & pre-processing
 _UPDATE_TIME = time.time()
 _SERIES_SIZE = 50
+_DATA_SERIES = DataTimeSeries(N=_SERIES_SIZE, dimensions=6)
 _ACC_TIME_SERIES = DataTimeSeries(N=_SERIES_SIZE, dimensions=3)
 _GYR_TIME_SERIES = DataTimeSeries(N=_SERIES_SIZE, dimensions=3)
 _MAG_TIME_SERIES = DataTimeSeries(N=_SERIES_SIZE, dimensions=3)
@@ -67,8 +67,8 @@ def draw():
     global _OBJ, _FRAME_TIME, _PROJECTION_MTRX, _VIEW_LOOKAT, _VELOCITY
     # pre-process data
     vel, rot = get_motion_data()
-    _VELOCITY += vel
-    # _OBJ.move(_VELOCITY)
+    # _VELOCITY += vel
+    _OBJ.move(vel)
     _OBJ.rotate(rot)
     tdelta = time.time() - _FRAME_TIME
     if tdelta > _MAX_TDELTA:
@@ -135,77 +135,58 @@ def get_motion_data():
     Returns current velocity and rotation as a tuple.
     """
     global _UPDATE_TIME, _DOF, _GRAV_MAGNITUDE, _GRAV_VECTOR, _FRAME_TIME
-    acc, gyr, mag = filter_imu_data()
-    tdelta = time.time() - _UPDATE_TIME
-    acc_norm = np.linalg.norm(acc)
-    print(acc_norm)
-    gyr_norm = np.linalg.norm(gyr)
+    update_time_series()
+    acc, gyr, mag = convert_raw_data()
+    tdelta = _DATA_SERIES.get_tdelta()
+    # acc_norm = np.linalg.norm(acc)
+    # print(acc_norm)
+    # gyr_norm = np.linalg.norm(gyr)
     # print(gyr_norm)
-    # velocity =
-    rotation = glm.tquat(glm.vec3((0, 0, 0), dtype=c_float))
-    if abs(gyr_norm - 0.34) > 5.453437:
-        rotation = glm.tquat(glm.vec3(gyr * tdelta))
-    # grav_rot = rotation
+    gyr = np.radians(gyr)
+    rotation = glm.tquat(glm.vec3(gyr * tdelta))
+    # rotation = glm.tquat(glm.vec3((0, 0, 0), dtype=c_float))
+    # if abs(gyr_norm - 0.34) > 5.453437:
+    #     rotation = glm.tquat(glm.vec3(gyr * tdelta))
     if _DOF == 9:
         # TODO: implement magnetometer rotation
         # 'rotation' quat multiplied by magnitometer rotation
         pass
-    inv_rotation = glm.inverse_quat(rotation)
-    _GRAV_VECTOR = _GRAV_VECTOR * inv_rotation * rotation
-    acceleration = np.zeros((3), c_float)
-    if abs(acc_norm - 1.0) > 0.0361864:
-        acceleration = acc * tdelta
-    grav = np.ones((3), c_float)
-    grav[2] = _GRAV_MAGNITUDE
-    # acceleration -= grav
+    velocity = acc * tdelta * 9.8
     # print(acceleration)
-    velocity = acceleration
     velocity[1], velocity[2] = -velocity[2], velocity[1]
     # velocity[0] = 0
-    # velocity[1] = 0
+    velocity[1] = 0
     # velocity[2] = 0
     return velocity, rotation
 
 
-def filter_imu_data():
-    global _ACC_TIME_SERIES, _GYR_TIME_SERIES, _MAG_TIME_SERIES
-    update_time_series()
-    accel = _ACC_TIME_SERIES.calc_ewma()
-    gyr_rot = _GYR_TIME_SERIES.calc_ewma()
-    mag_rot = _MAG_TIME_SERIES.calc_ewma()
-    # print('accel:' + str(accel) + ', gyro:' + str(gyr_rot))
-    return accel, gyr_rot, mag_rot
-
-
-def convert_raw_data(data_raw):
-    global _ACC_TIME_SERIES, _GYR_TIME_SERIES, _MAG_TIME_SERIES, _DOF,\
+def convert_raw_data():
+    global _DATA_SERIES, _DOF,\
         _ACC_VREF, _ACC_VZEROG, _ACC_SENSITIVITY,\
         _GYR_VREF, _GYR_VRO, _GYR_SENSITIVITY,\
         _MAG_VREF, _MAG_BITWIDTH, _MAG_SENSITIVITY
+    # get filtered data
+    data = _DATA_SERIES.calc_ewma()
     # convert raw accelerometer data
-    acc = data_raw[:3]
+    acc = data[:3]
     acc = (acc - _ACC_VZEROG) / _ACC_SENSITIVITY
     # conver raw gyroscope data
-    gyr = data_raw[3:6]
+    gyr = data[3:6]
     gyr = (gyr - _GYR_VRO) / _GYR_SENSITIVITY
     # check for 9 DoF
     mag = None
     if _DOF == 9:
-        mag = glm.vec3(data_raw[6:9])
+        mag = glm.vec3(data[6:9])
         # TODO: Implement magnitometer raw value conversion
+    print(gyr)
     return acc, gyr, mag
 
 
 def update_time_series():
-    global _ACC_TIME_SERIES, _GYR_TIME_SERIES, _MAG_TIME_SERIES,\
-        _DOF, _UPDATE_TIME
+    global _DATA_SERIES, _DOF, _UPDATE_TIME
     data = read_data()
     if len(data) == _DOF:
-        acc_data, gyr_data, mag_data = convert_raw_data(data)
-        _ACC_TIME_SERIES.add(acc_data)
-        _GYR_TIME_SERIES.add(gyr_data)
-        _MAG_TIME_SERIES.add(mag_data)
-    _UPDATE_TIME = time.time()
+        _DATA_SERIES.add(data)
 
 
 def init_serial_connection():
@@ -220,11 +201,6 @@ def init_serial_connection():
     # initialize time series
     for i in range(_SERIES_SIZE):
         update_time_series()
-    # initialize gravity vector and magnitude
-    acceleration = _ACC_TIME_SERIES.calc_ewma()
-    _GRAV_MAGNITUDE = np.linalg.norm(acceleration)
-    _GRAV_VECTOR = np.ones((4), c_float)
-    _GRAV_VECTOR[:3] = glm.normalize(acceleration)
 
 
 def read_data():
@@ -266,8 +242,7 @@ def main():
     _PROJECTION_MTRX = glm.perspective(
         glm.radians(45.0), _ASPECT_RATIO, 0.1, 100.0)
     _VIEW_LOOKAT = glm.lookAt(glm.vec3((0.0, 2.0, -4), dtype=c_float),   # eye
-                              glm.vec3((0.0, 1.0, 0.0),
-                                       dtype=c_float),  # center
+                              glm.vec3((0.0, 1.0, 0.0), dtype=c_float),  # center
                               glm.vec3((0.0, 1.0, 0.0), dtype=c_float))  # up
     # Begin main loop.
     init_object()
