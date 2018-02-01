@@ -41,7 +41,7 @@ _ACC_VREF = 3.46
 _PREV_DATA = None
 # 16384, 8192, 4096, 2048
 _ACC_SENSITIVITY = 16384
-_GYR_VZEROG = np.array([1.09375, 1.09375, 1.09375], c_float)
+_GYR_VRO = np.array([0.2, 0.2, 4.0], c_float)
 _GYR_BITWIDTH = 16
 _GYR_VREF = 3.46
 _GYR_SENSITIVITY = 131
@@ -50,10 +50,10 @@ _MAG_VREF = 3.46
 _MAG_SENSITIVITY = 16384
 # time series & pre-processing
 _UPDATE_TIME = time.time()
-_SERIES_SIZE = 10
-_ACC_TIME_SERIES = DataTimeSeries(size=_SERIES_SIZE, dimensions=3)
-_GYR_TIME_SERIES = DataTimeSeries(size=_SERIES_SIZE, dimensions=3)
-_MAG_TIME_SERIES = DataTimeSeries(size=_SERIES_SIZE, dimensions=3)
+_SERIES_SIZE = 50
+_ACC_TIME_SERIES = DataTimeSeries(N=_SERIES_SIZE, dimensions=3)
+_GYR_TIME_SERIES = DataTimeSeries(N=_SERIES_SIZE, dimensions=3)
+_MAG_TIME_SERIES = DataTimeSeries(N=_SERIES_SIZE, dimensions=3)
 _GRAV_MAGNITUDE = 0.0
 _GRAV_VECTOR = glm.vec3(0, dtype=c_float)
 _VELOCITY = np.zeros((3), c_float)
@@ -171,7 +171,7 @@ def filter_imu_data():
     global _ACC_TIME_SERIES, _GYR_TIME_SERIES, _MAG_TIME_SERIES
     update_time_series()
     accel = _ACC_TIME_SERIES.calc_ewma()
-    gyr_rot = _GYR_TIME_SERIES.calc_sma()
+    gyr_rot = _GYR_TIME_SERIES.calc_ewma()
     mag_rot = _MAG_TIME_SERIES.calc_ewma()
     # print('accel:' + str(accel) + ', gyro:' + str(gyr_rot))
     return accel, gyr_rot, mag_rot
@@ -180,14 +180,14 @@ def filter_imu_data():
 def convert_raw_data(data_raw):
     global _ACC_TIME_SERIES, _GYR_TIME_SERIES, _MAG_TIME_SERIES, _DOF,\
         _ACC_VREF, _ACC_VZEROG, _ACC_SENSITIVITY,\
-        _GYR_VREF, _GYR_VZEROG, _GYR_SENSITIVITY,\
+        _GYR_VREF, _GYR_VRO, _GYR_SENSITIVITY,\
         _MAG_VREF, _MAG_BITWIDTH, _MAG_SENSITIVITY
     # convert raw accelerometer data
     acc = data_raw[:3]
     acc = (acc - _ACC_VZEROG) / _ACC_SENSITIVITY
     # conver raw gyroscope data
     gyr = data_raw[3:6]
-    gyr = (gyr - _GYR_VZEROG) / _GYR_SENSITIVITY
+    gyr = (gyr - _GYR_VRO) / _GYR_SENSITIVITY
     # check for 9 DoF
     mag = None
     if _DOF == 9:
@@ -199,7 +199,7 @@ def convert_raw_data(data_raw):
 def update_time_series():
     global _ACC_TIME_SERIES, _GYR_TIME_SERIES, _MAG_TIME_SERIES,\
         _DOF, _UPDATE_TIME
-    data = get_data()
+    data = read_data()
     if len(data) == _DOF:
         acc_data, gyr_data, mag_data = convert_raw_data(data)
         _ACC_TIME_SERIES.add(acc_data)
@@ -214,7 +214,7 @@ def init_serial_connection():
     _SERIAL = serial.Serial(_PORT, _BAUD, timeout=1)
     # check for successful connection
     while True:
-        data = get_data()
+        data = read_data()
         if len(data) == 3 and data[2] == _SUCCESS_STR:
             break
     # initialize time series
@@ -227,7 +227,7 @@ def init_serial_connection():
     _GRAV_VECTOR[:3] = glm.normalize(acceleration)
 
 
-def get_data():
+def read_data():
     global _SERIAL
     success = False
     while not success:
