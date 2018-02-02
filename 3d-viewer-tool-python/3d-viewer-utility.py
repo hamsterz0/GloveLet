@@ -66,10 +66,11 @@ def print_fps(tdelta):
 def draw():
     global _OBJ, _FRAME_TIME, _PROJECTION_MTRX, _VIEW_LOOKAT, _VELOCITY
     # pre-process data
-    vel, rot = get_motion_data()
+    vel, rot, att = get_motion_data()
     # _VELOCITY += vel
-    _OBJ.move(vel)
-    _OBJ.rotate(rot)
+    # _OBJ.move(vel)
+    _OBJ.set_rotation(att)
+    # _OBJ.rotate(rot)
     tdelta = time.time() - _FRAME_TIME
     if tdelta > _MAX_TDELTA:
         gl.glClear(gl.GL_COLOR_BUFFER_BIT | gl.GL_DEPTH_BUFFER_BIT)
@@ -134,7 +135,7 @@ def get_motion_data():
     """
     Returns current velocity and rotation as a tuple.
     """
-    global _UPDATE_TIME, _DOF, _GRAV_MAGNITUDE, _GRAV_VECTOR, _FRAME_TIME
+    global _DOF, _GRAV_MAGNITUDE, _GRAV_VECTOR, _FRAME_TIME
     update_time_series()
     acc, gyr, mag = convert_raw_data()
     tdelta = _DATA_SERIES.get_tdelta()
@@ -142,22 +143,38 @@ def get_motion_data():
     # print(acc_norm)
     # gyr_norm = np.linalg.norm(gyr)
     # print(gyr_norm)
-    gyr = np.radians(gyr)
-    rotation = glm.tquat(glm.vec3(gyr * tdelta))
-    # rotation = glm.tquat(glm.vec3((0, 0, 0), dtype=c_float))
-    # if abs(gyr_norm - 0.34) > 5.453437:
-    #     rotation = glm.tquat(glm.vec3(gyr * tdelta))
-    if _DOF == 9:
-        # TODO: implement magnetometer rotation
-        # 'rotation' quat multiplied by magnitometer rotation
-        pass
+    attitude_est = None
+    print(str(acc) + " :: " + str(gyr))
+    attitude_est = attitude_estimation(acc)
+    acc[1], acc[2] = -acc[2], acc[1]
     velocity = acc * tdelta * 9.8
     # print(acceleration)
-    velocity[1], velocity[2] = -velocity[2], velocity[1]
     # velocity[0] = 0
     velocity[1] = 0
     # velocity[2] = 0
-    return velocity, rotation
+    gyr = np.radians(gyr)
+    rotation = glm.tquat(glm.vec3(gyr * tdelta))
+    # if abs(gyr_norm - 0.34) > 5.453437:
+    #     rotation = glm.tquat(glm.vec3(gyr * tdelta))
+    if _DOF == 9:
+        # rotation = glm.tquat(glm.vec3((0, 0, 0), dtype=c_float))
+        # TODO: implement magnetometer rotation
+        # 'rotation' quat multiplied by magnitometer rotation
+        pass
+    return velocity, rotation, attitude_est
+
+
+def attitude_estimation(acc):
+    rad = np.math.pi / 2
+    roll = rad
+    pitch = np.math.atan(acc[2] / acc[0])
+    yaw = np.math.atan(acc[1] / np.math.sqrt(acc[0]**2 + acc[2]**2))
+    # local quaternion rotation
+    att_rot = glm.tquat(glm.vec3([roll, pitch, yaw], dtype=c_float))
+    # transforms rotation to world coordinate system
+    att_rot = glm.tquat(glm.vec3([rad, 0, rad], dtype=c_float)) * att_rot
+    # att_rot = glm.eulerAngles(att_rot)
+    return att_rot
 
 
 def convert_raw_data():
@@ -178,20 +195,31 @@ def convert_raw_data():
     if _DOF == 9:
         mag = glm.vec3(data[6:9])
         # TODO: Implement magnitometer raw value conversion
-    print(gyr)
     return acc, gyr, mag
+
+
+def complementary_filter(att_est, alpha=0.2):
+    global _DATA_SERIES
+    prev_data, prev_dt = _DATA_SERIES.get_previous_data(get_tdelta=True)
+    prev_data = prev_data[3:6]
+    data = _DATA_SERIES.get_data()[3:6]
+    dt = _DATA_SERIES.get_tdelta()
+    for i in range(_DATA_SERIES.shape[1]):
+        result = (1 - alpha) * (prev_data * prev_dt + data * dt) + alpha * att_est
+    return result
 
 
 def update_time_series():
     global _DATA_SERIES, _DOF, _UPDATE_TIME
     data = read_data()
-    if len(data) == _DOF:
-        _DATA_SERIES.add(data)
+    while len(data) != _DOF:
+        data = read_data()
+    _DATA_SERIES.add(data)
 
 
 def init_serial_connection():
     global _SERIAL, _PORT, _BAUD, _SUCCESS_STR, _SERIES_SIZE,\
-        _ACC_TIME_SERIES, _GRAV_MAGNITUDE, _GRAV_VECTOR
+        _GRAV_MAGNITUDE, _GRAV_VECTOR
     _SERIAL = serial.Serial(_PORT, _BAUD, timeout=1)
     # check for successful connection
     while True:
