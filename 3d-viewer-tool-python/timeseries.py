@@ -97,8 +97,10 @@ class DataTimeSeries:
     def get_tdelta(self):
         return self._tdelta[self._head]
 
-    def get_data(self):
-        return self.data_series[self._head]
+    def get_data(self, index=-1):
+        if index < 0 or index >= self.shape[0]:
+            index = self._head
+        return self.data_series[index]
 
     def get_previous_data(self, count=1, get_tdelta=False):
         prev = self._get_previous_index(count)
@@ -118,7 +120,7 @@ class DataTimeSeries:
         return result / self._denom
 
     def calc_sma(self):
-        result = np.zeros((self._dimensions), c_float)
+        result = np.zeros(self._dimensions, c_float)
         it = self._head
         for i in range(self._added):
             if it < 0:
@@ -127,18 +129,22 @@ class DataTimeSeries:
             it -= 1
         return result / self._denom
 
-    def print_head(self):
-        print(str(self.data_series[self._head])
-              + '  :  dt='
-              + str(self._tdelta[self._head]))
+    def print_data(self, index=-1):
+        out = self.data2str(index)
+        print(out + '  :  dt=' + str(self._tdelta[index]))
+
+    def data2str(self, index=-1):
+        if index < 0 or index >= self.shape[0]:
+            index = self._head
+        return np.array2string(self.data_series[index], precision=4)
 
     def __str__(self):
         output = str()
         i = self._head - 1
         while i != self._head:
-            output += str(self.data_series[i]) + '  :  dt=' + str(self._tdelta[i]) + '\n'
+            output += str(self.data2str(i)) + '  :  dt=' + str(self._tdelta[i]) + '\n'
             i -= 1
             if i <= -1:
                 i = self._size - 1
-        output += str(self.data_series[i]) + '  :  dt=' + str(self._tdelta[i])
+        output += str(self.data2str(i)) + '  :  dt=' + str(self._tdelta[i])
         return output

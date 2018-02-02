@@ -50,10 +50,7 @@ _MAG_SENSITIVITY = 16384
 # time series & pre-processing
 _UPDATE_TIME = time.time()
 _SERIES_SIZE = 50
-_DATA_SERIES = DataTimeSeries(N=_SERIES_SIZE, dimensions=6)
-_ACC_TIME_SERIES = DataTimeSeries(N=_SERIES_SIZE, dimensions=3)
-_GYR_TIME_SERIES = DataTimeSeries(N=_SERIES_SIZE, dimensions=3)
-_MAG_TIME_SERIES = DataTimeSeries(N=_SERIES_SIZE, dimensions=3)
+_DATA_SERIES = None
 _GRAV_MAGNITUDE = 0.0
 _GRAV_VECTOR = glm.vec3(0, dtype=c_float)
 _VELOCITY = np.zeros((3), c_float)
@@ -135,9 +132,13 @@ def get_motion_data():
     """
     Returns current velocity and rotation as a tuple.
     """
-    global _DOF, _GRAV_MAGNITUDE, _GRAV_VECTOR, _FRAME_TIME
+    global _DOF, _GRAV_MAGNITUDE, _GRAV_VECTOR, _FRAME_TIME, _DATA_SERIES
     update_time_series()
-    acc, gyr, mag = convert_raw_data()
+    data = _DATA_SERIES.get_data()
+    acc, gyr = data[:3], data[3:6]
+    mag = None
+    if _DOF == 9:
+        mag = data[6:9]
     tdelta = _DATA_SERIES.get_tdelta()
     # acc_norm = np.linalg.norm(acc)
     # print(acc_norm)
@@ -165,7 +166,7 @@ def get_motion_data():
 
 
 def attitude_estimation(acc):
-    rad = np.math.pi / 2
+    rad = np.pi / 2
     roll = rad
     pitch = np.math.atan(acc[2] / acc[0])
     yaw = np.math.atan(acc[1] / np.math.sqrt(acc[0]**2 + acc[2]**2))
@@ -177,25 +178,27 @@ def attitude_estimation(acc):
     return att_rot
 
 
-def convert_raw_data():
-    global _DATA_SERIES, _DOF,\
-        _ACC_VREF, _ACC_VZEROG, _ACC_SENSITIVITY,\
-        _GYR_VREF, _GYR_VRO, _GYR_SENSITIVITY,\
-        _MAG_VREF, _MAG_BITWIDTH, _MAG_SENSITIVITY
+def convert_raw_data(data_series):
+    """
+    Callback function to be used with DataTimeSeries post_filter constructor argument.
+    \t
+    \tdata_series:    DataTimeSeries callback requires this parameter
+    """
+    global _ACC_VZEROG, _ACC_SENSITIVITY,\
+        _GYR_VRO, _GYR_SENSITIVITY,\
+        _MAG_SENSITIVITY
     # get filtered data
-    data = _DATA_SERIES.calc_ewma()
+    data = data_series.get_data()
     # convert raw accelerometer data
-    acc = data[:3]
-    acc = (acc - _ACC_VZEROG) / _ACC_SENSITIVITY
+    data[:3] = (data[:3] - _ACC_VZEROG) / _ACC_SENSITIVITY
     # conver raw gyroscope data
-    gyr = data[3:6]
-    gyr = (gyr - _GYR_VRO) / _GYR_SENSITIVITY
+    data[3:6] = (data[3:6] - _GYR_VRO) / _GYR_SENSITIVITY
     # check for 9 DoF
     mag = None
-    if _DOF == 9:
-        mag = glm.vec3(data[6:9])
+    if data_series.shape[1] == 9:
         # TODO: Implement magnitometer raw value conversion
-    return acc, gyr, mag
+        pass
+    return data
 
 
 def complementary_filter(att_est, alpha=0.2):
@@ -205,7 +208,8 @@ def complementary_filter(att_est, alpha=0.2):
     data = _DATA_SERIES.get_data()[3:6]
     dt = _DATA_SERIES.get_tdelta()
     for i in range(_DATA_SERIES.shape[1]):
-        result = (1 - alpha) * (prev_data * prev_dt + data * dt) + alpha * att_est
+        result = (1 - alpha) * (prev_data * prev_dt +
+                                data * dt) + alpha * att_est
     return result
 
 
@@ -247,7 +251,8 @@ def read_data():
 
 
 def main():
-    global _PROJECTION_MTRX, _VIEW_LOOKAT, _ASPECT_RATIO, _FRAME_TIME
+    global _PROJECTION_MTRX, _VIEW_LOOKAT, _ASPECT_RATIO, _FRAME_TIME, _DATA_SERIES
+    _DATA_SERIES = DataTimeSeries(N=_SERIES_SIZE, dimensions=6, auto_filter=True, post_filter=convert_raw_data)
     init_serial_connection()
     # OpenGL initialization.
     glut.glutInit(sys.argv)
@@ -270,7 +275,8 @@ def main():
     _PROJECTION_MTRX = glm.perspective(
         glm.radians(45.0), _ASPECT_RATIO, 0.1, 100.0)
     _VIEW_LOOKAT = glm.lookAt(glm.vec3((0.0, 2.0, -4), dtype=c_float),   # eye
-                              glm.vec3((0.0, 1.0, 0.0), dtype=c_float),  # center
+                              glm.vec3((0.0, 1.0, 0.0),
+                                       dtype=c_float),  # center
                               glm.vec3((0.0, 1.0, 0.0), dtype=c_float))  # up
     # Begin main loop.
     init_object()

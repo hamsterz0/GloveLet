@@ -56,7 +56,7 @@ except Exception as e:
     print(e)
 
 D = np.array(data_sample, int)
-dts = DataTimeSeries(N=20, dimensions=D.shape[1])
+dts = None
 
 
 def close_port():
@@ -68,6 +68,8 @@ atexit.register(close_port)
 
 
 def init_dts():
+    global dts
+    dts = DataTimeSeries(N=20, dimensions=D.shape[1], auto_filter=True, post_filter=convert_raw_data)
     for i in range(D.shape[0]):
         dts.add(D[i])
         time.sleep(0.010)
@@ -81,7 +83,7 @@ def clear():
 def serial_dts(exp_factor=1.0):
     global _SERIAL, _CONNECTED
     N = 50
-    dts = DataTimeSeries(N=N, dimensions=6, factor=exp_factor)
+    dts = DataTimeSeries(N=N, dimensions=6, factor=exp_factor, auto_filter=True, post_filter=convert_raw_data)
     while not _CONNECTED:
         data = read_data()
         if len(data) == 3 and data[2] == 'successful@':
@@ -91,21 +93,31 @@ def serial_dts(exp_factor=1.0):
         data = read_data()
         if len(data) == 6:
             dts.add(data)
-            dts.print_head()
+            dts.print_data()
     while True:
         data = read_data()
         if len(data) == 6:
             dts.add(data)
-            data = dts.calc_ewma()
-            # convert raw accelerometer data
-            data[:3] = (data[:3] - _ACC_VZEROG) / _ACC_SENSITIVITY
-            # conver raw gyroscope data
-            data[3:6] = (data[3:6] - _GYR_VRO) / _GYR_SENSITIVITY
-            # print output
-            o = str()
-            for i in range(data.shape[0]):
-                o += '{:.4f} '.format(data[i])
-            print('[ ' + o + ']')
+            dts.print_data()
+
+
+
+def convert_raw_data(data_series):
+    global _ACC_VZEROG, _ACC_SENSITIVITY,\
+        _GYR_VRO, _GYR_SENSITIVITY,\
+        _MAG_SENSITIVITY
+    # get filtered data
+    data = data_series.get_data()
+    # convert raw accelerometer data
+    data[:3] = (data[:3] - _ACC_VZEROG) / _ACC_SENSITIVITY
+    # conver raw gyroscope data
+    data[3:6] = (data[3:6] - _GYR_VRO) / _GYR_SENSITIVITY
+    # check for 9 DoF
+    mag = None
+    if data_series.shape[1] == 9:
+        # TODO: Implement magnitometer raw value conversion
+        pass
+    return data
 
 
 def read_data():
@@ -124,4 +136,5 @@ def read_data():
 
 
 if __name__ == '__main__':
+    init_dts()
     serial_dts()
