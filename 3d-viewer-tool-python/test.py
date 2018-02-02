@@ -48,8 +48,12 @@ _ACC_VZEROG = np.array([1.09375, 1.09375, 1.09375], c_float)
 _ACC_SENSITIVITY = 16384  # 16384, 8192, 4096, 2048
 _GYR_VRO = np.array([0.2, 0.2, 4.0], c_float)
 _GYR_SENSITIVITY = 131
-_SERIAL = serial.Serial('/dev/ttyACM0', 115200, timeout=1)
-_CONNECTED = False
+
+try:
+    _SERIAL = serial.Serial('/dev/ttyACM0', 115200, timeout=1)
+    _CONNECTED = False
+except Exception as e:
+    print(e)
 
 D = np.array(data_sample, int)
 dts = DataTimeSeries(N=20, dimensions=D.shape[1])
