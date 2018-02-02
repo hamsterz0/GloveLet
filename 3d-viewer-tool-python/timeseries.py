@@ -46,7 +46,7 @@ class DataTimeSeries:
         self.add = self._initial_series_add
         self._raw_data[self._head, :] = data
         if self._filtered_data is not None:
-            self._filter_data
+            self._filter_data()
         self._time = time.time()
 
     def _initial_series_add(self, data):
@@ -54,7 +54,7 @@ class DataTimeSeries:
         Repeats everytime 'add' is called until the data series has
         been completely initialized/filled with data.
         """
-        if self._added < self._dimensions:
+        if self._added < self._size:
             self._added += 1
         else:
             # rebind once series had bee initialized/filled with data
@@ -113,7 +113,8 @@ class DataTimeSeries:
         for i in range(self._added):
             if it < 0:
                 it = self._size - 1
-            result += (self._exp_weights[i] * self.data_series[i, :])
+            result += (self._exp_weights[it] * self.data_series[it, :])
+            it -= 1
         return result / self._denom
 
     def calc_sma(self):
@@ -122,7 +123,8 @@ class DataTimeSeries:
         for i in range(self._added):
             if it < 0:
                 it = self._size - 1
-            result += self.data_series[i, :]
+            result += self.data_series[it, :]
+            it -= 1
         return result / self._denom
 
     def print_head(self):

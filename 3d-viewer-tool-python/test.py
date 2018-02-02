@@ -121,3 +121,7 @@ def read_data():
     if len(data) == 6:
         data = np.array(data, c_float)
     return data
+
+
+if __name__ == '__main__':
+    serial_dts()
