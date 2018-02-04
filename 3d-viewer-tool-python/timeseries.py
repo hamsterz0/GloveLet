@@ -127,7 +127,7 @@ class DataTimeSeries:
                 it = self._size - 1
             result += self.data_series[it, :]
             it -= 1
-        return result / self._denom
+        return result / self._added
 
     def print_data(self, index=-1):
         out = self.data2str(index)

@@ -5,6 +5,7 @@ import serial
 import atexit
 from timeseries import DataTimeSeries
 from ctypes import c_float
+from viewer3d_utility import convert_raw_data
 
 
 data_sample = [
@@ -49,6 +50,7 @@ _ACC_SENSITIVITY = 16384  # 16384, 8192, 4096, 2048
 _GYR_VRO = np.array([0.2, 0.2, 4.0], c_float)
 _GYR_SENSITIVITY = 131
 
+_SERIAL = None
 try:
     _SERIAL = serial.Serial('/dev/ttyACM0', 115200, timeout=1)
     _CONNECTED = False
@@ -99,25 +101,6 @@ def serial_dts(exp_factor=1.0):
         if len(data) == 6:
             dts.add(data)
             dts.print_data()
-
-
-
-def convert_raw_data(data_series):
-    global _ACC_VZEROG, _ACC_SENSITIVITY,\
-        _GYR_VRO, _GYR_SENSITIVITY,\
-        _MAG_SENSITIVITY
-    # get filtered data
-    data = data_series.get_data()
-    # convert raw accelerometer data
-    data[:3] = (data[:3] - _ACC_VZEROG) / _ACC_SENSITIVITY
-    # conver raw gyroscope data
-    data[3:6] = (data[3:6] - _GYR_VRO) / _GYR_SENSITIVITY
-    # check for 9 DoF
-    mag = None
-    if data_series.shape[1] == 9:
-        # TODO: Implement magnitometer raw value conversion
-        pass
-    return data
 
 
 def read_data():

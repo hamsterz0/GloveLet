@@ -39,20 +39,20 @@ class WorldObject:
         # TODO: type check for 'mesh', 'parent', 'children', and 'axis' kwargs
         self._axis = axis               # TODO: Implement axis object
         self._mesh = mesh
-        self._pos = _convert2tvec3(position)
-        self._loc_pos = _convert2tvec3(local_position)
-        self._rot = _convert2tquat(rotation)
-        self._loc_rot = _convert2tquat(local_rotation)
+        self.position = _convert2tvec3(position)
+        self.local_position = _convert2tvec3(local_position)
+        self.rotation = _convert2tquat(rotation)
+        self.local_rotation = _convert2tquat(local_rotation)
         self._parent = parent
         self._children = children.copy()
 
     def render(self):
         trans_mat = glm.mat4(1.0, dtype=c_float)
-        trans_mat = glm.translate(trans_mat, self._pos)
+        trans_mat = glm.translate(trans_mat, self.position)
         loc_trans_mat = glm.mat4(1.0, dtype=c_float)
-        loc_trans_mat = glm.translate(loc_trans_mat, self._loc_pos)
-        rot_mat = glm.mat4_cast(self._rot)
-        loc_rot_mat = glm.mat4_cast(self._loc_rot)
+        loc_trans_mat = glm.translate(loc_trans_mat, self.local_position)
+        rot_mat = glm.mat4_cast(self.rotation)
+        loc_rot_mat = glm.mat4_cast(self.local_rotation)
         # push transformations to stack
         sm.CURRENT_PROGRAM.push()
         # sm.CURRENT_PROGRAM.model_mat4(glm.mat4(1.0, dtype=c_float).value)
@@ -77,14 +77,14 @@ class WorldObject:
         space of the parent if this object is a child of another object.
         """
         # TODO: Complete parameter documentation
-        self._pos += _convert2tvec3(vec)
+        self.position += _convert2tvec3(vec)
 
     def move_local(self, vec):
         """
         Move this object in local space.
         """
         # TODO: Complete parameter documentation
-        self._loc_pos += _convert2tvec3(vec)
+        self.local_position += _convert2tvec3(vec)
 
     def set_position(self, vec):
         """
@@ -92,14 +92,14 @@ class WorldObject:
         space of the parent if this object is a child of another object.
         """
         # TODO: Complete parameter documentation
-        self._pos = _convert2tvec3(vec)
+        self.position = _convert2tvec3(vec)
 
     def set_local_position(self, vec):
         """
         Set this object's position in local space.
         """
         # TODO: Complete parameter documentation
-        self._loc_pos = _convert2tvec3(vec)
+        self.local_position = _convert2tvec3(vec)
 
     def rotate(self, rot):
         """
@@ -108,14 +108,14 @@ class WorldObject:
         is a child of another object.
         """
         # TODO: Complete parameter documentation
-        self._rot = _convert2tquat(rot) * self._rot
+        self.rotation = _convert2tquat(rot) * self.rotation
 
     def rotate_local(self, rot):
         """
         Rotate the object by the specified amount in local space.
         """
         # TODO: Complete parameter documentation
-        self._loc_rot = self._loc_rot * _convert2tquat(rot)
+        self.local_rotation = self.local_rotation * _convert2tquat(rot)
 
     def set_rotation(self, rot):
         """
@@ -123,14 +123,14 @@ class WorldObject:
         space of the parent if this object is a child of another object.
         """
         # TODO: Complete parameter documentation
-        self._rot = _convert2tquat(rot)
+        self.rotation = _convert2tquat(rot)
 
     def set_local_rotation(self, rot):
         """
         Set this object's rotation in local space.
         """
         # TODO: Complete parameter documentation
-        self._loc_rot = _convert2tquat(rot)
+        self.local_rotation = _convert2tquat(rot)
 
     def add_child(self, child):
         """
@@ -177,3 +177,8 @@ class WorldObject:
         for i in range(len(self._children)):
             result += self._children[i].count_childern()
         return result
+
+
+def draw_vector(pos1, pos2, length, color=(1.0, 1.0, 1.0, 1.0)):
+    gl.glDisable(gl.GL_DEPTH_TEST)
+    gl.glEnable(gl.GL_DEPTH_TEST)
