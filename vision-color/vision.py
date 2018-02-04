@@ -211,8 +211,6 @@ class VisionTracking(object):
         self.mouseInit_X = self.finger1_posX
         self.mouseInit_Y = self.finger1_posY
 
-        print('Mouse Initial Coordinates {} {}'.format(self.mouseInit_X, self.mouseInit_Y))
-
         if marker1:
             self.__move_mouse()
             if not self.motionEnable:
@@ -230,7 +228,6 @@ class VisionTracking(object):
                     self.mouseFinal_Y = self.screen_height
                 self.pre_X = self.mousePoint_X
                 self.pre_Y = self.mouseFinal_Y
-            print('Mouse Final Coordinates: {} {}'.format(self.mouseFinal_X, self.mouseFinal_Y))
             if self.mouseFinal_X != 0 and self.mouseFinal_Y != 0:
                 pyautogui.moveTo(self.mouseFinal_X, self.mouseFinal_Y)
 
