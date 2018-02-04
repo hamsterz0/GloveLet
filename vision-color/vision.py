@@ -11,6 +11,7 @@ import numpy as np
 import tkinter
 import threading
 import pyautogui
+import pdb
 
 
 class VisionTracking(object):
@@ -30,7 +31,21 @@ class VisionTracking(object):
         self.screen_width = 0
         self.screen_height = 0
         self.camera = None
+        self.smoothness = 8
         pyautogui.FAILSAFE = False
+        self.finger1_posX = 0
+        self.finger2_posY = 0
+        self.mouseInit_X = 0
+        self.mouseInit_Y = 0
+        self.mouseFinal_X = 0
+        self.mouseFinal_Y = 0
+        self.mousePoint_X = 0
+        self.mousePoint_Y = 0
+        self.pre_X = 0
+        self.pre_Y = 0
+        self.dx = 0
+        self.dy = 0
+        self.motionEnable = False
 
     def __callback(self, value):
         """
@@ -113,7 +128,10 @@ class VisionTracking(object):
     def __findScreenSize(self):
         root = tkinter.Tk()
         root.withdraw()
-        self.width, self.height = root.winfo_screenwidth(), root.winfo_screenheight()
+        self.screen_width, self.screen_height = root.winfo_screenwidth(), root.winfo_screenheight()
+        self.mouseFinal_X = self.screen_width/2
+        self.mouseFinal_Y = self.screen_height/2
+
 
     def __frameOperations(self, mask):
         kernel = np.ones((5,5), np.uint8)
@@ -123,8 +141,7 @@ class VisionTracking(object):
         frame = cv2.morphologyEx(mask, cv2.MORPH_CLOSE, kernel)
         return frame
 
-    def __move_mouse(self):
-        pyautogui.moveTo(self.mouse_pos[0], self.mouse_pos[1])
+
 
     def __track_object(self, frame, finger_num):
         contours = cv2.findContours(frame, 1, 2)
@@ -150,30 +167,72 @@ class VisionTracking(object):
         if moment00 > 20000 and moment00 < 20000000:
             posX = moment10/moment00
             posY = moment01/moment00
-        return [posX, posY]
+            marker = True
+        else:
+            marker = False
+        return [marker, posX, posY]
+
+    def __move_mouse(self):
+        mouseFlag = False
+        self.dx = pow((self.mousePoint_X - self.mouseInit_X), 2)
+        self.dy = pow((self.mousePoint_Y - self.mouseInit_Y), 2)
+        r2 = pow(self.smoothness, 2)
+
+        if (self.dx+self.dy) >= r2:
+            mouseFlag = True
+        else:
+            mouseFlag = False
+
+        if mouseFlag:
+            self.mousePoint_X = self.mouseInit_X
+            self.mousePoint_Y = self.mouseInit_Y
+            mouseFlag = False
 
     def __track(self):
         ret, frame = self.camera.read()
         frame = cv2.flip(frame, 1)    # flipping the frame vertically.
+        frame_rows, frame_cols, tmp = frame.shape
         # frameRGB = cv2.cvtColor(frame, cv2.RGB2BGR)
         frameHSV = cv2.cvtColor(frame, cv2.COLOR_BGR2HSV)
         lower_threshold_f1 = np.array(self.threshold_finger1[:3])
         upper_threshold_f1 = np.array(self.threshold_finger1[3:])
 
-        lower_threshold_f2 = np.array(self.threshold_finger2[:3])
-        upper_threshold_f2 = np.array(self.threshold_finger2[3:])
+        # lower_threshold_f2 = np.array(self.threshold_finger2[:3])
+        # upper_threshold_f2 = np.array(self.threshold_finger2[3:])
 
         mask_f1 = cv2.inRange(frameHSV, lower_threshold_f1, upper_threshold_f1)
-        mask_f2 = cv2.inRange(frameHSV, lower_threshold_f2, upper_threshold_f2)
+        # mask_f2 = cv2.inRange(frameHSV, lower_threshold_f2, upper_threshold_f2)
         frame_f1 = self.__frameOperations(mask_f1)
-        frame_f2 = self.__frameOperations(mask_f2)
+        # frame_f2 = self.__frameOperations(mask_f2)
 
-        finger1_posX, finger1_posY = self.__track_object(frame_f1, self.FINGER_1)
-        finger2_posX, finger2_posY = self.__track_object(frame_f2, self.FINGER_2)
+        marker1, self.finger1_posX, self.finger1_posY = self.__track_object(frame_f1, self.FINGER_1)
+        # marker2, self.finger2_posX, self.finger2_posY = self.__track_object(frame_f2, self.FINGER_2)
 
-        self.mouse_pos = [self.pos_f1[0], self.pos_f1[1]]
+        self.mouseInit_X = self.finger1_posX
+        self.mouseInit_Y = self.finger1_posY
 
-        self.__move_mouse()
+        print('Mouse Initial Coordinates {} {}'.format(self.mouseInit_X, self.mouseInit_Y))
+
+        if marker1:
+            self.__move_mouse()
+            if not self.motionEnable:
+                self.pre_x = self.mousePoint_X
+                self.pre_Y = self.mousePoint_Y
+                self.motionEnable = True
+            else:
+                self.dx = self.mousePoint_X
+                self.dy = self.mousePoint_Y
+                self.mouseFinal_X = self.dx * (self.screen_width/frame_cols)
+                self.mouseFinal_Y = self.dy * (self.screen_height/frame_rows)
+                if self.mouseFinal_X > self.screen_width:
+                    self.mouseFinal_X = self.screen_width
+                elif self.mouseFinal_Y > self.screen_height:
+                    self.mouseFinal_Y = self.screen_height
+                self.pre_X = self.mousePoint_X
+                self.pre_Y = self.mouseFinal_Y
+            print('Mouse Final Coordinates: {} {}'.format(self.mouseFinal_X, self.mouseFinal_Y))
+            if self.mouseFinal_X != 0 and self.mouseFinal_Y != 0:
+                pyautogui.moveTo(self.mouseFinal_X, self.mouseFinal_Y)
 
         # print('W: {}, H: {}'.format(frame.shape[1], frame.shape[0]))
         
@@ -181,8 +240,8 @@ class VisionTracking(object):
         # cnt = contours[0]
         # M = cv2.moments(cnt)
 
-        cv2.imshow("Mask", mask_f1)
-        cv2.imshow("Frame", frame_f1)
+        # cv2.imshow("Mask", mask_f1)
+        # cv2.imshow("Frame", frame_f1)
 
     def get_coordinates(self):
         """
@@ -191,12 +250,13 @@ class VisionTracking(object):
         """
         # Running the webcam to collect the data. 
         self.__selectWebCam()
+        self.__findScreenSize()
         # Running the range detector
         # This would be used for now to calibrate.
         # for finger 1. 
         self.__rangeDetector(self.FINGER_1)
         # range for finger 2
-        self.__rangeDetector(self.FINGER_2)
+        # self.__rangeDetector(self.FINGER_2)
         # Calling the vision tracking process every x seconds
         while True:
             self.__track()
