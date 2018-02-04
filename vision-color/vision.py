@@ -18,16 +18,17 @@ class VisionTracking(object):
     THRESHOLD_MAX = 255
     THRESHOLD_MIN = 0
     SCREEN_UPDATE_TIME = 3
+    FINGER_1 = 1
+    FINGER_2 = 2
 
     def __init__(self):
         """
         Initializing the member variables.
         """
-        self.threshold = None
+        self.threshold_finger1 = None
+        self.threshold_finger2 = None
         self.screen_width = 0
         self.screen_height = 0
-        self.posX = 0
-        self.posY = 0
         self.camera = None
         pyautogui.FAILSAFE = False
 
@@ -70,7 +71,7 @@ class VisionTracking(object):
                 values.append(val)
         return values
 
-    def __rangeDetector(self):
+    def __rangeDetector(self, finger_num):
         """
         Master function for calling the CV Trackbar GUI to select the threshold 
         values for the threshold for the user selected colors. 
@@ -85,8 +86,8 @@ class VisionTracking(object):
                 break
             
             frame_thresh = cv2.cvtColor(img, cv2.COLOR_BGR2HSV) # converting to HSV colorscale.
-            self.threshold = self.__getMinMaxValues()
-            [hmin, smin, vmin, hmax, smax, vmax] = self.threshold
+            threshold = self.__getMinMaxValues()
+            [hmin, smin, vmin, hmax, smax, vmax] = threshold
             min_values = (hmin, smin, vmin)
             max_values = (hmax, smax, vmax)
 
@@ -95,6 +96,10 @@ class VisionTracking(object):
 
             if cv2.waitKey(1) & 0xFF is ord('q'):
                 break
+        if finger_num == 1:
+            self.threshold_finger1 = threshold
+        else:
+            self.threshold_finger2 = threshold
         cv2.destroyAllWindows()
 
     def __selectWebCam(self):
@@ -118,18 +123,10 @@ class VisionTracking(object):
         frame = cv2.morphologyEx(mask, cv2.MORPH_CLOSE, kernel)
         return frame
 
-    def __track(self):
-        ret, frame = self.camera.read()
-        frame = cv2.flip(frame, 1)    # flipping the frame vertically.
-        # frameRGB = cv2.cvtColor(frame, cv2.RGB2BGR)
-        frameHSV = cv2.cvtColor(frame, cv2.COLOR_BGR2HSV)
-        lower_threshold = np.array(self.threshold[:3])
-        upper_threshold = np.array(self.threshold[3:])
-        mask = cv2.inRange(frameHSV, lower_threshold, upper_threshold)
-        frame = self.__frameOperations(mask)
+    def __move_mouse(self):
+        pyautogui.moveTo(self.mouse_pos[0], self.mouse_pos[1])
 
-        # print('W: {}, H: {}'.format(frame.shape[1], frame.shape[0]))
-        
+    def __track_object(self, frame, finger_num):
         contours = cv2.findContours(frame, 1, 2)
         cnt = contours[0]
         M = cv2.moments(cnt)
@@ -144,24 +141,48 @@ class VisionTracking(object):
         'm10': 332658720.0, 'm02': 5326324995.0, 'm20': 138760534800.0, 
         'mu02': 802829841.8216686, 'nu20': 0.00010731544545134859, 'mu03': -1116991617.0978394,
          'm00': 797895.0, 'mu30': 4572032.8203125}
-
         """
         moment00 = M['m00']
         moment01 = M['m01']
         moment10 = M['m10']
-
+        posX = 0
+        posY = 0
         if moment00 > 20000 and moment00 < 20000000:
-            self.posX = moment10/moment00
-            self.posY = moment01/moment00
-            self.__move_mouse(frame)
+            posX = moment10/moment00
+            posY = moment01/moment00
+        return [posX, posY]
 
-        print('PosX: {}, PosY: {}'.format(self.posX, self.posY))
+    def __track(self):
+        ret, frame = self.camera.read()
+        frame = cv2.flip(frame, 1)    # flipping the frame vertically.
+        # frameRGB = cv2.cvtColor(frame, cv2.RGB2BGR)
+        frameHSV = cv2.cvtColor(frame, cv2.COLOR_BGR2HSV)
+        lower_threshold_f1 = np.array(self.threshold_finger1[:3])
+        upper_threshold_f1 = np.array(self.threshold_finger1[3:])
 
-        cv2.imshow("Mask", mask)
-        cv2.imshow("Frame", frame)
+        lower_threshold_f2 = np.array(self.threshold_finger2[:3])
+        upper_threshold_f2 = np.array(self.threshold_finger2[3:])
 
-    def __move_mouse(self, frame):
-        pyautogui.moveTo(self.posX, self.posY)
+        mask_f1 = cv2.inRange(frameHSV, lower_threshold_f1, upper_threshold_f1)
+        mask_f2 = cv2.inRange(frameHSV, lower_threshold_f2, upper_threshold_f2)
+        frame_f1 = self.__frameOperations(mask_f1)
+        frame_f2 = self.__frameOperations(mask_f2)
+
+        finger1_posX, finger1_posY = self.__track_object(frame_f1, self.FINGER_1)
+        finger2_posX, finger2_posY = self.__track_object(frame_f2, self.FINGER_2)
+
+        self.mouse_pos = [self.pos_f1[0], self.pos_f1[1]]
+
+        self.__move_mouse()
+
+        # print('W: {}, H: {}'.format(frame.shape[1], frame.shape[0]))
+        
+        # contours = cv2.findContours(frame_f1, 1, 2)
+        # cnt = contours[0]
+        # M = cv2.moments(cnt)
+
+        cv2.imshow("Mask", mask_f1)
+        cv2.imshow("Frame", frame_f1)
 
     def get_coordinates(self):
         """
@@ -171,8 +192,11 @@ class VisionTracking(object):
         # Running the webcam to collect the data. 
         self.__selectWebCam()
         # Running the range detector
-        # This would be used for now to calibrate. 
-        self.__rangeDetector()
+        # This would be used for now to calibrate.
+        # for finger 1. 
+        self.__rangeDetector(self.FINGER_1)
+        # range for finger 2
+        self.__rangeDetector(self.FINGER_2)
         # Calling the vision tracking process every x seconds
         while True:
             self.__track()
