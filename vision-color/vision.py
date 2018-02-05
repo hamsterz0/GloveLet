@@ -31,7 +31,7 @@ class VisionTracking(object):
         self.screen_width = 0
         self.screen_height = 0
         self.camera = None
-        self.smoothness = 8
+        self.smoothness = 5
         pyautogui.FAILSAFE = False
         self.finger1_posX = 0
         self.finger2_posY = 0
