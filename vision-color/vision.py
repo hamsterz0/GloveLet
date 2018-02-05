@@ -12,6 +12,7 @@ import tkinter
 import threading
 import pyautogui
 import pdb
+import math
 
 
 class VisionTracking(object):
@@ -21,6 +22,8 @@ class VisionTracking(object):
     SCREEN_UPDATE_TIME = 3
     FINGER_1 = 1
     FINGER_2 = 2
+    RIGHTCLICK_DELAY = 20
+    PINCH_RIGHT = 66
 
     def __init__(self):
         """
@@ -31,9 +34,13 @@ class VisionTracking(object):
         self.screen_width = 0
         self.screen_height = 0
         self.camera = None
-        self.smoothness = 5
+        self.smoothness = 8
+        self.window_fing1 = []
+        self.window_fing2 = []
         pyautogui.FAILSAFE = False
         self.finger1_posX = 0
+        self.finger1_posY = 0
+        self.finger2_posX = 0
         self.finger2_posY = 0
         self.mouseInit_X = 0
         self.mouseInit_Y = 0
@@ -45,7 +52,12 @@ class VisionTracking(object):
         self.pre_Y = 0
         self.dx = 0
         self.dy = 0
+        self.tempX = 0
+        self.tempY = 0
         self.motionEnable = False
+        self.rightClickWC = 0
+        self.pinch = False
+        self.frame = 0
 
     def __callback(self, value):
         """
@@ -123,7 +135,7 @@ class VisionTracking(object):
         the data from. 
         """
         # TODO: For now using the default camera.
-        self.camera = cv2.VideoCapture(0)
+        self.camera = cv2.VideoCapture(1)
 
     def __findScreenSize(self):
         root = tkinter.Tk()
@@ -187,13 +199,34 @@ class VisionTracking(object):
             self.mousePoint_X = self.mouseInit_X
             self.mousePoint_Y = self.mouseInit_Y
             mouseFlag = False
+        cv2.circle(self.frame, (int(self.mousePoint_X), int(self.mousePoint_Y)), self.smoothness, (0, 225, 0), 2)
+        cv2.circle(self.frame, (int(self.mousePoint_X), int(self.mousePoint_Y)), 2, (0, 225, 0), 2)
+        cv2.circle(self.frame, (int(self.mousePoint_X), int(self.mousePoint_Y)), 2, (0, 225, 0), 2)
+
+    def __pre_click(self):
+        self.pinch = 0
+        fingers_dist = math.sqrt( pow((self.finger2_posX - self.mouseInit_X), 2) + pow((self.finger2_posY - self.mouseInit_Y), 2) )
+        if fingers_dist < self.PINCH_RIGHT:
+            pinch = True
+        else:
+            pinch = False
+
+    def __calculate_window_avg(self):
+        X = 0
+        Y = 0
+        for [x, y] in self.window_fing1:
+            X += x
+            Y += y
+        X = X/len(self.window_fing1)
+        Y = Y/len(self.window_fing1)
+        return X, Y 
 
     def __track(self):
-        ret, frame = self.camera.read()
-        frame = cv2.flip(frame, 1)    # flipping the frame vertically.
-        frame_rows, frame_cols, tmp = frame.shape
+        ret, self.frame = self.camera.read()
+        self.frame = cv2.flip(self.frame, 1)    # flipping the frame vertically.
+        frame_rows, frame_cols, tmp = self.frame.shape
         # frameRGB = cv2.cvtColor(frame, cv2.RGB2BGR)
-        frameHSV = cv2.cvtColor(frame, cv2.COLOR_BGR2HSV)
+        frameHSV = cv2.cvtColor(self.frame, cv2.COLOR_BGR2HSV)
         lower_threshold_f1 = np.array(self.threshold_finger1[:3])
         upper_threshold_f1 = np.array(self.threshold_finger1[3:])
 
@@ -207,6 +240,8 @@ class VisionTracking(object):
 
         marker1, self.finger1_posX, self.finger1_posY = self.__track_object(frame_f1, self.FINGER_1)
         # marker2, self.finger2_posX, self.finger2_posY = self.__track_object(frame_f2, self.FINGER_2)
+
+        self.window_fing1.append([self.finger1_posX, self.finger1_posY])
 
         self.mouseInit_X = self.finger1_posX
         self.mouseInit_Y = self.finger1_posY
@@ -230,6 +265,21 @@ class VisionTracking(object):
                 self.pre_Y = self.mouseFinal_Y
             if self.mouseFinal_X != 0 and self.mouseFinal_Y != 0:
                 pyautogui.moveTo(self.mouseFinal_X, self.mouseFinal_Y)
+        if marker2:
+            if self.tempX == self.mouseFinal_X and self.tempY == self.mouseFinal_Y:
+                self.rightClickWC += 1
+            else:
+                self.tempX = 0
+                self.tempY = 0
+                self.rightClickWC = 0
+            if self.rightClickWC >= self.RIGHTCLICK_DELAY and self.pinch:
+                # TODO: pyautogui to right click.
+                print('RIGHT CLICK')
+                self.tempX = 0
+                self.tempY = 0
+                self.rightClickWC = 0
+            self.tempX = self.mouseFinal_X
+            self.tempY = self.mouseFinal_Y
 
         # print('W: {}, H: {}'.format(frame.shape[1], frame.shape[0]))
         
@@ -238,7 +288,7 @@ class VisionTracking(object):
         # M = cv2.moments(cnt)
 
         # cv2.imshow("Mask", mask_f1)
-        # cv2.imshow("Frame", frame_f1)
+        cv2.imshow("Frame", frame_f1)
 
     def get_coordinates(self):
         """
@@ -253,7 +303,7 @@ class VisionTracking(object):
         # for finger 1. 
         self.__rangeDetector(self.FINGER_1)
         # range for finger 2
-        # self.__rangeDetector(self.FINGER_2)
+        self.__rangeDetector(self.FINGER_2)
         # Calling the vision tracking process every x seconds
         while True:
             self.__track()
