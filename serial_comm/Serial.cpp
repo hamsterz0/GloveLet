@@ -32,7 +32,7 @@ Serial::~Serial() {
 }
 
 int Serial::flush_init() {
-    char* buffer = (char*) malloc(0x1 * sizeof(char));
+    char* buffer = (char*) calloc(0x1, sizeof(char));
     read(this->fd, buffer, 1);
     while(buffer[0] != '@' && buffer[0] != '#') {
         memset(buffer, 0, sizeof buffer);
