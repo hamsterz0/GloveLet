@@ -313,16 +313,11 @@ class VisionTracking(object):
             if self.pinch:
                 pyautogui.click()
                 self.buttonPress = False
-            
-
         # print('W: {}, H: {}'.format(frame.shape[1], frame.shape[0]))
-        
         # contours = cv2.findContours(frame_f1, 1, 2)
         # cnt = contours[0]
         # M = cv2.moments(cnt)
-
         # cv2.imshow("Mask", mask_f1)
-        
         # cv2.imshow("Frame", frame_f2)
 
     def get_coordinates(self):
