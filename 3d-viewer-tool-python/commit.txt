@@ -1,0 +1,34 @@
+Add functionality and flexibility to DataTimeSeries class.
+
+dataseries.py:
+    - Implement auto-filter to filter data automatically as data is added.
+    - Add ability to bind functions to pre_filter and post_filter so custom processing can be performed on the data before and after auto-filter.
+    - Change get_head method to get_data, which now accepts an index argument.
+    - Change print_head method to print_data, which now accepts an index argument.
+    - Add data2str method, which accepts index argument.
+
+test.py:
+    - Test changes DataTimeSeries class
+
+3d-viewer-utility.py:
+    - Change convert_raw_data function to work as callback for DataTimeSeries post_filter callback function.
+# Please enter the commit message for your changes. Lines starting
+# with '#' will be ignored, and an empty message aborts the commit.
+#
+# On branch 3d-viewer-tool
+# Your branch is up-to-date with 'origin/3d-viewer-tool'.
+#
+# Changes to be committed:
+#	modified:   3d-viewer-utility.py
+#	modified:   test.py
+#	modified:   timeseries.py
+#
+# Changes not staged for commit:
+#	modified:   ../3d_viewer_python/main.py
+#	modified:   ../Arduino/MPU6050_raw/MPU6050_raw.ino
+#	modified:   ../Arduino/MPU6050_raw/i2cdevlib (modified content)
+#
+# Untracked files:
+#	../.gitignore.save
+#	.gitignore
+#
