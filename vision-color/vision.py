@@ -22,8 +22,8 @@ class VisionTracking(object):
     SCREEN_UPDATE_TIME = 3
     FINGER_1 = 1
     FINGER_2 = 2
-    RIGHTCLICK_DELAY = 20
-    PINCH_RIGHT = 66
+    LEFTCLICK_DELAY = 2
+    PINCH_RIGHT = 80
 
     def __init__(self):
         """
@@ -55,7 +55,7 @@ class VisionTracking(object):
         self.tempX = 0
         self.tempY = 0
         self.motionEnable = False
-        self.rightClickWC = 0
+        self.leftClickWC = 0
         self.pinch = False
         self.frame = 0
 
@@ -64,6 +64,18 @@ class VisionTracking(object):
         Placeholder method just used to pass to a cv2 function. 
         """
         pass
+
+    def __config_saved(self):
+        try:
+            line = []
+            with open('.vision.conf', 'r') as file:
+                for values in file:
+                    line.append(values)
+            self.threshold_finger1 = [int(x) for x in line[0].split(',')]
+            self.threshold_finger2 = [int(x) for x in line[1].split(',')]
+        except IOError:
+            return False
+        return True
 
     def __createTrackbar(self):
         """
@@ -105,6 +117,7 @@ class VisionTracking(object):
         This function would call the __createTrackbar and __getMinMaxValues function
         to create the GUI and get the values from the GUI respectively.  
         """
+
         self.__createTrackbar()
         while True:
             ret, img = self.camera.read()   # getting the return value and the frame.
@@ -125,8 +138,13 @@ class VisionTracking(object):
                 break
         if finger_num == 1:
             self.threshold_finger1 = threshold
+            with open('.vision.conf', 'a') as file:
+                file.write('{},{},{},{},{},{}\n'.format(*self.threshold_finger1))
         else:
             self.threshold_finger2 = threshold
+            with open('.vision.conf', 'a') as file:
+                file.write('{},{},{},{},{},{}'.format(*self.threshold_finger2))
+
         cv2.destroyAllWindows()
 
     def __selectWebCam(self):
@@ -152,8 +170,6 @@ class VisionTracking(object):
         frame = cv2.morphologyEx(mask, cv2.MORPH_OPEN, kernel)
         frame = cv2.morphologyEx(mask, cv2.MORPH_CLOSE, kernel)
         return frame
-
-
 
     def __track_object(self, frame, finger_num):
         contours = cv2.findContours(frame, 1, 2)
@@ -206,10 +222,11 @@ class VisionTracking(object):
     def __pre_click(self):
         self.pinch = 0
         fingers_dist = math.sqrt( pow((self.finger2_posX - self.mouseInit_X), 2) + pow((self.finger2_posY - self.mouseInit_Y), 2) )
+        print('{} {}'.format(fingers_dist, self.PINCH_RIGHT))
         if fingers_dist < self.PINCH_RIGHT:
-            pinch = True
+            self.pinch = True
         else:
-            pinch = False
+            self.pinch = False
 
     def __calculate_window_avg(self):
         X = 0
@@ -230,18 +247,26 @@ class VisionTracking(object):
         lower_threshold_f1 = np.array(self.threshold_finger1[:3])
         upper_threshold_f1 = np.array(self.threshold_finger1[3:])
 
-        # lower_threshold_f2 = np.array(self.threshold_finger2[:3])
-        # upper_threshold_f2 = np.array(self.threshold_finger2[3:])
+        lower_threshold_f2 = np.array(self.threshold_finger2[:3])
+        upper_threshold_f2 = np.array(self.threshold_finger2[3:])
 
         mask_f1 = cv2.inRange(frameHSV, lower_threshold_f1, upper_threshold_f1)
-        # mask_f2 = cv2.inRange(frameHSV, lower_threshold_f2, upper_threshold_f2)
+        mask_f2 = cv2.inRange(frameHSV, lower_threshold_f2, upper_threshold_f2)
         frame_f1 = self.__frameOperations(mask_f1)
-        # frame_f2 = self.__frameOperations(mask_f2)
+        frame_f2 = self.__frameOperations(mask_f2)
+        frame = self.__frameOperations(mask_f2)
+        frame = self.__frameOperations(mask_f1)
 
         marker1, self.finger1_posX, self.finger1_posY = self.__track_object(frame_f1, self.FINGER_1)
-        # marker2, self.finger2_posX, self.finger2_posY = self.__track_object(frame_f2, self.FINGER_2)
+        marker2, self.finger2_posX, self.finger2_posY = self.__track_object(frame_f2, self.FINGER_2)
 
         self.window_fing1.append([self.finger1_posX, self.finger1_posY])
+
+        if len(self.window_fing1) <= 3:
+            return
+        else:
+            self.finger1_posX, self.finger1_posY = self.__calculate_window_avg()
+            self.window_fing1 = []
 
         self.mouseInit_X = self.finger1_posX
         self.mouseInit_Y = self.finger1_posY
@@ -255,31 +280,27 @@ class VisionTracking(object):
             else:
                 self.dx = self.mousePoint_X
                 self.dy = self.mousePoint_Y
-                self.mouseFinal_X = self.dx * (self.screen_width/frame_cols)
-                self.mouseFinal_Y = self.dy * (self.screen_height/frame_rows)
+                self.mouseFinal_X = self.dx * (self.screen_width/(frame_cols*1))
+                self.mouseFinal_Y = self.dy * (self.screen_height/(frame_cols*1))
                 if self.mouseFinal_X > self.screen_width:
                     self.mouseFinal_X = self.screen_width
                 elif self.mouseFinal_Y > self.screen_height:
                     self.mouseFinal_Y = self.screen_height
                 self.pre_X = self.mousePoint_X
                 self.pre_Y = self.mouseFinal_Y
-            if self.mouseFinal_X != 0 and self.mouseFinal_Y != 0:
+            if self.mouseFinal_X != 0 and self.mouseFinal_Y != 0 and not self.pinch:
                 pyautogui.moveTo(self.mouseFinal_X, self.mouseFinal_Y)
         if marker2:
-            if self.tempX == self.mouseFinal_X and self.tempY == self.mouseFinal_Y:
-                self.rightClickWC += 1
+            if self.pinch:
+                self.leftClickWC += 1
             else:
-                self.tempX = 0
-                self.tempY = 0
-                self.rightClickWC = 0
-            if self.rightClickWC >= self.RIGHTCLICK_DELAY and self.pinch:
-                # TODO: pyautogui to right click.
-                print('RIGHT CLICK')
-                self.tempX = 0
-                self.tempY = 0
-                self.rightClickWC = 0
-            self.tempX = self.mouseFinal_X
-            self.tempY = self.mouseFinal_Y
+                self.leftClickWC = 0
+                
+            if self.leftClickWC >= self.LEFTCLICK_DELAY and self.pinch:
+                pyautogui.click()
+                print('LEFT CLICK')
+                self.leftClickWC = 0
+            self.__pre_click()
 
         # print('W: {}, H: {}'.format(frame.shape[1], frame.shape[0]))
         
@@ -288,7 +309,8 @@ class VisionTracking(object):
         # M = cv2.moments(cnt)
 
         # cv2.imshow("Mask", mask_f1)
-        cv2.imshow("Frame", frame_f1)
+        cv2.imshow("Frame", frame)
+        # cv2.imshow("Frame", frame_f2)
 
     def get_coordinates(self):
         """
@@ -301,9 +323,12 @@ class VisionTracking(object):
         # Running the range detector
         # This would be used for now to calibrate.
         # for finger 1. 
-        self.__rangeDetector(self.FINGER_1)
-        # range for finger 2
-        self.__rangeDetector(self.FINGER_2)
+
+        if not self.__config_saved():
+            self.__rangeDetector(self.FINGER_1)
+            # range for finger 2
+            self.__rangeDetector(self.FINGER_2)
+
         # Calling the vision tracking process every x seconds
         while True:
             self.__track()
