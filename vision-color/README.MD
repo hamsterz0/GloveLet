@@ -14,7 +14,7 @@ This contains the computer vision script for tracking the hand/finger motion and
 ```sudo apt-get install python3-xlib```
 
 
-2. Opencv3 (Steps descripted below, thanks to Stackoverflow.)
+2. Opencv3 (Steps described below, thanks to Stackoverflow.)
 
 Update the repository: ```sudo apt-get update```
 Download the required packages to compile OpenCV:
