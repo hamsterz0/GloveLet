@@ -15,6 +15,7 @@ This contains the computer vision script for tracking the hand/finger motion and
 
 
 2. Opencv3 (Steps descripted below, thanks to Stackoverflow.)
+
 Update the repository: ```sudo apt-get update```
 Download the required packages to compile OpenCV:
 ```sudo apt-get install build-essential cmake git libgtk2.0-dev pkg-config libavcodec-dev libavformat-dev libswscale-dev```
