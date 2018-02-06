@@ -25,6 +25,7 @@ class VisionTracking(object):
     LEFTCLICK_DELAY = 2
     PINCH_RIGHT = 70
 
+
     def __init__(self):
         """
         Initializing the member variables.
@@ -60,11 +61,13 @@ class VisionTracking(object):
         self.frame = 0
         self.buttonPress = False
 
+
     def __callback(self, value):
         """
         Placeholder method just used to pass to a cv2 function. 
         """
         pass
+
 
     def __config_saved(self):
         try:
@@ -77,6 +80,7 @@ class VisionTracking(object):
         except IOError:
             return False
         return True
+
 
     def __createTrackbar(self):
         """
@@ -98,6 +102,7 @@ class VisionTracking(object):
                                   self.THRESHOLD_MAX, 
                                   self.__callback)
 
+
     def __getMinMaxValues(self):
         """
         This method would return the min and max HSV threshold values
@@ -110,6 +115,7 @@ class VisionTracking(object):
                                         'Calibrate')
                 values.append(val)
         return values
+
 
     def __rangeDetector(self, finger_num):
         """
@@ -148,6 +154,7 @@ class VisionTracking(object):
 
         cv2.destroyAllWindows()
 
+
     def __selectWebCam(self):
         """
         This function will let the user select which webcam he wants to collect
@@ -155,6 +162,7 @@ class VisionTracking(object):
         """
         # TODO: For now using the default camera.
         self.camera = cv2.VideoCapture(1)
+
 
     def __findScreenSize(self):
         root = tkinter.Tk()
@@ -171,6 +179,7 @@ class VisionTracking(object):
         frame = cv2.morphologyEx(mask, cv2.MORPH_OPEN, kernel)
         frame = cv2.morphologyEx(mask, cv2.MORPH_CLOSE, kernel)
         return frame
+
 
     def __track_object(self, frame, finger_num):
         # contours = cv2.findContours(frame, 1, 2)
@@ -221,6 +230,7 @@ class VisionTracking(object):
             marker = False
         return [marker, posX, posY]
 
+
     def __move_mouse(self):
         mouseFlag = False
         self.dx = pow((self.mousePoint_X - self.mouseInit_X), 2)
@@ -237,6 +247,7 @@ class VisionTracking(object):
             self.mousePoint_Y = self.mouseInit_Y
             mouseFlag = False
 
+
     def __pre_click(self):
         self.pinch = 0
         fingers_dist = math.sqrt( pow((self.finger2_posX - self.mouseInit_X), 2) + pow((self.finger2_posY - self.mouseInit_Y), 2) )
@@ -245,6 +256,7 @@ class VisionTracking(object):
             self.pinch = True
         else:
             self.pinch = False
+
 
     def __calculate_window_avg(self):
         X = 0
@@ -256,6 +268,7 @@ class VisionTracking(object):
         Y = Y/len(self.window_fing1)
         return X, Y 
 
+
     def __track(self):
         ret, self.frame = self.camera.read()
         self.frame = cv2.flip(self.frame, 1)    # flipping the frame vertically.
@@ -265,18 +278,18 @@ class VisionTracking(object):
         lower_threshold_f1 = np.array(self.threshold_finger1[:3])
         upper_threshold_f1 = np.array(self.threshold_finger1[3:])
 
-        lower_threshold_f2 = np.array(self.threshold_finger2[:3])
-        upper_threshold_f2 = np.array(self.threshold_finger2[3:])
+        #  lower_threshold_f2 = np.array(self.threshold_finger2[:3])
+        #  upper_threshold_f2 = np.array(self.threshold_finger2[3:])
 
         mask_f1 = cv2.inRange(frameHSV, lower_threshold_f1, upper_threshold_f1)
-        mask_f2 = cv2.inRange(frameHSV, lower_threshold_f2, upper_threshold_f2)
+        #  mask_f2 = cv2.inRange(frameHSV, lower_threshold_f2, upper_threshold_f2)
         frame_f1 = self.__frameOperations(mask_f1)
-        frame_f2 = self.__frameOperations(mask_f2)
-        frame = self.__frameOperations(mask_f2)
-        frame = self.__frameOperations(mask_f1)
+        #  frame_f2 = self.__frameOperations(mask_f2)
+        #  frame = self.__frameOperations(mask_f2)
+        #  frame = self.__frameOperations(mask_f1)
 
         marker1, self.finger1_posX, self.finger1_posY = self.__track_object(frame_f1, self.FINGER_1)
-        marker2, self.finger2_posX, self.finger2_posY = self.__track_object(frame_f2, self.FINGER_2)
+        #  marker2, self.finger2_posX, self.finger2_posY = self.__track_object(frame_f2, self.FINGER_2)
 
         self.window_fing1.append([self.finger1_posX, self.finger1_posY])
 
@@ -308,17 +321,18 @@ class VisionTracking(object):
                 self.pre_Y = self.mouseFinal_Y
             if self.mouseFinal_X != 0 and self.mouseFinal_Y != 0:
                 pyautogui.moveTo(self.mouseFinal_X, self.mouseFinal_Y)
-        if marker2:
-            self.__pre_click()
-            if self.pinch:
-                pyautogui.click()
-                self.buttonPress = False
+        #  if marker2:
+        #      self.__pre_click()
+        #      if self.pinch:
+        #          pyautogui.click()
+        #          self.buttonPress = False
         # print('W: {}, H: {}'.format(frame.shape[1], frame.shape[0]))
         # contours = cv2.findContours(frame_f1, 1, 2)
         # cnt = contours[0]
         # M = cv2.moments(cnt)
         # cv2.imshow("Mask", mask_f1)
         # cv2.imshow("Frame", frame_f2)
+
 
     def get_coordinates(self):
         """
@@ -335,7 +349,7 @@ class VisionTracking(object):
         if not self.__config_saved():
             self.__rangeDetector(self.FINGER_1)
             # range for finger 2
-            self.__rangeDetector(self.FINGER_2)
+            #  self.__rangeDetector(self.FINGER_2)
 
         # Calling the vision tracking process every x seconds
         while True:
