@@ -32,3 +32,5 @@ Create a build directory, move to it and run:
 ```cmake -D CMAKE_BUILD_TYPE=RELEASE -D CMAKE_INSTALL_PREFIX=/usr/local ../opencv-3```
 
  After the process is finished, run ```make``` and then ```sudo make install```.
+
+3. Download the remaining packages from the requirements.txt file. 
