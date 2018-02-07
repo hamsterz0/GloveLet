@@ -9,13 +9,16 @@ class Vision():
 		self.webcam.set(cv2.CAP_PROP_FRAME_WIDTH, self.cameraWidth)
 		self.webcam.set(cv2.CAP_PROP_FRAME_HEIGHT, self.cameraHeight)
 		self.stationary = False
+		self.window = []
+		self.realX, self.realY = 0, 0
 
 	def __read_camera(self):
 		_, self.frame = self.webcam.read()
 		self.frame = cv2.flip(self.frame, 1)
+		self.canvas = np.zeros(self.frame.shape, np.uint8)
 
 	def __add_color_threshold(self):
-		boundaries = [([150, 150, 150], [255, 255, 255])]
+		boundaries = [([17, 15, 100], [50, 56, 200])]
 		for (lower, upper) in boundaries:
 			lower = np.array(lower, dtype="uint8")
 			upper = np.array(upper, dtype="uint8")
@@ -50,6 +53,15 @@ class Vision():
 		self.handX = int(self.moments["m10"] / self.moments["m00"])
 		self.handY = int(self.moments["m01"] / self.moments["m00"])
 		self.handMoment = (self.handX, self.handY)
+		self.window += [self.handMoment]
+		if len(self.window) == 4:
+			self.realX, self.realY = 0, 0
+			for (x, y) in self.window:
+				self.realX += x
+				self.realY += y
+			self.realX = int(self.realX / len(self.window))
+			self.realY = int(self.realY / len(self.window))
+			self.window = []
 
 	def __ecludian_space_reduction(self):
 		scaleFactor = 0.3
@@ -80,8 +92,8 @@ class Vision():
 		self.palmRadius = cv2.pointPolygonTest(self.handContour, tuple(self.palmCenter), True)
 		
 	def __draw(self):
-		self.canvas = np.zeros(self.frame.shape, np.uint8)
-		cv2.circle(self.canvas, tuple(self.palmCenter),10, (255, 0, 0), -2)
+		if self.realX != 0 and self.realY != 0:
+			cv2.circle(self.canvas, (self.realX, self.realY),10, (255, 0, 0), -2)
 		cv2.drawContours(self.canvas, [self.handContour], 0, (0, 255, 0), 1)
 		# cv2.drawContours(self.canvas, [self.hullPoints], 0, (255, 0, 0), 2)
 
@@ -93,12 +105,12 @@ class Vision():
 			self.__get_contour_dimensions()
 			self.__calculate_convex_hull()
 			self.__find_center()
-			self.__find_palm_center()
+			# self.__find_palm_center()
 			self.__draw()
 			cv2.imshow("images", self.canvas)
 			if cv2.waitKey(1) & 0xFF is ord('q'):
 				break
-		cv2.destryAllWindows()
+		cv2.destroyAllWindows()
 
 
 vision = Vision()
