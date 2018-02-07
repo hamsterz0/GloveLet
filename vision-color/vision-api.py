@@ -11,8 +11,9 @@ class Vision():
 		self.stationary = False
 		self.window = []
 		self.realX, self.realY = 0, 0
+		self.stationary = False
 
-	def __read_camera(self):
+	def __read_webcam(self):
 		_, self.frame = self.webcam.read()
 		self.frame = cv2.flip(self.frame, 1)
 		self.canvas = np.zeros(self.frame.shape, np.uint8)
@@ -61,6 +62,7 @@ class Vision():
 				self.realY += y
 			self.realX = int(self.realX / len(self.window))
 			self.realY = int(self.realY / len(self.window))
+			self.__check_stationary()
 			self.window = []
 
 	def __ecludian_space_reduction(self):
@@ -90,6 +92,17 @@ class Vision():
 	def __find_palm_center(self):
 		self.palmCenter = self.__ecludian_space_reduction()
 		self.palmRadius = cv2.pointPolygonTest(self.handContour, tuple(self.palmCenter), True)
+
+	def __check_stationary(self):
+		factor = 0.04
+		for (x, y) in self.window:
+			if (x-self.realX)**2 + (y-self.realY) > factor * min(self.cameraWidth,self.cameraHeight):
+				self.stationary = False
+				return
+		self.stationary = True
+
+	def __move_mouse():
+		pass
 		
 	def __draw(self):
 		if self.realX != 0 and self.realY != 0:
@@ -99,12 +112,13 @@ class Vision():
 
 	def start_process(self):
 		while True:
-			self.__read_camera()
+			self.__read_webcam()
 			self.__add_color_threshold()
 			self.__extract_contours()
 			self.__get_contour_dimensions()
 			self.__calculate_convex_hull()
 			self.__find_center()
+			self.__move_mouse()
 			# self.__find_palm_center()
 			self.__draw()
 			cv2.imshow("images", self.canvas)
