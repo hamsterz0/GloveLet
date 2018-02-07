@@ -20,17 +20,36 @@ class Vision():
 			lower = np.array(lower, dtype="uint8")
 			upper = np.array(upper, dtype="uint8")
 			mask = cv2.inRange(self.frame, lower, upper)
-			this.output = cv2.bitwise_and(self.frame, self.frame, mask=mask)
-			# grey = cv2.cvtColor(output, cv2.COLOR_BGR2GRAY)
-			# _, self.thresholded = cv2.threshold(grey, 0, 255,
-			#  									 cv2.THRESH_BINARY+cv2.THRESH_OTSU)
-			
+			self.output = cv2.bitwise_and(self.frame, self.frame, mask=mask)
+			self.output = cv2.cvtColor(self.output, cv2.COLOR_BGR2GRAY)
+	
+	def __extract_contours(self):
+		_, self.contours, _ = cv2.findContours(self.output.copy(), 
+											   cv2.RETR_TREE,
+											   cv2.CHAIN_APPROX_SIMPLE)
+		maxArea, idx = 0, 0
+		for i in range(len(self.contours)):
+			area = cv2.contourArea(self.contours[i])
+			if area > maxArea:
+				maxArea = area
+				idx = i
+		self.realHandContour = self.contours[idx]
+		self.realHandLength = cv2.arcLength(self.realHandContour, True)
+		self.handContour = cv2.approxPolyDP(self.realHandContour,
+											0.001 * self.realHandLength,
+											True)
+
+	def __get_contour_dimensions(self):
+		self.minX, self.minY, self.handWidth, self.handHeight = \
+			cv2.boundingRect(self.handContour)
 
 	def start_process(self):
 		while True:
 			self.__read_camera()
 			self.__add_color_threshold()
-			cv2.imshow("images", this.output)
+			self.__extract_contours()
+			self.__get_contour_dimensions()
+			cv2.imshow("images", self.output)
 			if cv2.waitKey(1) & 0xFF is ord('q'):
 				break
 		cv2.destryAllWindows()
