@@ -76,7 +76,7 @@ class VisionTracking(object):
                 for values in file:
                     line.append(values)
             self.threshold_finger1 = [int(x) for x in line[0].split(',')]
-            self.threshold_finger2 = [int(x) for x in line[1].split(',')]
+            #  self.threshold_finger2 = [int(x) for x in line[1].split(',')]
         except IOError:
             return False
         return True
@@ -131,7 +131,6 @@ class VisionTracking(object):
             # Error handling
             if not ret:
                 break
-            
             frame_thresh = cv2.cvtColor(img, cv2.COLOR_BGR2HSV) # converting to HSV colorscale.
             threshold = self.__getMinMaxValues()
             [hmin, smin, vmin, hmax, smax, vmax] = threshold
@@ -161,7 +160,7 @@ class VisionTracking(object):
         the data from. 
         """
         # TODO: For now using the default camera.
-        self.camera = cv2.VideoCapture(1)
+        self.camera = cv2.VideoCapture(0)
 
 
     def __findScreenSize(self):
@@ -181,51 +180,39 @@ class VisionTracking(object):
         return frame
 
 
+    def __extract_contours(self, frame):
+        _, contours, _ = cv2.findContours(frame, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
+        maxArea, index = 0, 0
+        for i in range(len(contours)):
+            area = cv2.contourArea(contours[i])
+            if area > maxArea:
+                maxArea = area
+                index = i
+        real_finger_contour = contours[index]
+        real_finger_len = cv2.arcLength(real_finger_contour, True)
+        finger_contour = cv2.approxPolyDP(real_finger_contour, 0.001*real_finger_len, True)
+        cv2.drawContours(self.drawingCanvas, [finger_contour],
+                         0, (0, 255, 0), 1)
+        return finger_contour
+
+
     def __track_object(self, frame, finger_num):
         # contours = cv2.findContours(frame, 1, 2)
         # cnt = contours[0]
         # M = cv2.moments(cnt)
-
-        cnts = cv2.findContours(frame.copy(), cv2.RETR_EXTERNAL,
-            cv2.CHAIN_APPROX_SIMPLE)[-2]
-        center = None
+        self.drawingCanvas = np.zeros(self.frame.shape, np.uint8)
+        contour = self.__extract_contours(frame)
+        M = cv2.moments(contour)
+        moment00 = int(M['m00'])
+        moment01 = int(M['m01'])
+        moment10 = int(M['m10'])
+        marker = True
         posX = 0
         posY = 0
-        if len(cnts) > 0:
-            c = max(cnts, key=cv2.contourArea)
-            ((x, y), radius) = cv2.minEnclosingCircle(c)
-            M = cv2.moments(c)
-            """
-            Type of data returned by cv2.moments. 
-            {'nu12': 2.429873851311728e-06, 'mu12': 1381809220.850586, 'm11': 25132807395.0, 
-            'm30': 57909074053770.0, 'm01': 60077235.0, 
-            'mu11': 85381234.61649323, 'm21': 10519418922885.0, 'nu21': 5.220555276767182e-07, 
-            'nu03': -1.9641993131654756e-06, 'nu02': 0.0012610491682499118, 
-            'mu21': 296880079.4124689, 'm03': 520824457515.0, 'mu20': 68320922.18600464, 
-            'nu11': 0.00013411302032940116, 'm12': 2234892975645.0, 'nu30': 8.039795096010302e-09, 
-            'm10': 332658720.0, 'm02': 5326324995.0, 'm20': 138760534800.0, 
-            'mu02': 802829841.8216686, 'nu20': 0.00010731544545134859, 'mu03': -1116991617.0978394,
-             'm00': 797895.0, 'mu30': 4572032.8203125}
-            """
-            if radius > 10:
-                # draw the circle and centroid on the frame,
-                # then update the list of tracked points
-                cv2.circle(frame, (int(x), int(y)), int(radius),
-                    (0, 255, 255), 2)
-                cv2.circle(frame, center, 5, (0, 0, 255), -1)
-            moment00 = int(M['m00'])
-            moment01 = int(M['m01'])
-            moment10 = int(M['m10'])
+        if moment00 > 20000 and moment00 < 20000000:
             posX = moment10/moment00
             posY = moment01/moment00
             marker = True
-            # print(moment00)
-            # if moment00 > 20000 and moment00 < 20000000:
-            #     posX = moment10/moment00
-            #     posY = moment01/moment00
-            #     marker = True
-            # else:
-            #     marker = False
         else:
             marker = False
         return [marker, posX, posY]
@@ -330,7 +317,7 @@ class VisionTracking(object):
         # contours = cv2.findContours(frame_f1, 1, 2)
         # cnt = contours[0]
         # M = cv2.moments(cnt)
-        # cv2.imshow("Mask", mask_f1)
+        cv2.imshow("Finger 1 Frame", frame_f1)
         # cv2.imshow("Frame", frame_f2)
 
 
