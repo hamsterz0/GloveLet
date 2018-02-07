@@ -15,7 +15,7 @@ class Vision():
 		self.frame = cv2.flip(self.frame, 1)
 
 	def __add_color_threshold(self):
-		boundaries = [([200, 200, 200], [255, 255, 255])]
+		boundaries = [([150, 150, 150], [255, 255, 255])]
 		for (lower, upper) in boundaries:
 			lower = np.array(lower, dtype="uint8")
 			upper = np.array(upper, dtype="uint8")
@@ -45,12 +45,30 @@ class Vision():
 		self.hullPoints = np.array(self.hullPoints, dtype = np.int32)
 		self.defects = cv2.convexityDefects(self.handContour, self.convexHull)
 
-	def find_center(self):
+	def __find_center(self):
 		self.moments = cv2.moments(self.handContour)
 		self.handX = int(self.moments["m10"] / self.moments["m00"])
 		self.handY = int(self.moments["m01"] / self.moments["m00"])
 		self.handMoment = (self.handX, self.handY)
-		self.handMomentPositions += [self.handMoment]
+
+	def ecludian_space_reduction(self):
+		scaleFactor = 0.3
+		reducedSize = np.array(self.handContour * scaleFactor, dtype=np.int32)
+		tx, ty, w, h = cv2.boundingRect(reducedSize)
+		maxPoint = None
+		maxRadius = 0
+		for x in range(w):
+			for y in range(h):
+				radius = cv2.pointPolygonTest(reducedSize, (tx+x, ty+y), True)
+				if radius > maxRadius:
+					maxPoint =(x, y)
+					maxRadius = radius
+		return np.array(maxPoint) 
+
+	def __draw(self):
+		self.canvas = np.zeros(self.frame.shape, np.uint8)
+		cv2.drawContours(self.canvas, [self.handContour], 0, (0, 255, 0), 1)
+		cv2.drawContours(self.canvas, [self.hullPoints], 0, (255, 0, 0), 2)
 
 	def start_process(self):
 		while True:
@@ -58,7 +76,10 @@ class Vision():
 			self.__add_color_threshold()
 			self.__extract_contours()
 			self.__get_contour_dimensions()
-			cv2.imshow("images", self.output)
+			self.__calculate_convex_hull()
+			self.__find_center()
+			self.__draw()
+			cv2.imshow("images", self.canvas)
 			if cv2.waitKey(1) & 0xFF is ord('q'):
 				break
 		cv2.destryAllWindows()
