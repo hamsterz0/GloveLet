@@ -51,7 +51,7 @@ class Vision():
 		self.handY = int(self.moments["m01"] / self.moments["m00"])
 		self.handMoment = (self.handX, self.handY)
 
-	def ecludian_space_reduction(self):
+	def __ecludian_space_reduction(self):
 		scaleFactor = 0.3
 		reducedSize = np.array(self.handContour * scaleFactor, dtype=np.int32)
 		tx, ty, w, h = cv2.boundingRect(reducedSize)
@@ -61,14 +61,29 @@ class Vision():
 			for y in range(h):
 				radius = cv2.pointPolygonTest(reducedSize, (tx+x, ty+y), True)
 				if radius > maxRadius:
-					maxPoint =(x, y)
+					maxPoint =(tx+x, ty+y)
 					maxRadius = radius
-		return np.array(maxPoint) 
+		realCenter = np.array(np.array(maxPoint) / scaleFactor, dtype=np.int32)
+		error = int((1 / scaleFactor) * 1.5)
+		maxPoint = None
+		maxRadius = 0
+		for x in range(realCenter[0] - error, realCenter[0] + error):
+			for y in range(realCenter[1] - error, realCenter[1] + error):
+				radius = cv2.pointPolygonTest(self.handContour, (x, y), True)
+				if radius > maxRadius:
+					maxPoint = (x,y)
+					maxRadius = radius
+		return np.array(maxPoint)
 
+	def __find_palm_center(self):
+		self.palmCenter = self.__ecludian_space_reduction()
+		self.palmRadius = cv2.pointPolygonTest(self.handContour, tuple(self.palmCenter), True)
+		
 	def __draw(self):
 		self.canvas = np.zeros(self.frame.shape, np.uint8)
+		cv2.circle(self.canvas, tuple(self.palmCenter),10, (255, 0, 0), -2)
 		cv2.drawContours(self.canvas, [self.handContour], 0, (0, 255, 0), 1)
-		cv2.drawContours(self.canvas, [self.hullPoints], 0, (255, 0, 0), 2)
+		# cv2.drawContours(self.canvas, [self.hullPoints], 0, (255, 0, 0), 2)
 
 	def start_process(self):
 		while True:
@@ -78,6 +93,7 @@ class Vision():
 			self.__get_contour_dimensions()
 			self.__calculate_convex_hull()
 			self.__find_center()
+			self.__find_palm_center()
 			self.__draw()
 			cv2.imshow("images", self.canvas)
 			if cv2.waitKey(1) & 0xFF is ord('q'):
