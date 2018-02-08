@@ -1,5 +1,6 @@
 import cv2
 import numpy as np
+import argparse
 
 class Vision():
 	def __init__(self):
@@ -12,14 +13,22 @@ class Vision():
 		self.window = []
 		self.realX, self.realY = 0, 0
 		self.stationary = False
+		self.foundContour = True
+		self.ap = argparse.ArgumentParser()
+		self.ap.add_argument('-f', '--findrange', required=False, help='Range filter RGB')
+		self.args = vars(self.ap.parse_args()) 
 
 	def __read_webcam(self):
 		_, self.frame = self.webcam.read()
 		self.frame = cv2.flip(self.frame, 1)
 		self.canvas = np.zeros(self.frame.shape, np.uint8)
+		self.frame = cv2.cvtColor(self.frame, cv2.COLOR_BGR2HSV)
 
 	def __add_color_threshold(self):
-		boundaries = [([17, 15, 100], [50, 56, 200])]
+		# G B R and not B G R
+		if self.args['findrange']:
+			pass
+		boundaries = [([131, 69, 0], [181, 255, 255])]
 		for (lower, upper) in boundaries:
 			lower = np.array(lower, dtype="uint8")
 			upper = np.array(upper, dtype="uint8")
@@ -30,6 +39,11 @@ class Vision():
 	def __extract_contours(self):
 		_, self.contours, _ = cv2.findContours(self.output.copy(), cv2.RETR_TREE,cv2.CHAIN_APPROX_SIMPLE)
 		maxArea, idx = 0, 0
+		if len(self.contours) == 0:
+			self.foundContour = False
+			return
+		else:
+			self.foundContour = True
 		for i in range(len(self.contours)):
 			area = cv2.contourArea(self.contours[i])
 			if area > maxArea:
@@ -51,10 +65,11 @@ class Vision():
 
 	def __find_center(self):
 		self.moments = cv2.moments(self.handContour)
-		self.handX = int(self.moments["m10"] / self.moments["m00"])
-		self.handY = int(self.moments["m01"] / self.moments["m00"])
-		self.handMoment = (self.handX, self.handY)
-		self.window += [self.handMoment]
+		if self.moments["m00"] != 0:
+			self.handX = int(self.moments["m10"] / self.moments["m00"])
+			self.handY = int(self.moments["m01"] / self.moments["m00"])
+			self.handMoment = (self.handX, self.handY)
+			self.window += [self.handMoment]
 		if len(self.window) == 4:
 			self.realX, self.realY = 0, 0
 			for (x, y) in self.window:
@@ -63,6 +78,7 @@ class Vision():
 			self.realX = int(self.realX / len(self.window))
 			self.realY = int(self.realY / len(self.window))
 			self.__check_stationary()
+			print('X: {}, Y: {}'.format(self.realX, self.realY))
 			self.window = []
 
 	def __ecludian_space_reduction(self):
@@ -100,28 +116,27 @@ class Vision():
 				self.stationary = False
 				return
 		self.stationary = True
-
-	def __move_mouse():
-		pass
 		
 	def __draw(self):
 		if self.realX != 0 and self.realY != 0:
 			cv2.circle(self.canvas, (self.realX, self.realY),10, (255, 0, 0), -2)
 		cv2.drawContours(self.canvas, [self.handContour], 0, (0, 255, 0), 1)
 		# cv2.drawContours(self.canvas, [self.hullPoints], 0, (255, 0, 0), 2)
+		cv2.imshow("images", self.canvas)
 
 	def start_process(self):
 		while True:
 			self.__read_webcam()
 			self.__add_color_threshold()
 			self.__extract_contours()
-			self.__get_contour_dimensions()
-			self.__calculate_convex_hull()
-			self.__find_center()
-			self.__move_mouse()
-			# self.__find_palm_center()
-			self.__draw()
-			cv2.imshow("images", self.canvas)
+			if self.foundContour:
+				self.__get_contour_dimensions()
+				self.__calculate_convex_hull()
+				self.__find_center()
+				# self.__find_palm_center()
+				self.__draw()
+			cv2.imshow('Output', self.output)
+			cv2.imshow('Frame', self.frame)
 			if cv2.waitKey(1) & 0xFF is ord('q'):
 				break
 		cv2.destroyAllWindows()
