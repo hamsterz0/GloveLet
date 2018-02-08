@@ -8,15 +8,15 @@ class Vision():
 
 	def __init__(self):
 		pyautogui.FAILSAFE = False
-		self.root = tkinter.Tk()
-		self.root.withdraw()
-		self.screen_width = self.root.winfo_screenwidth()
-		self.screen_height = self.root.winfo_screenheight()
-		self.webcam = cv2.VideoCapture(1)
+		root = tkinter.Tk()
+		root.withdraw()
+		self.screen_width = root.winfo_screenwidth()
+		self.screen_height = root.winfo_screenheight()
+		self.webcam = cv2.VideoCapture(0)
 		self.cameraWidth = self.screen_width
 		self.cameraHeight = self.screen_height
-		# self.webcam.set(cv2.CAP_PROP_FRAME_WIDTH, self.cameraWidth)
-		# self.webcam.set(cv2.CAP_PROP_FRAME_HEIGHT, self.cameraHeight)
+		self.webcam.set(cv2.CAP_PROP_FRAME_WIDTH, self.cameraWidth)
+		self.webcam.set(cv2.CAP_PROP_FRAME_HEIGHT, self.cameraHeight)
 		self.stationary = False
 		self.window = []
 		self.realX, self.realY = 0, 0
@@ -134,22 +134,26 @@ class Vision():
 	def __find_cursor_location(self):
 		if not self.queue:
 			self.queue.append([self.realX, self.realY])
-			# self.mouseX, self.mouseY = self.realX, self.realY
+			self.mouseX, self.mouseY = self.realX, self.realY
 			return
 		if len(self.queue) == 2:
 			del self.queue[0]
 		self.queue.append([self.realX, self.realY])
 		self.dx = (self.queue[1][0] - self.queue[0][0])**2
 		self.dy = (self.queue[1][1] - self.queue[0][1])**2
+
+		# if self.dx > 1000 or self.dy > 1000:
+		# 	self.queue = []
+		# 	return
 		# mouseX = dx * (screen_width / frame cols)
 		# mouseY = dy * (screen_height / frame rows)
-		self.mouseX = self.dx * (self.screen_width / self.output.shape[1])
-		self.mouseY = self.dy * (self.screen_height / self.output.shape[0])
+		self.mouseX = self.dx * (self.screen_width / self.frame.shape[1])
+		self.mouseY = self.dy * (self.screen_height / self.frame.shape[0])
 
 		# print('X: {}, Y: {}'.format(self.realX, self.realY))
 		if self.mouseX != 0 and self.mouseY != 0:
-			print('dx: {}, dy: {}'.format(self.dx, self.dy))
-			print('MouseX: {}, MouseY: {}'.format(self.mouseX, self.mouseY))
+			# print('dx: {}, dy: {}'.format(self.dx, self.dy))
+			# print('MouseX: {}, MouseY: {}'.format(self.mouseX, self.mouseY))
 			pyautogui.moveTo(self.realX, self.realY)
 		# print('X1: {}, Y1: {}, X2: {}, Y2: {}'.format(self.queue[0][0], self.queue[0][1],
 		# 											  self.queue[1][0], self.queue[1][1]))
@@ -166,8 +170,13 @@ class Vision():
 		cv2.imshow('Frame', self.frame)
 
 	def start_process(self):
+		print_log = 0
 		while True:
+			if print_log == 0:
+				print('[+] Webcam Initialized')
 			self.__read_webcam()
+			if print_log == 0:
+				print('[+] Tracking Initialized')
 			self.__add_color_threshold()
 			self.__extract_contours()
 			if self.foundContour:
@@ -177,10 +186,14 @@ class Vision():
 				# if not self.stationary:
 				self.__find_cursor_location()
 				# self.__find_palm_center()
-				self.__draw()
+				# self.__draw()
 				# self.__frame_outputs()
+			else:
+				print('[-] Error finding the color')
 			if cv2.waitKey(1) & 0xFF is ord('q'):
+				print('[+] Goodbye.')
 				break
+			print_log += 1
 		cv2.destroyAllWindows()
 
 
