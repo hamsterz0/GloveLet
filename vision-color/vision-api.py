@@ -4,6 +4,7 @@ import tkinter
 import argparse
 import pyautogui
 import math
+from timeseries import DataTimeSeries
 
 class Vision():
 
@@ -29,10 +30,7 @@ class Vision():
 		self.foundContour = {self.FINGER1:True, self.FINGER2:True}
 		self.realX = {self.FINGER1:int(self.screen_width/2), self.FINGER2:0}
 		self.realY = {self.FINGER1:int(self.screen_height/2), self.FINGER2:0}
-		self.stationary = False
-		self.ap = argparse.ArgumentParser()
-		self.ap.add_argument('-f', '--findrange', required=False, help='Range filter HSV',action='store_true')
-		self.args = vars(self.ap.parse_args()) 
+		self.stationary = False 
 		self.mouseX = self.screen_width/2
 		self.mouseY = self.screen_height/2
 		self.queue = []
@@ -42,6 +40,10 @@ class Vision():
 		self.clickThresh = 70
 		self.clickCounter = 0
 		self.pinched = False
+		self.timeseries = DataTimeSeries(2, 4, auto_filter=True)
+		self.window = np.zeros(4, np.float32)
+		self.boundaries = {self.FINGER1:([23, 96, 50], [38, 252, 227]),
+					  	   self.FINGER2:([131, 69, 0], [181, 255, 255])}
 
 	def __read_webcam(self):
 		_, self.frame = self.webcam.read()
@@ -51,15 +53,7 @@ class Vision():
 		self.frame = cv2.cvtColor(self.frame, cv2.COLOR_BGR2HSV)
 
 	def __add_color_threshold(self, finger):
-		# G B R and not B G R
-		if self.args['findrange']:
-			pass
-		# boundaries = [([131, 69, 0], [181, 255, 255]),
-		# 			  ([23, 96, 50], [38, 252, 227])]
-		boundaries = {self.FINGER1:([23, 96, 50], [38, 252, 227]),
-					  self.FINGER2:([131, 69, 0], [181, 255, 255])}
-
-		(lower, upper) = boundaries[finger]
+		(lower, upper) = self.boundaries[finger]
 		lower = np.array(lower, dtype="uint8")
 		upper = np.array(upper, dtype="uint8")
 		mask = cv2.inRange(self.frame, lower, upper)
@@ -83,16 +77,6 @@ class Vision():
 		self.realHandLength = cv2.arcLength(self.realHandContour, True)
 		self.handContour[finger] = cv2.approxPolyDP(self.realHandContour, 0.001 * self.realHandLength,True)
 
-	def __get_contour_dimensions(self):
-		self.minX, self.minY, self.handWidth, self.handHeight = \
-			cv2.boundingRect(self.handContour)
-
-	def __calculate_convex_hull(self):
-		self.convexHull = cv2.convexHull(self.handContour,returnPoints = False)
-		self.hullPoints = [self.handContour[i[0]] for i in self.convexHull]
-		self.hullPoints = np.array(self.hullPoints, dtype = np.int32)
-		self.defects = cv2.convexityDefects(self.handContour, self.convexHull)
-
 	def __check_stationary(self):
 		factor = 0.04
 		for (x, y) in self.window:
@@ -107,17 +91,77 @@ class Vision():
 			self.handX = int(self.moments["m10"] / self.moments["m00"])
 			self.handY = int(self.moments["m01"] / self.moments["m00"])
 			self.handMoment = (self.handX, self.handY)
-			self.window[finger] += [self.handMoment]
-		if len(self.window[finger]) == 4:
-			self.realX[finger], self.realY[finger] = 0, 0
-			for (x, y) in self.window[finger]:
-				self.realX[finger] += x
-				self.realY[finger] += y
-			self.realX[finger] = int(self.realX[finger] / len(self.window[finger]))
-			self.realY[finger] = int(self.realY[finger] / len(self.window[finger]))
-			# self.__check_stationary()
-			# print('X: {}, Y: {}'.format(self.realX, self.realY))
-			self.window[finger] = []
+			self.window[finger].add([self.handMoment])
+
+	def __find_cursor_location(self, finger):
+		if not self.queue:
+			self.queue.append([self.realX[finger], self.realY[finger]])
+			self.mouseX, self.mouseY = self.realX[finger], self.realY[finger]
+			return
+		if len(self.queue) == 2:
+			del self.queue[0]
+		self.queue.append([self.realX[finger], self.realY[finger]])
+		self.dx = (self.queue[1][0] - self.queue[0][0])**2
+		self.dy = (self.queue[1][1] - self.queue[0][1])**2
+
+		self.mouseX = (self.realX[finger] / self.frame.shape[1]) * self.screen_width
+		self.mouseY = (self.realY[finger] / self.frame.shape[0]) * self.screen_height
+		if self.mouseX != 0 and self.mouseY != 0:
+			pyautogui.moveTo(self.mouseX, self.mouseY)
+		
+	def __check_pinch(self):
+		fingerDist = math.sqrt((self.realX[self.FINGER1] - self.realX[self.FINGER2])**2 + \
+							   (self.realY[self.FINGER1] - self.realY[self.FINGER2])**2)
+		print('Finger Distance: {}'.format(fingerDist))
+		if fingerDist < self.clickThresh:
+			if self.clickCounter > 3 and not self.pinched:
+				pyautogui.click(x=self.realX[self.FINGER1], y=self.realY[self.FINGER1])
+				self.pinched = True
+				self.clickCounter = 0
+			else:
+				self.clickCounter += 1
+		else:
+			self.pinched = False
+
+	def __draw(self, finger):
+		if self.realX[finger] != 0 and self.realY[finger] != 0:
+			cv2.circle(self.canvas[finger], (self.realX[finger], self.realY[finger]),10, (255, 0, 0), -2)
+		cv2.drawContours(self.canvas[finger], [self.handContour[finger]], 0, (0, 255, 0), 1)
+		# cv2.drawContours(self.canvas, [self.hullPoints], 0, (255, 0, 0), 2)
+
+	def __frame_outputs(self, finger):
+		if finger == self.FINGER1:
+			cv2.imshow('Canvas: ' + finger, self.canvas[finger])
+		# cv2.imshow('Output ' + finger, self.output[finger])
+		# cv2.imshow('Frame', self.frame)
+
+	def start_process(self):
+		while True:
+			for finger in self.FINGERS:
+				self.__read_webcam()
+				self.__add_color_threshold(finger)
+				self.__extract_contours(finger)
+				if self.foundContour[finger]:
+					self.__find_center(finger)
+
+			for finger in self.FINGERS:
+				pass
+
+			if cv2.waitKey(1) & 0xFF is ord('q'):
+				break
+		cv2.destroyAllWindows()
+
+'''******************** METHODS FOR ENTIRE HAND TRACKING ********************'''
+
+	def __get_contour_dimensions(self):
+		self.minX, self.minY, self.handWidth, self.handHeight = \
+			cv2.boundingRect(self.handContour)
+
+	def __calculate_convex_hull(self):
+		self.convexHull = cv2.convexHull(self.handContour,returnPoints = False)
+		self.hullPoints = [self.handContour[i[0]] for i in self.convexHull]
+		self.hullPoints = np.array(self.hullPoints, dtype = np.int32)
+		self.defects = cv2.convexityDefects(self.handContour, self.convexHull)
 
 	def __ecludian_space_reduction(self):
 		scaleFactor = 0.3
@@ -146,85 +190,6 @@ class Vision():
 	def __find_palm_center(self):
 		self.palmCenter = self.__ecludian_space_reduction()
 		self.palmRadius = cv2.pointPolygonTest(self.handContour, tuple(self.palmCenter), True)
-
-	def __find_cursor_location(self, finger):
-		if not self.queue:
-			self.queue.append([self.realX[finger], self.realY[finger]])
-			self.mouseX, self.mouseY = self.realX[finger], self.realY[finger]
-			return
-		if len(self.queue) == 2:
-			del self.queue[0]
-		self.queue.append([self.realX[finger], self.realY[finger]])
-		self.dx = (self.queue[1][0] - self.queue[0][0])**2
-		self.dy = (self.queue[1][1] - self.queue[0][1])**2
-
-		# if self.dx > 1000 or self.dy > 1000:
-		# 	self.queue = []
-		# 	return
-		# mouseX = dx * (screen_width / frame cols)
-		# mouseY = dy * (screen_height / frame rows)
-		self.mouseX = (self.realX[finger] / self.frame.shape[1]) * self.screen_width
-		self.mouseY = (self.realY[finger] / self.frame.shape[0]) * self.screen_height
-		# print('X: {}, Y: {}'.format(self.realX, self.realY))
-		if self.mouseX != 0 and self.mouseY != 0:
-			# print('dx: {}, dy: {}'.format(self.dx, self.dy))
-			# print('MouseX: {}, MouseY: {}'.format(self.mouseX, self.mouseY))
-			pyautogui.moveTo(self.mouseX, self.mouseY)
-		# print('X1: {}, Y1: {}, X2: {}, Y2: {}'.format(self.queue[0][0], self.queue[0][1],
-		# 											  self.queue[1][0], self.queue[1][1]))
-		
-	def __check_pinch(self):
-		fingerDist = math.sqrt((self.realX[self.FINGER1] - self.realX[self.FINGER2])**2 + \
-							   (self.realY[self.FINGER1] - self.realY[self.FINGER2])**2)
-		# print('Finger1: ({},{})  Finger2: ({},{})'.format(self.realX[self.FINGER1],
-		# 												  self.realY[self.FINGER1],
-		# 												  self.realX[self.FINGER2],
-		# 												  self.realY[self.FINGER2]))
-		print('Finger Distance: {}'.format(fingerDist))
-		if fingerDist < self.clickThresh:
-			if self.clickCounter > 3 and not self.pinched:
-				pyautogui.click(x=self.realX[self.FINGER1], y=self.realY[self.FINGER1])
-				self.pinched = True
-				self.clickCounter = 0
-			else:
-				self.clickCounter += 1
-		else:
-			self.pinched = False
-
-	def __draw(self, finger):
-		if self.realX[finger] != 0 and self.realY[finger] != 0:
-			cv2.circle(self.canvas[finger], (self.realX[finger], self.realY[finger]),10, (255, 0, 0), -2)
-		cv2.drawContours(self.canvas[finger], [self.handContour[finger]], 0, (0, 255, 0), 1)
-		# cv2.drawContours(self.canvas, [self.hullPoints], 0, (255, 0, 0), 2)
-
-	def __frame_outputs(self, finger):
-		if finger == self.FINGER1:
-			cv2.imshow('Canvas: ' + finger, self.canvas[finger])
-		# cv2.imshow('Output ' + finger, self.output[finger])
-		# cv2.imshow('Frame', self.frame)
-
-
-	def start_process(self):
-		while True:
-			for finger in self.FINGERS:
-				self.__read_webcam()
-				self.__add_color_threshold(finger)
-				self.__extract_contours(finger)
-				if self.foundContour[finger]:
-					# self.__get_contour_dimensions()
-				# 	self.__calculate_convex_hull()
-					self.__find_center(finger)
-				# 	# if not self.stationary:
-					if finger == self.FINGER1:
-						self.__find_cursor_location(finger)
-				# 	# self.__find_palm_center()
-					self.__draw(finger)
-				self.__frame_outputs(finger)
-			if len(self.FINGERS) == 2:
-				self.__check_pinch()
-			if cv2.waitKey(1) & 0xFF is ord('q'):
-				break
-		cv2.destroyAllWindows()
 
 
 vision = Vision()
