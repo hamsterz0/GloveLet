@@ -1,22 +1,35 @@
 import cv2
 import numpy as np
+import tkinter
 import argparse
+import pyautogui
 
 class Vision():
+
 	def __init__(self):
-		self.webcam = cv2.VideoCapture(0)
-		self.cameraWidth = 1280
-		self.cameraHeight = 720
-		self.webcam.set(cv2.CAP_PROP_FRAME_WIDTH, self.cameraWidth)
-		self.webcam.set(cv2.CAP_PROP_FRAME_HEIGHT, self.cameraHeight)
+		pyautogui.FAILSAFE = False
+		self.root = tkinter.Tk()
+		self.root.withdraw()
+		self.screen_width = self.root.winfo_screenwidth()
+		self.screen_height = self.root.winfo_screenheight()
+		self.webcam = cv2.VideoCapture(1)
+		self.cameraWidth = self.screen_width
+		self.cameraHeight = self.screen_height
+		# self.webcam.set(cv2.CAP_PROP_FRAME_WIDTH, self.cameraWidth)
+		# self.webcam.set(cv2.CAP_PROP_FRAME_HEIGHT, self.cameraHeight)
 		self.stationary = False
 		self.window = []
 		self.realX, self.realY = 0, 0
 		self.stationary = False
 		self.foundContour = True
 		self.ap = argparse.ArgumentParser()
-		self.ap.add_argument('-f', '--findrange', required=False, help='Range filter RGB')
+		self.ap.add_argument('-f', '--findrange', required=False, help='Range filter HSV')
 		self.args = vars(self.ap.parse_args()) 
+		self.mouseX = self.screen_width/2
+		self.mouseY = self.screen_height/2
+		self.queue = []
+		self.dx = 0
+		self.dy = 0
 
 	def __read_webcam(self):
 		_, self.frame = self.webcam.read()
@@ -28,7 +41,8 @@ class Vision():
 		# G B R and not B G R
 		if self.args['findrange']:
 			pass
-		boundaries = [([131, 69, 0], [181, 255, 255])]
+		boundaries = [([131, 69, 0], [181, 255, 255]),
+					  ([23, 96, 50], [38, 252, 227])]
 		for (lower, upper) in boundaries:
 			lower = np.array(lower, dtype="uint8")
 			upper = np.array(upper, dtype="uint8")
@@ -63,6 +77,14 @@ class Vision():
 		self.hullPoints = np.array(self.hullPoints, dtype = np.int32)
 		self.defects = cv2.convexityDefects(self.handContour, self.convexHull)
 
+	def __check_stationary(self):
+		factor = 0.04
+		for (x, y) in self.window:
+			if (x-self.realX)**2 + (y-self.realY) > factor * min(self.cameraWidth,self.cameraHeight):
+				self.stationary = False
+				return
+		self.stationary = True
+
 	def __find_center(self):
 		self.moments = cv2.moments(self.handContour)
 		if self.moments["m00"] != 0:
@@ -78,7 +100,7 @@ class Vision():
 			self.realX = int(self.realX / len(self.window))
 			self.realY = int(self.realY / len(self.window))
 			self.__check_stationary()
-			print('X: {}, Y: {}'.format(self.realX, self.realY))
+			# print('X: {}, Y: {}'.format(self.realX, self.realY))
 			self.window = []
 
 	def __ecludian_space_reduction(self):
@@ -109,13 +131,28 @@ class Vision():
 		self.palmCenter = self.__ecludian_space_reduction()
 		self.palmRadius = cv2.pointPolygonTest(self.handContour, tuple(self.palmCenter), True)
 
-	def __check_stationary(self):
-		factor = 0.04
-		for (x, y) in self.window:
-			if (x-self.realX)**2 + (y-self.realY) > factor * min(self.cameraWidth,self.cameraHeight):
-				self.stationary = False
-				return
-		self.stationary = True
+	def __find_cursor_location(self):
+		if not self.queue:
+			self.queue.append([self.realX, self.realY])
+			# self.mouseX, self.mouseY = self.realX, self.realY
+			return
+		if len(self.queue) == 2:
+			del self.queue[0]
+		self.queue.append([self.realX, self.realY])
+		self.dx = (self.queue[1][0] - self.queue[0][0])**2
+		self.dy = (self.queue[1][1] - self.queue[0][1])**2
+		# mouseX = dx * (screen_width / frame cols)
+		# mouseY = dy * (screen_height / frame rows)
+		self.mouseX = self.dx * (self.screen_width / self.output.shape[1])
+		self.mouseY = self.dy * (self.screen_height / self.output.shape[0])
+
+		# print('X: {}, Y: {}'.format(self.realX, self.realY))
+		if self.mouseX != 0 and self.mouseY != 0:
+			print('dx: {}, dy: {}'.format(self.dx, self.dy))
+			print('MouseX: {}, MouseY: {}'.format(self.mouseX, self.mouseY))
+			pyautogui.moveTo(self.realX, self.realY)
+		# print('X1: {}, Y1: {}, X2: {}, Y2: {}'.format(self.queue[0][0], self.queue[0][1],
+		# 											  self.queue[1][0], self.queue[1][1]))
 		
 	def __draw(self):
 		if self.realX != 0 and self.realY != 0:
@@ -123,6 +160,10 @@ class Vision():
 		cv2.drawContours(self.canvas, [self.handContour], 0, (0, 255, 0), 1)
 		# cv2.drawContours(self.canvas, [self.hullPoints], 0, (255, 0, 0), 2)
 		cv2.imshow("images", self.canvas)
+
+	def __frame_outputs():
+		cv2.imshow('Output', self.output)
+		cv2.imshow('Frame', self.frame)
 
 	def start_process(self):
 		while True:
@@ -133,10 +174,11 @@ class Vision():
 				self.__get_contour_dimensions()
 				self.__calculate_convex_hull()
 				self.__find_center()
+				# if not self.stationary:
+				self.__find_cursor_location()
 				# self.__find_palm_center()
 				self.__draw()
-			cv2.imshow('Output', self.output)
-			cv2.imshow('Frame', self.frame)
+				# self.__frame_outputs()
 			if cv2.waitKey(1) & 0xFF is ord('q'):
 				break
 		cv2.destroyAllWindows()
