@@ -6,22 +6,28 @@ import pyautogui
 
 class Vision():
 
+	FINGER1 = 'finger1'
+	FINGER2 = 'finger2'
+	FINGERS = [FINGER1, FINGER2]
+
 	def __init__(self):
 		pyautogui.FAILSAFE = False
 		root = tkinter.Tk()
 		root.withdraw()
 		self.screen_width = root.winfo_screenwidth()
 		self.screen_height = root.winfo_screenheight()
-		self.webcam = cv2.VideoCapture(1)
+		self.webcam = cv2.VideoCapture(0)
 		self.cameraWidth = self.screen_width
 		self.cameraHeight = self.screen_height
-		self.webcam.set(cv2.CAP_PROP_FRAME_WIDTH, self.cameraWidth)
-		self.webcam.set(cv2.CAP_PROP_FRAME_HEIGHT, self.cameraHeight)
-		self.stationary = False
-		self.window = []
+		# self.webcam.set(cv2.CAP_PROP_FRAME_WIDTH, self.cameraWidth)
+		# self.webcam.set(cv2.CAP_PROP_FRAME_HEIGHT, self.cameraHeight)
+		self.output = {}
+		self.handContour = {}
+		self.window = {self.FINGER1:[], self.FINGER2:[]}
+		self.stationary = {self.FINGER1:False, self.FINGER2:False}
+		self.foundContour = {self.FINGER1:True, self.FINGER2:True}
 		self.realX, self.realY = 0, 0
 		self.stationary = False
-		self.foundContour = True
 		self.ap = argparse.ArgumentParser()
 		self.ap.add_argument('-f', '--findrange', required=False, help='Range filter HSV',action='store_true')
 		self.args = vars(self.ap.parse_args()) 
@@ -37,27 +43,30 @@ class Vision():
 		self.canvas = np.zeros(self.frame.shape, np.uint8)
 		self.frame = cv2.cvtColor(self.frame, cv2.COLOR_BGR2HSV)
 
-	def __add_color_threshold(self):
+	def __add_color_threshold(self, finger):
 		# G B R and not B G R
 		if self.args['findrange']:
 			pass
-		boundaries = [([131, 69, 0], [181, 255, 255]),
-					  ([23, 96, 50], [38, 252, 227])]
-		for (lower, upper) in boundaries:
-			lower = np.array(lower, dtype="uint8")
-			upper = np.array(upper, dtype="uint8")
-			mask = cv2.inRange(self.frame, lower, upper)
-			self.output = cv2.bitwise_and(self.frame, self.frame, mask=mask)
-			self.output = cv2.cvtColor(self.output, cv2.COLOR_BGR2GRAY)
+		# boundaries = [([131, 69, 0], [181, 255, 255]),
+		# 			  ([23, 96, 50], [38, 252, 227])]
+		boundaries = {self.FINGER1:([23, 96, 50], [38, 252, 227]),
+					  self.FINGER2:([131, 69, 0], [181, 255, 255])}
+
+		(lower, upper) = boundaries[finger]
+		lower = np.array(lower, dtype="uint8")
+		upper = np.array(upper, dtype="uint8")
+		mask = cv2.inRange(self.frame, lower, upper)
+		self.output[finger] = cv2.bitwise_and(self.frame, self.frame, mask=mask)
+		self.output[finger] = cv2.cvtColor(self.output[finger], cv2.COLOR_BGR2GRAY)
 	
-	def __extract_contours(self):
-		_, self.contours, _ = cv2.findContours(self.output.copy(), cv2.RETR_TREE,cv2.CHAIN_APPROX_SIMPLE)
+	def __extract_contours(self, finger):
+		_, self.contours, _ = cv2.findContours(self.output[finger].copy(), cv2.RETR_TREE,cv2.CHAIN_APPROX_SIMPLE)
 		maxArea, idx = 0, 0
 		if len(self.contours) == 0:
-			self.foundContour = False
+			self.foundContour[finger] = False
 			return
 		else:
-			self.foundContour = True
+			self.foundContour[finger] = True
 		for i in range(len(self.contours)):
 			area = cv2.contourArea(self.contours[i])
 			if area > maxArea:
@@ -65,7 +74,7 @@ class Vision():
 				idx = i
 		self.realHandContour = self.contours[idx]
 		self.realHandLength = cv2.arcLength(self.realHandContour, True)
-		self.handContour = cv2.approxPolyDP(self.realHandContour, 0.001 * self.realHandLength,True)
+		self.handContour[finger] = cv2.approxPolyDP(self.realHandContour, 0.001 * self.realHandLength,True)
 
 	def __get_contour_dimensions(self):
 		self.minX, self.minY, self.handWidth, self.handHeight = \
@@ -165,24 +174,25 @@ class Vision():
 		# cv2.drawContours(self.canvas, [self.hullPoints], 0, (255, 0, 0), 2)
 		cv2.imshow("images", self.canvas)
 
-	def __frame_outputs(self):
-		cv2.imshow('Output', self.output)
+	def __frame_outputs(self, finger):
+		cv2.imshow('Output ' + finger, self.output[finger])
 		cv2.imshow('Frame', self.frame)
 
 	def start_process(self):
 		while True:
-			self.__read_webcam()
-			self.__add_color_threshold()
-			self.__extract_contours()
-			# if self.foundContour:
-			# 	self.__get_contour_dimensions()
-			# 	self.__calculate_convex_hull()
-			# 	self.__find_center()
-			# 	# if not self.stationary:
-			# 	self.__find_cursor_location()
-			# 	# self.__find_palm_center()
-			# 	self.__draw()
-			self.__frame_outputs()
+			for finger in self.FINGERS:
+				self.__read_webcam()
+				self.__add_color_threshold(finger)
+				self.__extract_contours(finger)
+				# if self.foundContour:
+				# 	self.__get_contour_dimensions()
+				# 	self.__calculate_convex_hull()
+				# 	self.__find_center()
+				# 	# if not self.stationary:
+				# 	self.__find_cursor_location()
+				# 	# self.__find_palm_center()
+				# 	self.__draw()
+				self.__frame_outputs(finger)
 			if cv2.waitKey(1) & 0xFF is ord('q'):
 				break
 		cv2.destroyAllWindows()
