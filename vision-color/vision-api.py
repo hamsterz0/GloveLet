@@ -26,7 +26,8 @@ class Vision():
 		self.window = {self.FINGER1:[], self.FINGER2:[]}
 		self.stationary = {self.FINGER1:False, self.FINGER2:False}
 		self.foundContour = {self.FINGER1:True, self.FINGER2:True}
-		self.realX, self.realY = 0, 0
+		self.realX = {self.FINGER1:0, self.FINGER2:0}
+		self.realY = {self.FINGER1:0, self.FINGER2:0}
 		self.stationary = False
 		self.ap = argparse.ArgumentParser()
 		self.ap.add_argument('-f', '--findrange', required=False, help='Range filter HSV',action='store_true')
@@ -36,11 +37,13 @@ class Vision():
 		self.queue = []
 		self.dx = 0
 		self.dy = 0
+		self.canvas = {}
 
 	def __read_webcam(self):
 		_, self.frame = self.webcam.read()
 		self.frame = cv2.flip(self.frame, 1)
-		self.canvas = np.zeros(self.frame.shape, np.uint8)
+		self.canvas[self.FINGER1] = np.zeros(self.frame.shape, np.uint8)
+		self.canvas[self.FINGER2] = np.zeros(self.frame.shape, np.uint8)
 		self.frame = cv2.cvtColor(self.frame, cv2.COLOR_BGR2HSV)
 
 	def __add_color_threshold(self, finger):
@@ -94,23 +97,23 @@ class Vision():
 				return
 		self.stationary = True
 
-	def __find_center(self):
-		self.moments = cv2.moments(self.handContour)
+	def __find_center(self, finger):
+		self.moments = cv2.moments(self.handContour[finger])
 		if self.moments["m00"] != 0:
 			self.handX = int(self.moments["m10"] / self.moments["m00"])
 			self.handY = int(self.moments["m01"] / self.moments["m00"])
 			self.handMoment = (self.handX, self.handY)
-			self.window += [self.handMoment]
-		if len(self.window) == 4:
-			self.realX, self.realY = 0, 0
-			for (x, y) in self.window:
-				self.realX += x
-				self.realY += y
-			self.realX = int(self.realX / len(self.window))
-			self.realY = int(self.realY / len(self.window))
-			self.__check_stationary()
+			self.window[finger] += [self.handMoment]
+		if len(self.window[finger]) == 4:
+			self.realX[finger], self.realY[finger] = 0, 0
+			for (x, y) in self.window[finger]:
+				self.realX[finger] += x
+				self.realY[finger] += y
+			self.realX[finger] = int(self.realX[finger] / len(self.window[finger]))
+			self.realY[finger] = int(self.realY[finger] / len(self.window[finger]))
+			# self.__check_stationary()
 			# print('X: {}, Y: {}'.format(self.realX, self.realY))
-			self.window = []
+			self.window[finger] = []
 
 	def __ecludian_space_reduction(self):
 		scaleFactor = 0.3
@@ -167,12 +170,12 @@ class Vision():
 		# print('X1: {}, Y1: {}, X2: {}, Y2: {}'.format(self.queue[0][0], self.queue[0][1],
 		# 											  self.queue[1][0], self.queue[1][1]))
 		
-	def __draw(self):
-		if self.realX != 0 and self.realY != 0:
-			cv2.circle(self.canvas, (self.realX, self.realY),10, (255, 0, 0), -2)
-		cv2.drawContours(self.canvas, [self.handContour], 0, (0, 255, 0), 1)
+	def __draw(self, finger):
+		if self.realX[finger] != 0 and self.realY[finger] != 0:
+			cv2.circle(self.canvas[finger], (self.realX[finger], self.realY[finger]),10, (255, 0, 0), -2)
+		cv2.drawContours(self.canvas[finger], [self.handContour[finger]], 0, (0, 255, 0), 1)
 		# cv2.drawContours(self.canvas, [self.hullPoints], 0, (255, 0, 0), 2)
-		cv2.imshow("images", self.canvas)
+		cv2.imshow('Frame: ' + finger, self.canvas[finger])
 
 	def __frame_outputs(self, finger):
 		cv2.imshow('Output ' + finger, self.output[finger])
@@ -184,15 +187,15 @@ class Vision():
 				self.__read_webcam()
 				self.__add_color_threshold(finger)
 				self.__extract_contours(finger)
-				# if self.foundContour:
-				# 	self.__get_contour_dimensions()
+				if self.foundContour[finger]:
+					# self.__get_contour_dimensions()
 				# 	self.__calculate_convex_hull()
-				# 	self.__find_center()
+					self.__find_center(finger)
 				# 	# if not self.stationary:
 				# 	self.__find_cursor_location()
 				# 	# self.__find_palm_center()
-				# 	self.__draw()
-				self.__frame_outputs(finger)
+					self.__draw(finger)
+				# self.__frame_outputs(finger)
 			if cv2.waitKey(1) & 0xFF is ord('q'):
 				break
 		cv2.destroyAllWindows()
