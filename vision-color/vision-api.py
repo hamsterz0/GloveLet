@@ -23,7 +23,7 @@ class Vision():
 		self.stationary = False
 		self.foundContour = True
 		self.ap = argparse.ArgumentParser()
-		self.ap.add_argument('-f', '--findrange', required=False, help='Range filter HSV')
+		self.ap.add_argument('-f', '--findrange', required=False, help='Range filter HSV',action='store_true')
 		self.args = vars(self.ap.parse_args()) 
 		self.mouseX = self.screen_width/2
 		self.mouseY = self.screen_height/2
@@ -174,14 +174,14 @@ class Vision():
 			self.__read_webcam()
 			self.__add_color_threshold()
 			self.__extract_contours()
-			if self.foundContour:
-				self.__get_contour_dimensions()
-				self.__calculate_convex_hull()
-				self.__find_center()
-				# if not self.stationary:
-				self.__find_cursor_location()
-				# self.__find_palm_center()
-				self.__draw()
+			# if self.foundContour:
+			# 	self.__get_contour_dimensions()
+			# 	self.__calculate_convex_hull()
+			# 	self.__find_center()
+			# 	# if not self.stationary:
+			# 	self.__find_cursor_location()
+			# 	# self.__find_palm_center()
+			# 	self.__draw()
 			self.__frame_outputs()
 			if cv2.waitKey(1) & 0xFF is ord('q'):
 				break
