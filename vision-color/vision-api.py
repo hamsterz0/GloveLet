@@ -12,7 +12,7 @@ class Vision():
 		root.withdraw()
 		self.screen_width = root.winfo_screenwidth()
 		self.screen_height = root.winfo_screenheight()
-		self.webcam = cv2.VideoCapture(0)
+		self.webcam = cv2.VideoCapture(1)
 		self.cameraWidth = self.screen_width
 		self.cameraHeight = self.screen_height
 		self.webcam.set(cv2.CAP_PROP_FRAME_WIDTH, self.cameraWidth)
@@ -165,18 +165,13 @@ class Vision():
 		# cv2.drawContours(self.canvas, [self.hullPoints], 0, (255, 0, 0), 2)
 		cv2.imshow("images", self.canvas)
 
-	def __frame_outputs():
+	def __frame_outputs(self):
 		cv2.imshow('Output', self.output)
 		cv2.imshow('Frame', self.frame)
 
 	def start_process(self):
-		print_log = 0
 		while True:
-			if print_log == 0:
-				print('[+] Webcam Initialized')
 			self.__read_webcam()
-			if print_log == 0:
-				print('[+] Tracking Initialized')
 			self.__add_color_threshold()
 			self.__extract_contours()
 			if self.foundContour:
@@ -186,14 +181,10 @@ class Vision():
 				# if not self.stationary:
 				self.__find_cursor_location()
 				# self.__find_palm_center()
-				# self.__draw()
-				# self.__frame_outputs()
-			else:
-				print('[-] Error finding the color')
+				self.__draw()
+			self.__frame_outputs()
 			if cv2.waitKey(1) & 0xFF is ord('q'):
-				print('[+] Goodbye.')
 				break
-			print_log += 1
 		cv2.destroyAllWindows()
 
 
