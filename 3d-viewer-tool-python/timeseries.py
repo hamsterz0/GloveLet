@@ -92,13 +92,13 @@ class DataTimeSeries:
             self._head = 0
 
     def _get_previous_index(self, count=1):
-        prev = self._head
+        result = self._head
         if count >= self._added:
             count = self._added - 1
-        prev -= count
-        if prev < 0:
-            prev += self._size
-        return prev
+        result -= count
+        if result < 0:
+            result += self._added
+        return result
 
     def get_tdelta(self):
         """
@@ -189,13 +189,66 @@ class DataTimeSeries:
             index = self._head
         return np.array2string(self.data_series[index], precision=4)
 
+    def max(self, axis, start=-1, end=-1):
+        """
+        Returns maximum value along the specified axis.
+
+        Returns maximum along the specified axis within the given range.
+        By default, this will give the maximum over the entire time series.
+        Otherwise, it will return the maximum from index 'start' to 'end',
+        where 0 is the index of the oldest data, and N is the index of the
+        newest data.
+        """
+        if axis < 0 or axis >= self._dimensions:
+            raise IndexError
+        if start < 0 or start >= end:
+            start = 0
+        if end >= self._size:
+            end = self._size - 1
+        start = self._get_previous_index(self._size - 1 - start)
+        end = self._get_previous_index(self._size - 1 - end)
+
+    def _extract_range(self, start=-1, stop=-1, step=1):
+        step = -step
+        result = np.zeros((stop - start, self._dimensions), c_float)
+        start_ind = self._get_previous_index(start)
+        end_ind = self._get_previous_index(stop)
+        print('start:  {:d}, start_ind:  {:d}'.format(start, start_ind))
+        print('stop:  {:d}, end_ind:  {:d}'.format(stop, end_ind))
+        if end_ind > start_ind:
+            n = start_ind
+            result[:n] = self.data_series[start_ind:0:step]
+            result[n:] = self.data_series[self._added:end_ind-1:step]
+        else:
+            result[:] = self.data_series[start_ind:end_ind:step]
+        return result
+
+    def __getitem__(self, key):
+        if isinstance(key, slice):
+            # TODO: Implement support for 'step' slice argument
+            start, stop, step = key.start, key.stop, key.step
+            if step is None:
+                step = 1
+            if start is None:
+                start = 0
+            elif start < 0:
+                start += self._added
+            if stop is None:
+                stop = self._added
+            elif stop < 0:
+                stop += self._added
+            return self._extract_range(start, stop, step)
+        else:
+            i = self._get_previous_index(key)
+            return self.data_series[i]
+
     def __str__(self):
         output = str()
-        i = self._head - 1
+        i = self._get_previous_index(self._added)
         while i != self._head:
             output += str(self.data2str(i)) + '  :  dt=' + str(self._tdelta[i]) + '\n'
-            i -= 1
-            if i <= -1:
-                i = self._size - 1
+            i += 1
+            if i >= self._added:
+                i = 0
         output += str(self.data2str(i)) + '  :  dt=' + str(self._tdelta[i])
         return output
