@@ -8,6 +8,7 @@ from timeseries import DataTimeSeries
 import logging
 from ast import literal_eval
 import sys
+from PIL import Image
 
 def callback(value):
 	pass
@@ -20,7 +21,7 @@ class Vision():
 	ACTIVE_FINGERS = [FINGER1]
 	TOTAL_FINGERS =[FINGER1, FINGER2]
 	TRACKER_FINGER = FINGER1
-	WINDOW_SIZE = 3
+	WINDOW_SIZE = 4
 	PREV_MEMORY = 2
 
 	def __init__(self):
@@ -49,7 +50,7 @@ class Vision():
 		self.queue = []
 		self.dx = 0
 		self.dy = 0
-		self.clickThresh = 70
+		self.clickThresh = 100
 		self.clickCounter = 0
 		self.pinched = False
 		# self.window = DataTimeSeries(4, 4, auto_filter=True)
@@ -82,7 +83,7 @@ class Vision():
 				for finger in self.ACTIVE_FINGERS:
 					value = self.__find_range()
 					self.boundaries[finger] = value
-					file.write('{}:{}'.format(finger, str(value)))
+					file.write('{}:{}\n'.format(finger, str(value)))
 		else:
 			try:
 				finger_map = {}
@@ -215,7 +216,7 @@ class Vision():
 			self.mouseX = self.screen_width
 		if self.mouseY > self.screen_height:
 			self.mouseY = self.screen_height
-		print('mouseX: {}, mouseY: {}'.format(self.mouseX, self.mouseY))
+		# print('mouseX: {}, mouseY: {}'.format(self.mouseX, self.mouseY))
 		# print('RX: {} RY: {} DX: {} DY: {} MX: {}, MY: {}'.format(self.realX[finger], 
 			# self.realY[finger], dx, dy, self.mouseX, self.mouseY))
 		pyautogui.moveTo(self.mouseX, self.mouseY)
@@ -226,8 +227,8 @@ class Vision():
 							   (self.realY[self.FINGER1] - self.realY[self.FINGER2])**2)
 		print('Finger Distance: {}'.format(fingerDist))
 		if fingerDist < self.clickThresh:
-			if self.clickCounter > 3 and not self.pinched:
-				pyautogui.click(x=self.realX[self.FINGER1], y=self.realY[self.FINGER1])
+			if self.clickCounter > 3:
+				pyautogui.click()
 				self.pinched = True
 				self.clickCounter = 0
 			else:
@@ -242,10 +243,12 @@ class Vision():
 		# cv2.drawContours(self.canvas, [self.hullPoints], 0, (255, 0, 0), 2)
 
 	def __frame_outputs(self, finger):
-		cv2.imshow('Output ' + finger, self.output[finger])
-		cv2.imshow('Frame', self.frame)
+		# cv2.imshow('Output ' + finger, self.output[finger])
+		# cv2.imshow('Frame', self.frame)
+		pass
 
 	def start_process(self):
+		run_once = False
 		while True:
 			for finger in self.ACTIVE_FINGERS:
 				self.__read_webcam()
@@ -254,7 +257,18 @@ class Vision():
 				if self.foundContour[finger]:
 					self.__find_center(finger)
 					self.__normalize_center(finger)
+				else:
+					self.stationary[self.TRACKER_FINGER] = True
+					if not run_once:
+						print('Should Run')
+						img = Image.open('donald_trump.jpg')
+						img.show()
+						run_once = True
 				self.__frame_outputs(finger)
+
+			# if self.FINGER1 in self.ACTIVE_FINGERS \
+			# 	and self.FINGER2 in self.ACTIVE_FINGERS:
+			# 	self.__check_pinch()
 			
 			if not self.stationary[self.TRACKER_FINGER]:
 				self.__move_cursor(self.TRACKER_FINGER)
