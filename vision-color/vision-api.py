@@ -21,6 +21,7 @@ class Vision():
 	TOTAL_FINGERS =[FINGER1, FINGER2]
 	TRACKER_FINGER = FINGER1
 	WINDOW_SIZE = 3
+	PREV_MEMORY = 2
 
 	def __init__(self):
 		pyautogui.FAILSAFE = False
@@ -30,8 +31,8 @@ class Vision():
 		self.webcam = cv2.VideoCapture(0)
 		self.screen_width = root.winfo_screenwidth()
 		self.screen_height = root.winfo_screenheight()
-		self.cameraWidth = self.screen_width
-		self.cameraHeight = self.screen_height
+		self.cameraWidth = self.screen_width / 2
+		self.cameraHeight = self.screen_height / 2
 		self.webcam.set(cv2.CAP_PROP_FRAME_WIDTH, self.cameraWidth)
 		self.webcam.set(cv2.CAP_PROP_FRAME_HEIGHT, self.cameraHeight)
 		self.logger = logging.getLogger(__name__)
@@ -42,7 +43,7 @@ class Vision():
 		self.foundContour = {}
 		self.realX = {}
 		self.realY = {}
-		self.stationary = {} 
+		self.stationary = {}
 		self.mouseX = self.screen_width/2
 		self.mouseY = self.screen_height/2
 		self.queue = []
@@ -53,6 +54,7 @@ class Vision():
 		self.pinched = False
 		# self.window = DataTimeSeries(4, 4, auto_filter=True)
 		self.window = {}
+		self.cursor_history = []
 		self.parser = argparse.ArgumentParser()
 		self.parser.add_argument('-f', '--find_range', 
 			help="Find the range from within the program", 
@@ -69,10 +71,11 @@ class Vision():
 			self.handMoment[finger] = (0, 0)
 			self.foundContour[finger] = True
 			self.stationary[finger] = False
-			self.realX[finger] = int(self.screen_width/2)
-			self.realY[finger] = int(self.screen_height/2)
+			self.realX[finger] = 0
+			self.realY[finger] = 0
+			self.mouseX = int(self.screen_width/2)
+			self.mouseY = int(self.screen_height/2)
 			self.window[finger] = np.zeros((self.WINDOW_SIZE, 2), dtype=int)
-
 
 		if self.args.find_range:
 			with open('.vision.config', 'w') as file:
@@ -186,15 +189,37 @@ class Vision():
 		window_head = self.counter % self.WINDOW_SIZE
 		self.window[finger][window_head, : ] = self.handMoment[finger]
 		if self.counter < self.WINDOW_SIZE:
+			self.stationary[finger] = True
 			return
+		self.stationary[finger] = False
 		mean = np.mean(self.window[finger], axis=0)
 		self.realX[finger], self.realY[finger] = mean[0], mean[1]
 		self.__check_stationary(finger)
 
 	def __move_cursor(self, finger):
-		mouseX = self.realX[finger]
-		mouseY = self.realY[finger]
-		pyautogui.moveTo(mouseX, mouseY)
+		self.cursor_history.append([self.realX[finger], self.realY[finger]])
+		if len(self.cursor_history) < self.PREV_MEMORY:
+			return
+		dx = self.cursor_history[1][0] - self.cursor_history[0][0]
+		dy = self.cursor_history[1][1] - self.cursor_history[0][1]
+		# scale_factorX = 1
+		# scale_factorY = 1
+		# if dy < 0:
+		# 	scale_factorY = 1
+		# else:
+		# 	scaleFactorY = 1.3
+		buff = 10
+		self.mouseX += dx * ((self.screen_width + buff) / self.frame.shape[1])
+		self.mouseY += dy * ((self.screen_height + buff) / self.frame.shape[0])
+		if self.mouseX > self.screen_width:
+			self.mouseX = self.screen_width
+		if self.mouseY > self.screen_height:
+			self.mouseY = self.screen_height
+		print('mouseX: {}, mouseY: {}'.format(self.mouseX, self.mouseY))
+		# print('RX: {} RY: {} DX: {} DY: {} MX: {}, MY: {}'.format(self.realX[finger], 
+			# self.realY[finger], dx, dy, self.mouseX, self.mouseY))
+		pyautogui.moveTo(self.mouseX, self.mouseY)
+		del self.cursor_history[0]
 		
 	def __check_pinch(self):
 		fingerDist = math.sqrt((self.realX[self.FINGER1] - self.realX[self.FINGER2])**2 + \
