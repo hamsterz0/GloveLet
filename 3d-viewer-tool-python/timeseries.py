@@ -4,15 +4,16 @@ from ctypes import c_float
 
 
 class DataTimeSeries:
-    def __init__(self, dimensions=1, N=50, factor=1.0,
-                 auto_filter=False, filter_alg='ewma', pre_filter=None, post_filter=None):
+    def __init__(self, dimensions=1, N=50,  factor=1.0,
+                 auto_filter=False, filter_alg='ewma',
+                 pre_filter=None, post_filter=None):
         self._size = N
         self._dimensions = dimensions
         self.shape = (N, dimensions)
         self._factor = factor
         self._added = 0
         self._exp_weights = np.zeros((N), c_float)
-        self._weight = 1 - (2.0 / (N + 1))
+        self._weight = 0.0
         self._head = 0
         self._denom = 0.0
         self._tdelta = np.zeros(N)
@@ -22,7 +23,6 @@ class DataTimeSeries:
         self._raw_data = np.zeros((N, dimensions), c_float)
         # initialize data series
         self.data_series = self._raw_data   # use raw data if not auto-filtered.
-        self.compute_exponential_weights()
         self._filtered_data = None
         if auto_filter:
             self._filtered_data = np.zeros(self.data_series.shape, c_float)
@@ -35,8 +35,10 @@ class DataTimeSeries:
         self.pre_filter = pre_filter
         self.post_filter = post_filter
 
-    def compute_exponential_weights(self):
-        for i in range(self._size):
+    def _compute_exponential_weights(self):
+        self._weight = 1 - (2.0 / (self._added + 1))
+        self._denom = 0.0
+        for i in range(self._added):
             self._exp_weights[i] = self._weight**(i * self._factor)
             self._denom += self._exp_weights[i]
 
@@ -46,6 +48,7 @@ class DataTimeSeries:
         self.add = self._initial_series_add
         self._raw_data[self._head, :] = data
         if self._filtered_data is not None:
+            self._compute_exponential_weights()
             self._filter_data()
         self._time = time.time()
 
@@ -59,6 +62,9 @@ class DataTimeSeries:
         else:
             # rebind once series had bee initialized/filled with data
             self.add = self._add
+        if self._filtered_data is not None:
+            # weights for EWMA must be recomputed each time _added is incremented
+            self._compute_exponential_weights()
         self._add(data)
 
     def _add(self, data):
@@ -95,14 +101,33 @@ class DataTimeSeries:
         return prev
 
     def get_tdelta(self):
+        """
+        Returns the most recent time delta.
+        """
         return self._tdelta[self._head]
 
     def get_data(self, index=-1):
+        """
+        Returns a data sample.
+
+        By default, the most recent data sample is returned.
+        Otherwise, specifiy the index of the data sample to return. If the given
+        index is out of bounds, the most recent data sample is returned.
+        \t
+        \tindex:    The index of the data to return.
+        \t          The most recent data sample is returned by default.
+        """
         if index < 0 or index >= self.shape[0]:
             index = self._head
         return self.data_series[index]
 
     def get_previous_data(self, count=1, get_tdelta=False):
+        """
+        Retrieve previous data.
+        \t
+        \tcount:        number of samples to walk backward from head
+        \tget_tdelta:   retrieve time delta of sample
+        """
         prev = self._get_previous_index(count)
         if not get_tdelta:
             return self.data_series[prev, :]
@@ -110,9 +135,13 @@ class DataTimeSeries:
             return self.data_series[prev, :], self._tdelta[prev]
 
     def calc_ewma(self):
+        """
+        Calculate the Exponential Weighted Moving Average
+        over the initialized values of the data series and return the result.
+        """
         result = np.zeros((self._dimensions), c_float)
         it = self._head
-        for i in range(self._added):
+        for i in range(self._size):
             if it < 0:
                 it = self._size - 1
             result += (self._exp_weights[it] * self.data_series[it, :])
@@ -120,6 +149,10 @@ class DataTimeSeries:
         return result / self._denom
 
     def calc_sma(self):
+        """
+        Calculate the Simple Moving Average over the
+        initialized values of the data series and return the result.
+        """
         result = np.zeros(self._dimensions, c_float)
         it = self._head
         for i in range(self._added):
@@ -130,10 +163,28 @@ class DataTimeSeries:
         return result / self._added
 
     def print_data(self, index=-1):
+        """
+        Prints a data sample and associated time delta.
+
+        By default, the most recent data sample is printed.
+        Otherwise, specifiy the index of the data sample to print.
+        \t
+        \tindex:    The index of the data to convert to string.
+        \t          The most recent data sample is selected by default.
+        """
         out = self.data2str(index)
         print(out + '  :  dt=' + str(self._tdelta[index]))
 
     def data2str(self, index=-1):
+        """
+        Returns a data sample as a string.
+
+        By default, the most recent data sample is returned as a string.
+        Otherwise, specifiy the index of the data sample to return.
+        \t
+        \tindex:    The index of the data to convert to string.
+        \t          The most recent data sample is selected by default.
+        """
         if index < 0 or index >= self.shape[0]:
             index = self._head
         return np.array2string(self.data_series[index], precision=4)
