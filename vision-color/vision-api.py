@@ -20,6 +20,7 @@ class Vision():
 	ACTIVE_FINGERS = [FINGER1]
 	TOTAL_FINGERS =[FINGER1, FINGER2]
 	TRACKER_FINGER = FINGER1
+	WINDOW_SIZE = 3
 
 	def __init__(self):
 		pyautogui.FAILSAFE = False
@@ -31,8 +32,8 @@ class Vision():
 		self.screen_height = root.winfo_screenheight()
 		self.cameraWidth = self.screen_width
 		self.cameraHeight = self.screen_height
-		# self.webcam.set(cv2.CAP_PROP_FRAME_WIDTH, self.cameraWidth)
-		# self.webcam.set(cv2.CAP_PROP_FRAME_HEIGHT, self.cameraHeight)
+		self.webcam.set(cv2.CAP_PROP_FRAME_WIDTH, self.cameraWidth)
+		self.webcam.set(cv2.CAP_PROP_FRAME_HEIGHT, self.cameraHeight)
 		self.logger = logging.getLogger(__name__)
 		self.output = {}
 		self.handContour = {}
@@ -41,7 +42,7 @@ class Vision():
 		self.foundContour = {}
 		self.realX = {}
 		self.realY = {}
-		self.stationary = False 
+		self.stationary = {} 
 		self.mouseX = self.screen_width/2
 		self.mouseY = self.screen_height/2
 		self.queue = []
@@ -50,7 +51,8 @@ class Vision():
 		self.clickThresh = 70
 		self.clickCounter = 0
 		self.pinched = False
-		self.window = DataTimeSeries(4, 4, auto_filter=True)
+		# self.window = DataTimeSeries(4, 4, auto_filter=True)
+		self.window = {}
 		self.parser = argparse.ArgumentParser()
 		self.parser.add_argument('-f', '--find_range', 
 			help="Find the range from within the program", 
@@ -58,15 +60,19 @@ class Vision():
 		self.args = self.parser.parse_args()
 		# self.data = np.zeros(4, np.float32)
 		self.boundaries = {}
+		self.counter = 0
 		self.__init_mem_vars()
 
 	def __init_mem_vars(self):
 		# initializing member variables with initial values.
-		for finger in self.TOTAL_FINGERS:
+		for finger in self.ACTIVE_FINGERS:
 			self.handMoment[finger] = (0, 0)
-			self.foundContour[finger] = [True]
+			self.foundContour[finger] = True
+			self.stationary[finger] = False
 			self.realX[finger] = int(self.screen_width/2)
 			self.realY[finger] = int(self.screen_height/2)
+			self.window[finger] = np.zeros((self.WINDOW_SIZE, 2), dtype=int)
+
 
 		if self.args.find_range:
 			with open('.vision.config', 'w') as file:
@@ -161,13 +167,13 @@ class Vision():
 		self.realHandLength = cv2.arcLength(self.realHandContour, True)
 		self.handContour[finger] = cv2.approxPolyDP(self.realHandContour, 0.001 * self.realHandLength,True)
 
-	def __check_stationary(self):
-		factor = 0.04
-		for (x, y) in self.window:
-			if (x-self.realX)**2 + (y-self.realY) > factor * min(self.cameraWidth,self.cameraHeight):
-				self.stationary = False
+	def __check_stationary(self, finger):
+		factor = 0.02
+		for [x, y] in self.window[finger]:
+			if (x-self.realX[finger])**2 + (y-self.realY[finger]) > factor * min(self.cameraWidth,self.cameraHeight):
+				self.stationary[finger] = False
 				return
-		self.stationary = True
+		self.stationary[finger] = True
 
 	def __find_center(self, finger):
 		self.moments = cv2.moments(self.handContour[finger])
@@ -176,10 +182,19 @@ class Vision():
 			self.handY = int(self.moments["m01"] / self.moments["m00"])
 			self.handMoment[finger] = (self.handX, self.handY)
 
-	def __update_cursor(self, coords, finger):
-		self.data = np.zeros(4)
-		self.data[:] = coords
-		print(self.data)
+	def __normalize_center(self, finger):
+		window_head = self.counter % self.WINDOW_SIZE
+		self.window[finger][window_head, : ] = self.handMoment[finger]
+		if self.counter < self.WINDOW_SIZE:
+			return
+		mean = np.mean(self.window[finger], axis=0)
+		self.realX[finger], self.realY[finger] = mean[0], mean[1]
+		self.__check_stationary(finger)
+
+	def __move_cursor(self, finger):
+		mouseX = self.realX[finger]
+		mouseY = self.realY[finger]
+		pyautogui.moveTo(mouseX, mouseY)
 		
 	def __check_pinch(self):
 		fingerDist = math.sqrt((self.realX[self.FINGER1] - self.realX[self.FINGER2])**2 + \
@@ -202,8 +217,6 @@ class Vision():
 		# cv2.drawContours(self.canvas, [self.hullPoints], 0, (255, 0, 0), 2)
 
 	def __frame_outputs(self, finger):
-		if finger == self.FINGER1:
-			cv2.imshow('Canvas: ' + finger, self.canvas[finger])
 		cv2.imshow('Output ' + finger, self.output[finger])
 		cv2.imshow('Frame', self.frame)
 
@@ -215,14 +228,12 @@ class Vision():
 				self.__extract_contours(finger)
 				if self.foundContour[finger]:
 					self.__find_center(finger)
+					self.__normalize_center(finger)
 				self.__frame_outputs(finger)
-
-			# coords = ()
-			# for finger in self.TOTAL_FINGERS:
-				# coords += self.handMoment[finger]
 			
-			# self.__update_cursor(coords, self.TRACKER_FINGER)
-
+			if not self.stationary[self.TRACKER_FINGER]:
+				self.__move_cursor(self.TRACKER_FINGER)
+			self.counter += 1
 
 			if cv2.waitKey(1) & 0xFF is ord('q'):
 				break
