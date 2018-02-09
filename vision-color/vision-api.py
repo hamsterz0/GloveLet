@@ -6,6 +6,8 @@ import pyautogui
 import math
 from timeseries import DataTimeSeries
 import logging
+from ast import literal_eval
+import sys
 
 def callback(value):
 	pass
@@ -49,6 +51,11 @@ class Vision():
 		self.clickCounter = 0
 		self.pinched = False
 		self.window = DataTimeSeries(4, 4, auto_filter=True)
+		self.parser = argparse.ArgumentParser()
+		self.parser.add_argument('-f', '--find_range', 
+			help="Find the range from within the program", 
+			action="store_true", default=False)
+		self.args = self.parser.parse_args()
 		# self.data = np.zeros(4, np.float32)
 		self.boundaries = {}
 		self.__init_mem_vars()
@@ -61,8 +68,28 @@ class Vision():
 			self.realX[finger] = int(self.screen_width/2)
 			self.realY[finger] = int(self.screen_height/2)
 
-		for finger in self.ACTIVE_FINGERS:
-			self.boundaries[finger] = self.__find_range()
+		if self.args.find_range:
+			with open('.vision.config', 'w') as file:
+				for finger in self.ACTIVE_FINGERS:
+					value = self.__find_range()
+					self.boundaries[finger] = value
+					file.write('{}:{}'.format(finger, str(value)))
+		else:
+			try:
+				finger_map = {}
+				with open('.vision.config', 'r') as file:
+					for line in file:
+						[finger_name, finger_tuple] = line.split(':')
+						finger_tuple = literal_eval(finger_tuple)
+						self.boundaries[finger_name] = finger_tuple
+				if len(self.boundaries.keys()) < len(self.ACTIVE_FINGERS):
+					raise Exception
+			except IOError:
+				print('Config file not found. Run the program with -f flag.')
+				sys,exit()
+			except Exception:
+				print('Not all the fingers have colors configured. Run with -f flag')
+				sys.exit()
 
 	def __find_range(self):
 		range_filter = 'HSV'
@@ -153,21 +180,6 @@ class Vision():
 		self.data = np.zeros(4)
 		self.data[:] = coords
 		print(self.data)
-
-		# if not self.queue:
-		# 	self.queue.append([self.realX[finger], self.realY[finger]])
-		# 	self.mouseX, self.mouseY = self.realX[finger], self.realY[finger]
-		# 	return
-		# if len(self.queue) == 2:
-		# 	del self.queue[0]
-		# self.queue.append([self.realX[finger], self.realY[finger]])
-		# self.dx = (self.queue[1][0] - self.queue[0][0])**2
-		# self.dy = (self.queue[1][1] - self.queue[0][1])**2
-
-		# self.mouseX = (self.realX[finger] / self.frame.shape[1]) * self.screen_width
-		# self.mouseY = (self.realY[finger] / self.frame.shape[0]) * self.screen_height
-		# if self.mouseX != 0 and self.mouseY != 0:
-		# 	pyautogui.moveTo(self.mouseX, self.mouseY)
 		
 	def __check_pinch(self):
 		fingerDist = math.sqrt((self.realX[self.FINGER1] - self.realX[self.FINGER2])**2 + \
@@ -190,8 +202,8 @@ class Vision():
 		# cv2.drawContours(self.canvas, [self.hullPoints], 0, (255, 0, 0), 2)
 
 	def __frame_outputs(self, finger):
-		# if finger == self.FINGER1:
-		# 	cv2.imshow('Canvas: ' + finger, self.canvas[finger])
+		if finger == self.FINGER1:
+			cv2.imshow('Canvas: ' + finger, self.canvas[finger])
 		cv2.imshow('Output ' + finger, self.output[finger])
 		cv2.imshow('Frame', self.frame)
 
@@ -200,9 +212,9 @@ class Vision():
 			for finger in self.ACTIVE_FINGERS:
 				self.__read_webcam()
 				self.__threshold(finger)
-				# self.__extract_contours(finger)
-				# if self.foundContour[finger]:
-					# self.__find_center(finger)
+				self.__extract_contours(finger)
+				if self.foundContour[finger]:
+					self.__find_center(finger)
 				self.__frame_outputs(finger)
 
 			# coords = ()
