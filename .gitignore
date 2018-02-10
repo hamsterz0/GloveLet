@@ -104,3 +104,9 @@ venv.bak/
 
 # mypy
 .mypy_cache/
+
+#vscode
+.vscode/
+
+# Vision Config File
+.vision.conf
