@@ -8,6 +8,8 @@ from ctypes import c_float
 from viewer3d_utility import convert_raw_data
 
 
+np.set_printoptions(precision=4)
+
 data_sample = [
     [-12,   140, 16432,  -508,    77,  -239],
     [-240,   224, 16480,  -554,    21,  -214],
@@ -69,13 +71,17 @@ def close_port():
 atexit.register(close_port)
 
 
-def init_dts():
+def init_dts(N=20, n=len(data_sample)):
     global dts
-    dts = DataTimeSeries(N=20, dimensions=D.shape[1], auto_filter=True, post_filter=convert_raw_data)
-    for i in range(D.shape[0]):
+    dts = DataTimeSeries(N, D.shape[1], auto_filter=True, post_filter=convert_raw_data)
+    for i in range(n):
         dts.add(D[i])
         time.sleep(0.010)
     print(dts)
+    return dts
+
+
+dts = init_dts()
 
 
 def clear():
@@ -85,7 +91,7 @@ def clear():
 def serial_dts(exp_factor=1.0):
     global _SERIAL, _CONNECTED
     N = 50
-    dts = DataTimeSeries(N=N, dimensions=6, factor=exp_factor, auto_filter=True, post_filter=convert_raw_data)
+    dts = DataTimeSeries(N, 6, factor=exp_factor, auto_filter=True, post_filter=convert_raw_data)
     while not _CONNECTED:
         data = read_data()
         if len(data) == 3 and data[2] == 'successful@':
@@ -116,6 +122,10 @@ def read_data():
     if len(data) == 6:
         data = np.array(data, c_float)
     return data
+
+
+def clamp(a, mn, mx):
+    return (a - mn) / (mx - mn)
 
 
 if __name__ == '__main__':

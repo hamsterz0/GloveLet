@@ -68,7 +68,7 @@ def draw():
     vel, rot, att = get_motion_data()
     _VELOCITY += vel
     # _OBJ.move(vel)
-    _OBJ.move(_VELOCITY)
+    # _OBJ.move(_VELOCITY)
     # _OBJ.set_rotation(rot)
     _OBJ.set_local_rotation(rot)
     tdelta = time.time() - _FRAME_TIME
@@ -96,7 +96,7 @@ def get_motion_data():
     """
     global _DOF, _GRAV_MAGNITUDE, _GRAV_VECTOR, _FRAME_TIME, _DATA_SERIES
     update_time_series()
-    data = _DATA_SERIES.get_data()
+    data = _DATA_SERIES[0]
     acc, gyr = data[:3], data[3:6]
     mag = None
     if _DOF == 9:
@@ -106,7 +106,7 @@ def get_motion_data():
     # print(acc_norm)
     # gyr_norm = np.linalg.norm(gyr)
     # print(gyr_norm)
-    # print(np.array2string(acc, precision=4) + " :: " + np.array2string(gyr, precision=4))
+    print(np.array2string(acc, precision=4) + " :: " + np.array2string(gyr, precision=4))
     attitude_est = attitude_estimation(acc)
     rotation = complementary_filter(attitude_est)
     attitude_est[1] = 0
@@ -115,7 +115,7 @@ def get_motion_data():
     grav = _GRAV_VECTOR * rot_mat4
     grav[0] = -grav[0]
     grav[2] = -grav[2]
-    print(acc - grav[:3])
+    # print(acc - grav[:3])
     # velocity = (acc - grav[:3]) * tdelta * 9.8
     velocity = (acc - grav[:3]) * tdelta
     # print(np.linalg.norm(velocity))
@@ -145,7 +145,7 @@ def attitude_estimation(acc):
 
 def complementary_filter(att_est, alpha=1.0):
     global _DATA_SERIES, _PREV_ATT
-    data = _DATA_SERIES.get_data()[3:6]
+    data = _DATA_SERIES[0][3:6]
     dt = _DATA_SERIES.get_tdelta()
     data *= dt
     result = np.zeros(3, c_float)
@@ -165,7 +165,7 @@ def convert_raw_data(data_series):
         _GYR_VRO, _GYR_SENSITIVITY,\
         _MAG_SENSITIVITY
     # get filtered data
-    data = data_series.get_data()
+    data = data_series[0]
     # convert raw accelerometer data
     data[:3] = (data[:3] - _ACC_VZEROG) / _ACC_SENSITIVITY
     data[2] = -data[2]                   # invert z
@@ -243,7 +243,7 @@ def init_object():
                       [0.0, 0.0, 0.5, 1.0]], c_float)
     mesh = RectPrismMesh(0.05, 0.01, 0.05, face_colors=color)
     _OBJ = WorldObject(mesh)
-    acc = _DATA_SERIES.get_data()[:3]
+    acc = _DATA_SERIES[0][:3]
     _PREV_ATT = np.zeros(3, c_float)
     att_est = attitude_estimation(acc)
     _OBJ.set_local_rotation(glm.tquat(glm.vec3(att_est)))
