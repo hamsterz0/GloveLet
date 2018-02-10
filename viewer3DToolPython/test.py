@@ -6,9 +6,11 @@ import atexit
 from timeseries import DataTimeSeries
 from ctypes import c_float
 from viewer3d_utility import convert_raw_data
+from enum import Enum
 
 
 np.set_printoptions(precision=4)
+
 
 data_sample = [
     [-12,   140, 16432,  -508,    77,  -239],
@@ -126,6 +128,12 @@ def read_data():
 
 def clamp(a, mn, mx):
     return (a - mn) / (mx - mn)
+
+
+class EnumTest(tuple, Enum):
+    CHANNEL01 = (0, 1, 2)
+    CHANNEL02 = (3, 4, 5)
+    CHANNEL03 = CHANNEL01 + CHANNEL02
 
 
 if __name__ == '__main__':
