@@ -49,7 +49,7 @@ _MAG_VREF = 3.46
 _MAG_SENSITIVITY = 16384
 # time series & pre-processing
 _UPDATE_TIME = time.time()
-_SERIES_SIZE = 50
+_SERIES_SIZE = 25
 _DATA_SERIES = None
 _PREV_ATT = None
 _YAW_NORM = None
@@ -286,7 +286,7 @@ def init_window():
 
 def main():
     global _PROJECTION_MTRX, _VIEW_LOOKAT, _ASPECT_RATIO, _FRAME_TIME, _DATA_SERIES
-    _DATA_SERIES = DataTimeSeries(N=_SERIES_SIZE, dimensions=6, auto_filter=True, post_filter=convert_raw_data)
+    _DATA_SERIES = DataTimeSeries(_SERIES_SIZE, 6, auto_filter=True, post_filter=convert_raw_data)
     # OpenGL initialization.
     glut.glutInit(sys.argv)
     # Initialize buffer and OpenGL settings.
