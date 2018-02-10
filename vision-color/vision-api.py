@@ -53,8 +53,8 @@ class Vision():
 		self.clickThresh = 100
 		self.clickCounter = 0
 		self.pinched = False
-		# self.window = DataTimeSeries(4, 4, auto_filter=True)
-		self.window = {}
+		self.window = DataTimeSeries(2, self.WINDOW_SIZE, auto_filter=True)
+		# self.window = {}
 		self.cursor_history = []
 		self.parser = argparse.ArgumentParser()
 		self.parser.add_argument('-f', '--find_range', 
@@ -76,7 +76,7 @@ class Vision():
 			self.realY[finger] = 0
 			self.mouseX = int(self.screen_width/2)
 			self.mouseY = int(self.screen_height/2)
-			self.window[finger] = np.zeros((self.WINDOW_SIZE, 2), dtype=int)
+			# self.window[finger] = np.zeros((self.WINDOW_SIZE, 2), dtype=int)
 
 		if self.args.find_range:
 			with open('.vision.config', 'w') as file:
@@ -173,7 +173,7 @@ class Vision():
 
 	def __check_stationary(self, finger):
 		factor = 0.02
-		for [x, y] in self.window[finger]:
+		for [x, y] in self.window.data_series:
 			if (x-self.realX[finger])**2 + (y-self.realY[finger]) > factor * min(self.cameraWidth,self.cameraHeight):
 				self.stationary[finger] = False
 				return
@@ -187,15 +187,20 @@ class Vision():
 			self.handMoment[finger] = (self.handX, self.handY)
 
 	def __normalize_center(self, finger):
-		window_head = self.counter % self.WINDOW_SIZE
-		self.window[finger][window_head, : ] = self.handMoment[finger]
-		if self.counter < self.WINDOW_SIZE:
-			self.stationary[finger] = True
-			return
-		self.stationary[finger] = False
-		mean = np.mean(self.window[finger], axis=0)
-		self.realX[finger], self.realY[finger] = mean[0], mean[1]
+		# print('{} {}'.format(self.realX[finger], self.realY[finger]))
+		self.window.add(self.handMoment[finger])
+		# self.window.print_data()
+		self.realX[finger], self.realY[finger] = self.window.get_data()
 		self.__check_stationary(finger)
+		# window_head = self.counter % self.WINDOW_SIZE
+		# self.window[finger][window_head, : ] = self.handMoment[finger]
+		# if self.counter < self.WINDOW_SIZE:
+		# 	self.stationary[finger] = True
+		# 	return
+		# self.stationary[finger] = False
+		# mean = np.mean(self.window[finger], axis=0)
+		# self.realX[finger], self.realY[finger] = mean[0], mean[1]
+		# self.__check_stationary(finger)
 
 	def __move_cursor(self, finger):
 		self.cursor_history.append([self.realX[finger], self.realY[finger]])
@@ -210,8 +215,18 @@ class Vision():
 		# else:
 		# 	scaleFactorY = 1.3
 		buff = 10
-		self.mouseX += dx * ((self.screen_width + buff) / self.frame.shape[1])
-		self.mouseY += dy * ((self.screen_height + buff) / self.frame.shape[0])
+		# print('{} {} {} {}'.format(self.screen_width, 
+		# 	self.screen_height,
+		# 	self.frame.shape[1],
+		# 	self.frame.shape[0]))
+		self.mouseX = self.realX[finger] * (self.screen_width / self.frame.shape[1]) # * ((self.screen_width + buff))
+		self.mouseY = self.realY[finger] * (self.screen_height / self.frame.shape[0]) # * ((self.screen_height + buff))
+
+		print('MX: {} MY: {} RX: {} RY: {}'.format(self.mouseX, 
+			self.mouseY,
+			self.realX[finger],
+			self.realY[finger]))
+
 		if self.mouseX > self.screen_width:
 			self.mouseX = self.screen_width
 		if self.mouseY > self.screen_height:
@@ -243,7 +258,7 @@ class Vision():
 		# cv2.drawContours(self.canvas, [self.hullPoints], 0, (255, 0, 0), 2)
 
 	def __frame_outputs(self, finger):
-		# cv2.imshow('Output ' + finger, self.output[finger])
+		cv2.imshow('Output ' + finger, self.output[finger])
 		# cv2.imshow('Frame', self.frame)
 		pass
 
@@ -259,11 +274,11 @@ class Vision():
 					self.__normalize_center(finger)
 				else:
 					self.stationary[self.TRACKER_FINGER] = True
-					if not run_once:
-						print('Should Run')
-						img = Image.open('donald_trump.jpg')
-						img.show()
-						run_once = True
+					# if not run_once:
+					# 	print('Should Run')
+					# 	img = Image.open('donald_trump.jpg')
+					# 	img.show()
+					# 	run_once = True
 				self.__frame_outputs(finger)
 
 			# if self.FINGER1 in self.ACTIVE_FINGERS \
