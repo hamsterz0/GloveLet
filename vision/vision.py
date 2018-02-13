@@ -14,15 +14,14 @@ def callback(value):
 	pass
 
 
-class Vision():
-
-	FINGER1 = 'finger1'
-	FINGER2 = 'finger2'
-	ACTIVE_FINGERS = [FINGER1]
-	TOTAL_FINGERS =[FINGER1, FINGER2]
-	TRACKER_FINGER = FINGER1
-	WINDOW_SIZE = 4
-	PREV_MEMORY = 2
+class Vision:
+	FINGER1 = 'finger1' # finger 1 tag
+	FINGER2 = 'finger2' # finger 2 tag
+	ACTIVE_FINGERS = [FINGER1]  # Number of fingers tracking
+	TOTAL_FINGERS =[FINGER1, FINGER2]   # Total numbers of fingers
+	TRACKER_FINGER = FINGER1    # The cursor tracker finger
+	WINDOW_SIZE = 4 # The window size for calculating hte average
+	PREV_MEMORY = 2 # Previous points stored. 
 
 	def __init__(self):
 		pyautogui.FAILSAFE = False
