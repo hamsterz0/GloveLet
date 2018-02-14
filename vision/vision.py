@@ -101,6 +101,11 @@ class Vision:
 				sys.exit()
 
 	def __find_range(self):
+		'''
+		Checking the if the configuration file exists. If not, then load up the 
+		GUI for finding the HSV range. Else, just read the values of the 
+		.vision.conf file.
+		'''
 		range_filter = 'HSV'
 		cv2.namedWindow("Trackbar", 0)
 		for i in ["MIN", "MAX"]:
@@ -171,6 +176,9 @@ class Vision:
 		self.handContour[finger] = cv2.approxPolyDP(self.realHandContour, 0.001 * self.realHandLength,True)
 
 	def __check_stationary(self, finger):
+		'''
+		Finding the absolute deviation from the mean to find if the finger is stationary. 
+		'''
 		factor = 0.02
 		for [x, y] in self.window[finger].data_series:
 			if (x-self.realX[finger])**2 + (y-self.realY[finger]) > factor * min(self.cameraWidth,self.cameraHeight):
@@ -179,6 +187,9 @@ class Vision:
 		self.stationary[finger] = True
 
 	def __find_center(self, finger):
+		'''
+		Finding the center of the contour of the finger that we are tracking.
+		'''
 		self.moments = cv2.moments(self.handContour[finger])
 		if self.moments["m00"] != 0:
 			self.handX = int(self.moments["m10"] / self.moments["m00"])
@@ -186,11 +197,21 @@ class Vision:
 			self.handMoment[finger] = (self.handX, self.handY)
 
 	def __normalize_center(self, finger):
+		'''
+		Using the time series data to normalize the data. 
+		This is calling the Mean function in the window[finger] object and 
+		then getting the data from it. 
+		The realX and realY are basically are just the mean of n handX and handY 
+		values (to stop the gitter)
+		'''
 		self.window[finger].add(self.handMoment[finger])
 		self.realX[finger], self.realY[finger] = self.window[finger].get_data()
 		self.__check_stationary(finger)
 
 	def __move_cursor(self, finger):
+		'''
+		Function to move the cursor on the screen. 
+		'''
 		self.cursor_history.append([self.realX[finger], self.realY[finger]])
 		if len(self.cursor_history) < self.PREV_MEMORY:
 			return
@@ -213,6 +234,9 @@ class Vision:
 		del self.cursor_history[0]
 		
 	def __check_pinch(self):
+		'''
+		The left click action on the screen.
+		'''
 		fingerDist = math.sqrt((self.realX[self.FINGER1] - self.realX[self.FINGER2])**2 + \
 							   (self.realY[self.FINGER1] - self.realY[self.FINGER2])**2)
 		print('Finger Distance: {}'.format(fingerDist))
@@ -256,9 +280,9 @@ class Vision:
 					# 	run_once = True
 				self.__frame_outputs(finger)
 
-			# if self.FINGER1 in self.ACTIVE_FINGERS \
-			# 	and self.FINGER2 in self.ACTIVE_FINGERS:
-			# 	self.__check_pinch()
+			if self.FINGER1 in self.ACTIVE_FINGERS \
+				and self.FINGER2 in self.ACTIVE_FINGERS:
+				self.__check_pinch()
 			
 			if not self.stationary[self.TRACKER_FINGER]:
 				self.__move_cursor(self.TRACKER_FINGER)
