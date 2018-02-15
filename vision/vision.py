@@ -14,6 +14,32 @@ def callback(value):
 	pass
 
 
+class StoreGestures:
+	def __init__(self, points, name):
+		self.points = np.array(points, dtype=np.float)
+		self.name = name
+		self.normalize_points()
+
+	def normalize_points(self):
+		return self.points - self.points[0]
+
+
+class Gesture:
+	def __init__(self):
+		self.point_count = 256
+		self.gestures = []
+
+	def __circle_gesture(self):
+		radius = 512
+		cc_points = [(radius*math.cos(t), radius*math.sin(t)) \
+			for t in np.linspace(0, 2*math.pi, num=self.point_count)]
+		c_points = [(radius*math.cos(t), -radius*math.sin(t)) \
+			for t in np.linspace(0, 2*math.pi, num=self.point_count)]
+		counter_clockwise = StoreGestures(cc_points, "Counter Clockwise")
+		clockwise = StoreGestures(c_points, "Clockwise")
+		self.gestures += [counter_clockwise, clockwise]
+
+
 class Vision:
 	FINGER1 = 'finger1' # finger 1 tag
 	FINGER2 = 'finger2' # finger 2 tag
@@ -285,14 +311,17 @@ class Vision:
 				self.__draw(finger)
 				self.__frame_outputs(finger)
 
+			# Check if the user pinched his finger for left click
 			if self.FINGER1 in self.ACTIVE_FINGERS \
 				and self.FINGER2 in self.ACTIVE_FINGERS:
 				self.__check_pinch()
 			
+			# Update the cursor location with the new finger location.
 			if not self.stationary[self.TRACKER_FINGER]:
 				self.__move_cursor(self.TRACKER_FINGER)
 			self.counter += 1
 
+			# Exit out of this hell hole.
 			if cv2.waitKey(1) & 0xFF is ord('q'):
 				break
 		cv2.destroyAllWindows()
