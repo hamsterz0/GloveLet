@@ -10,6 +10,7 @@ from ast import literal_eval
 import sys
 from PIL import Image
 
+
 def callback(value):
 	pass
 
@@ -53,6 +54,7 @@ class StoreGestures:
 	def distance(self, point1, point2):
 		return ((point1[0] - point2[0])**2 + (point1[1] - point2[1])**2)**0.5
 
+
 class Gesture:
 	def __init__(self):
 		self.point_count = 256
@@ -68,7 +70,7 @@ class Gesture:
 		clockwise = StoreGestures(c_points, "Clockwise")
 		self.predefined_gestures += [counter_clockwise, clockwise]
 
-	
+
 
 
 class Vision:
