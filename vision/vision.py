@@ -28,7 +28,7 @@ class Vision:
 		root = tkinter.Tk()
 		root.withdraw()
 		# member variables
-		self.webcam = cv2.VideoCapture(1)
+		self.webcam = cv2.VideoCapture(0)
 		self.screen_width = root.winfo_screenwidth()
 		self.screen_height = root.winfo_screenheight()
 		self.cameraWidth = self.screen_width / 2
@@ -38,7 +38,7 @@ class Vision:
 		self.logger = logging.getLogger(__name__)
 		self.output = {}
 		self.handContour = {}
-		self.canvas = {}
+		self.canvas = None
 		self.handMoment = {}
 		self.foundContour = {}
 		self.realX = {}
@@ -55,6 +55,7 @@ class Vision:
 		# self.window = DataTimeSeries(2, self.WINDOW_SIZE, auto_filter=True)
 		self.window = {}
 		self.cursor_history = []
+		self.movement_history = {}
 		self.parser = argparse.ArgumentParser()
 		self.parser.add_argument('-f', '--find_range', 
 			help="Find the range from within the program", 
@@ -75,6 +76,7 @@ class Vision:
 			self.realY[finger] = 0
 			self.mouseX = int(self.screen_width/2)
 			self.mouseY = int(self.screen_height/2)
+			self.movement_history[finger] = []
 			self.window[finger] = DataTimeSeries(2, self.WINDOW_SIZE, auto_filter=True)
 
 		if self.args.find_range:
@@ -137,8 +139,8 @@ class Vision:
 		'''
 		_, self.frame = self.webcam.read()
 		self.frame = cv2.flip(self.frame, 1)
-		for finger in self.ACTIVE_FINGERS:
-			self.canvas[finger] = np.zeros(self.frame.shape, np.uint8)
+		# for finger in self.ACTIVE_FINGERS:
+		self.canvas = np.zeros(self.frame.shape, np.uint8)
 		self.frame = cv2.cvtColor(self.frame, cv2.COLOR_BGR2HSV)
 
 	def __threshold(self, finger):
@@ -146,7 +148,6 @@ class Vision:
 		adding the color threshold to the frame captured by the webcam.
 		The threshold boundaries are specified in advance.
 		'''
-		# TODO: Give user the option to select the threshold color. Under configuration.
 		(lower, upper) = self.boundaries[finger]
 		lower = np.array(lower, dtype="uint8")
 		upper = np.array(upper, dtype="uint8")
@@ -206,6 +207,7 @@ class Vision:
 		'''
 		self.window[finger].add(self.handMoment[finger])
 		self.realX[finger], self.realY[finger] = self.window[finger].get_data()
+		self.movement_history[finger] += [(self.realX[finger], self.realY[finger])]
 		self.__check_stationary(finger)
 
 	def __move_cursor(self, finger):
@@ -251,14 +253,21 @@ class Vision:
 			self.pinched = False
 
 	def __draw(self, finger):
-		if self.realX[finger] != 0 and self.realY[finger] != 0:
-			cv2.circle(self.canvas[finger], (self.realX[finger], self.realY[finger]),10, (255, 0, 0), -2)
-		cv2.drawContours(self.canvas[finger], [self.handContour[finger]], 0, (0, 255, 0), 1)
-		# cv2.drawContours(self.canvas, [self.hullPoints], 0, (255, 0, 0), 2)
+		# if self.realX[finger] != 0 and self.realY[finger] != 0:
+		# 	cv2.circle(self.canvas[finger], (self.realX[finger], self.realY[finger]),10, (255, 0, 0), -2)
+		# cv2.drawContours(self.canvas[finger], [self.handContour[finger]], 0, (0, 255, 0), 1)
+		cv2.drawContours(self.canvas, [self.handContour[finger]], 0, (0, 255, 0), 1)
+		cv2.circle(self.canvas, tuple([self.realX[finger], self.realY[finger]]),
+			10, (255, 0, 0), -2)
+		recent_positions = self.movement_history[finger][-30:]
+		if len(recent_positions) != 0:
+			for i in range(len(recent_positions)):
+				cv2.circle(self.canvas, recent_positions[i], 5, 
+					(25*i, 255, 25*i), -1)
 
 	def __frame_outputs(self, finger):
-		cv2.imshow('Output ' + finger, self.output[finger])
-		# cv2.imshow('Frame', self.frame)
+		# cv2.imshow('Output ' + finger, self.output[finger])
+		cv2.imshow('Canvas', self.canvas)
 		pass
 
 	def start_process(self):
@@ -273,11 +282,7 @@ class Vision:
 					self.__normalize_center(finger)
 				else:
 					self.stationary[self.TRACKER_FINGER] = True
-					# if not run_once:
-					# 	print('Should Run')
-					# 	img = Image.open('donald_trump.jpg')
-					# 	img.show()
-					# 	run_once = True
+				self.__draw(finger)
 				self.__frame_outputs(finger)
 
 			if self.FINGER1 in self.ACTIVE_FINGERS \
