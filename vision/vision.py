@@ -9,6 +9,7 @@ import logging
 from ast import literal_eval
 import sys
 from PIL import Image
+from glovelet.utility.motion_multiplier import motion_multiplier
 
 
 def callback(value):
@@ -123,6 +124,7 @@ class Vision:
 		# self.data = np.zeros(4, np.float32)
 		self.boundaries = {}
 		self.counter = 0
+		self.prev_mouse = ()
 		self.__init_mem_vars()
 
 	def __init_mem_vars(self):
@@ -278,9 +280,19 @@ class Vision:
 			return
 		dx = self.cursor_history[1][0] - self.cursor_history[0][0]
 		dy = self.cursor_history[1][1] - self.cursor_history[0][1]
-		self.mouseX = self.realX[finger] * (self.screen_width / self.frame.shape[1]) # * ((self.screen_width + buff))
-		self.mouseY = self.realY[finger] * (self.screen_height / self.frame.shape[0]) # * ((self.screen_height + buff))
+		
+		self.x = self.realX[finger] * (self.screen_width / self.frame.shape[1]) # * ((self.screen_width + buff))
+		self.y = self.realY[finger] * (self.screen_height / self.frame.shape[0]) # * ((self.screen_height + buff))
 
+
+		if len(self.prev_mouse) == 0:
+			self.prev_mouse = (self.x, self.y)
+			return 
+		
+		# X axis
+		self.mouseX = motion_multiplier(self.prev_mouse[0], dx)
+		self.mouseY = motion_multiplier(self.prev_mouse[1], dy)
+	
 		print('MX: {} MY: {} RX: {} RY: {}'.format(self.mouseX, 
 			self.mouseY,
 			self.realX[finger],
