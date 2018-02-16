@@ -20,4 +20,4 @@ def motion_multiplier(prev_coord, delta_real_coord, k_max=20, k_min=4, n=2, m=1)
     :param k_max: the upper-threshold value for delta_real_coord\t
     :param k_min: the lower-threshold value for delta_real_coord
     """
-    return prev_coord + delta_real_coord * (1 + u(abs(delta_real_coord, k_max, k_min, n, m)))
+    return prev_coord + delta_real_coord * (1 + u(abs(delta_real_coord), k_max, k_min, n, m))
