@@ -3,6 +3,9 @@ import numpy as np
 from ctypes import c_float
 
 
+__all__ = ["DataTimeSeries"]
+
+
 class DataTimeSeries:
     def __init__(self, samples=50, dimensions=1,  factor=1.0,
                  auto_filter=False, filter_alg='ewma',
