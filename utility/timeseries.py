@@ -53,13 +53,9 @@ class DataTimeSeries:
 
     def add(self, data):
         """
-        Add a data sample to the time series.
-
-        If the time series is filled, the oldest value in the time series
-        is overwritten.
-        \t
-        \tdata:    The data. Must be of length `ndim` dimensions.
-        \t         Can be any iterable.
+        Add a data sample to the time series.\n
+        If the time series is filled, the oldest value in the time series is overwritten.\t
+        :param data:    The data. Must be of length `ndim` dimensions. Can be any iterable.
         """
         # NOTE: `add` is rebound at DataTimeSeries object creation
         pass
@@ -101,13 +97,10 @@ class DataTimeSeries:
 
     def print_data(self, index=0):
         """
-        Prints a data sample and associated time delta.
-
-        By default, the most recent data sample is printed.
-        Otherwise, specifiy the index of the data sample to print.
-        \t
-        \tindex:    The index of the data to convert to string.
-        \t          The most recent data sample is selected by default.
+        Prints a data sample and associated time delta.\n
+        By default, the most recent data sample is printed.\t
+        Otherwise, specifiy the index of the data sample to print.\t
+        :param index: The index of the data to convert to string. The most recent data sample is selected by default.
         """
         index = self.__get_index(index)
         out = self.data2str(index)
@@ -145,8 +138,7 @@ class DataTimeSeries:
 
     def __initial_series_add(self, data):
         """
-        Repeats everytime 'add' is called until the data series has
-        been completely initialized/filled with data.
+        Repeats everytime 'add' is called until the data series has been completely initialized/filled with data.
         """
         if self.__added < self.__nsamples:
             self.__added += 1
@@ -159,6 +151,7 @@ class DataTimeSeries:
         self.__add(data)
 
     def __add(self, data):
+        """The optimised version of the `add` function."""
         self.__increment_head()
         self.__tdelta[self.__head] = time.time() - self.__time
         self.__raw_data[self.__head, :] = data
