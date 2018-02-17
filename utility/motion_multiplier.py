@@ -7,7 +7,7 @@ def u(dr, k_max=20, k_min=4, n=2, m=1):
     if dr < k_min:
         return -m
     elif dr > k_max:
-        return n - m
+        return n
     return ((n + m) * (dr - k_min) / (k_max - k_min)) - m
 
 
