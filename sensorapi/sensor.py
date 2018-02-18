@@ -1,4 +1,4 @@
-from sensorstreamchannel import SensorStreamDataChannel
+from glovelet.sensorapi.sensorstreamchannel import SensorStreamDataChannel
 
 __all__ = ["Sensor"]
 

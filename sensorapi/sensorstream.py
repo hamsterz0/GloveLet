@@ -5,9 +5,9 @@ from multiprocessing import Lock
 import time
 import logging
 import sys
-from sensorstreamchannel import SensorStreamDataChannel
-from ctypes import c_float
+from glovelet.sensorapi.sensorstreamchannel import SensorStreamDataChannel
 from glovelet.sensorapi.sensor import Sensor
+from ctypes import c_float
 
 
 __all__ = ['SensorStreamConnectionStatus', 'SensorDataMonitor', 'SensorStream']
@@ -131,7 +131,7 @@ class SensorStream:
                 self.__logger.error(str(e))
                 self.__logger.warning('Unable to parse data as float.')
             except DataReadException as e:
-                self.__logger.waring(str(e))
+                self.__logger.warning(str(e))
             return data
         else:
             self.__logger.warning('Attempt to invoke `get_data` while connection is closed.')

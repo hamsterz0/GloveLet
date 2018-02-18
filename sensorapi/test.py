@@ -66,7 +66,6 @@ class TestMonitor(SensorDataMonitor):
 
 def stream_test(port, baud):
     stream = SensorStream(port, baud)
-    stream.open()
     monitor = GloveletBNO055IMUSensorMonitor()
     stream.register_monitor(monitor)
     try:
@@ -77,7 +76,6 @@ def stream_test(port, baud):
     while(stream.is_open()):
         stream.update()
         print('acc:' + str(monitor.get_acceleration()) + ' : rot:' + str(monitor.get_rotation().value) )
-        time.sleep(0.004)
 
 
 if __name__ == '__main__':
