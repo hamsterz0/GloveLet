@@ -39,7 +39,11 @@ def axis_correction(time_series):
     # swap y and z and invert z
     data[1], data[2] = -data[2], data[1]
     # swap qy and qz
-    data[-2], data[-1] = data[-1], data[-2]
+    # data[-2], data[-1] = -data[-1], -data[-2]
+    # data[-1], data[4:] = data[3], = data[3:6]
+    data[5], data[6] = data[6], data[5]
+    data[4], data[5] = data[5], data[4]
+    data[3] = -data[3]
     return data
 
 
