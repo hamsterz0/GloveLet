@@ -71,13 +71,15 @@ def draw():
     global _OBJ, _FRAME_TIME, _PROJECTION_MTRX, _VIEW_LOOKAT, _VELOCITY
     # pre-process data
     # vel, rot, att = get_motion_data()
-    # _VELOCITY += vel
     # _OBJ.move(vel)
-    # _OBJ.move(_VELOCITY)
     _SENSOR_STREAM.update()
     rot = _IMU_MONITOR.get_rotation()
-    world_rot = glm.tquat(0, 0, 0, 1, dtype=c_float)
-    rot = world_rot * rot
+    chg_vel = _IMU_MONITOR.get_chg_velocity()
+    if _IMU_MONITOR.is_moving(norm_threshold=0.25):
+        _VELOCITY += chg_vel * 0.05
+    else:
+        _VELOCITY[:] = (0, 0, 0)
+    # _OBJ.move(_VELOCITY)
     _OBJ.set_local_rotation(rot)
     tdelta = time.time() - _FRAME_TIME
     if tdelta > _MAX_TDELTA:
