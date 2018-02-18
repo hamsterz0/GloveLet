@@ -37,7 +37,7 @@ class FingerFlexGroup(Sensor):
 def axis_correction(time_series):
     data = time_series[0]
     # swap y and z and invert z
-    data[1], data[2] = -data[2], data[1]
+    data[1], data[2] = data[2], -data[1]
     # swap qy and qz
     # data[-2], data[-1] = -data[-1], -data[-2]
     # data[-1], data[4:] = data[3], = data[3:6]
@@ -59,19 +59,49 @@ class GloveletBNO055IMUSensorMonitor(SensorDataMonitor):
         self.__data_lock = Lock()
 
     def update(self, data):
-        self.__data_lock.acquire()
+        # self.__data_lock.acquire()
         self.__timeseries.add(data)
-        self.__data_lock.release()
+        # self.__data_lock.release()
 
     def get_acceleration(self):
-        self.__data_lock.acquire()
+        # self.__data_lock.acquire()
         acceleration = np.array(self.__timeseries[0][0:3])
-        self.__data_lock.release()
+        # self.__data_lock.release()
         return acceleration
 
     def get_rotation(self):
-        self.__data_lock.acquire()
+        # self.__data_lock.acquire()
         data = self.__timeseries[0][3:7]
         rotation = glm.tquat(*data)
-        self.__data_lock.release()
+        # self.__data_lock.release()
         return rotation
+
+    def get_time_delta(self):
+        # self.__data_lock.acquire()
+        dt = self.__timeseries.get_tdelta()
+        # self.__data_lock.release()
+        return dt
+
+    def get_chg_velocity(self):
+        # self.__data_lock.acquire()
+        dt = self.__timeseries.get_tdelta()
+        acc_norm = self.get_acceleration_norm()
+        vel = np.zeros(3, dtype='f')
+        if acc_norm > 0.15:
+            vel = self.get_acceleration() * dt
+        # self.__data_lock.release()
+        return vel
+
+    def get_acceleration_norm(self):
+        # self.__data_lock.acquire()
+        acc = self.get_acceleration()
+        acc_norm = np.linalg.norm(acc)
+        # self.__data_lock.release()
+        return acc_norm
+
+    def is_moving(self, norm_threshold=0.15):
+        # self.__data_lock.acquire()
+        acc_norm = self.get_acceleration_norm()
+        is_moving = (acc_norm > norm_threshold)
+        # self.__data_lock.release()
+        return is_moving
