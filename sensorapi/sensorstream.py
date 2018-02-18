@@ -130,6 +130,8 @@ class SensorStream:
             except UnicodeDecodeError as e:
                 self.__logger.error(str(e))
                 self.__logger.warning('Unable to parse data as float.')
+            except ValueError as e:
+                self.__logger.warning(str(e))
             except DataReadException as e:
                 self.__logger.warning(str(e))
             return data
