@@ -41,9 +41,9 @@ def axis_correction(time_series):
     # swap qy and qz
     # data[-2], data[-1] = -data[-1], -data[-2]
     # data[-1], data[4:] = data[3], = data[3:6]
-    data[5], data[6] = data[6], data[5]
+    # data[5], data[6] = data[6], data[5]
     data[4], data[5] = data[5], data[4]
-    data[3] = -data[3]
+    # data[3] = -data[3]
     return data
 
 
@@ -72,7 +72,7 @@ class GloveletBNO055IMUSensorMonitor(SensorDataMonitor):
     def get_rotation(self):
         # self.__data_lock.acquire()
         data = self.__timeseries[0][3:7]
-        rotation = glm.tquat(*data)
+        rotation = glm.tquat(180, 0, 0, dtype='f') * glm.tquat(*data)
         # self.__data_lock.release()
         return rotation
 
