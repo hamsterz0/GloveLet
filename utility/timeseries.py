@@ -3,7 +3,7 @@ import numpy as np
 from ctypes import c_float
 
 
-__all__ = ["DataTimeSeries"]
+__all__ = ["DataTimeSeries", "DataSequence"]
 
 
 class DataSequence:
@@ -14,14 +14,14 @@ class DataSequence:
     Does not record time deltas or time stamps.
     """
 
-    def __init__(self, samples, dimensions):
+    def __init__(self, samples, dimensions, dtype='f'):
         self.__nsamples = samples
         self.__ndim = dimensions
         self.__shape = (samples, dimensions)
         self.__added = 0
         self.__head = 0
         # initialize data series
-        self.data_series = np.zeros((samples, dimensions), c_float)
+        self.data_series = np.zeros((samples, dimensions), dtype)
 
     @property
     def nsamples(self):
@@ -86,7 +86,6 @@ class DataSequence:
             self.__added += 1
 
     def _get_real_index(self, from_head):
-        # FIXME: wrong index is being returned
         result = self.__head - from_head
         if result < 0:
             result += self.__added
@@ -132,16 +131,16 @@ class DataSequence:
 
 
 class DataTimeSeries(DataSequence):
-    def __init__(self, nsamples, ndim,  factor=1.0,
+    def __init__(self, nsamples, ndim, dtype='f', factor=1.0,
                  auto_filter=False, filter_alg='ewma',
                  pre_filter=None, post_filter=None):
-        super().__init__(nsamples, ndim)
+        super().__init__(nsamples, ndim, dtype)
         self.__factor = factor
         self.__exp_weights = np.zeros((nsamples), c_float)
         self.__weight = 0.0
         self.__denom = 0.0
         self.tdelta = DataSequence(nsamples, 1)
-        self.timestamp = DataSequence(nsamples, 1)
+        self.timestamp = DataSequence(nsamples, 1, dtype=float)
         # bind initial function for adding data to the series
         self.add = self.__initial_time_add
         self.__raw_data = np.zeros((nsamples, ndim), c_float)
@@ -172,8 +171,7 @@ class DataTimeSeries(DataSequence):
         """
         Returns the most recent time delta.
         """
-        tdelta = self.tdelta[index][0]
-        return tdelta
+        return self.tdelta[index][0]
 
     def calc_ewma(self):
         """
@@ -265,7 +263,8 @@ class DataTimeSeries(DataSequence):
         super().add(data)
         if timestamp is None:
             timestamp = time.time()
-        self.tdelta.add(timestamp - self.timestamp[0][0])
+        dt = timestamp - self.timestamp[0][0]
+        self.tdelta.add(dt)
         if self.__filtered_data is not None:
             self.__filter_data()
             self.data_series = self.__filtered_data
@@ -284,6 +283,6 @@ class DataTimeSeries(DataSequence):
     def __str__(self):
         output = list()
         for i in range(self.nsamples):
-            output.append(str(self[i]) + '  :  dt=' + str(self.__tdelta[i]))
+            output.append(str(self[i]) + '  :  dt=' + str(self.tdelta[0][0]))
         output = '\n'.join(output)
         return output
