@@ -140,10 +140,8 @@ class DataTimeSeries(DataSequence):
         self.__exp_weights = np.zeros((nsamples), c_float)
         self.__weight = 0.0
         self.__denom = 0.0
-        self.__tdelta = np.zeros(nsamples)
-        # self.tdelta = DataSequence(nsamples, 1)
-        # self.timestamp = DataSequence(nsamples, 1)
-        self.__time = None
+        self.tdelta = DataSequence(nsamples, 1)
+        self.timestamp = DataSequence(nsamples, 1)
         # bind initial function for adding data to the series
         self.add = self.__initial_time_add
         self.__raw_data = np.zeros((nsamples, ndim), c_float)
@@ -174,8 +172,8 @@ class DataTimeSeries(DataSequence):
         """
         Returns the most recent time delta.
         """
-        index = self._get_real_index(index)
-        return self.__tdelta[self.head]
+        tdelta = self.tdelta[index][0]
+        return tdelta
 
     def calc_ewma(self):
         """
@@ -236,7 +234,7 @@ class DataTimeSeries(DataSequence):
             self.__exp_weights[i] = self.__weight**(i * self.__factor)
             self.__denom += self.__exp_weights[i]
 
-    def __initial_time_add(self, data):
+    def __initial_time_add(self, data, timestamp=None):
         # bind next function for adding data to series until series is fully initialized
         self.add = self.__initial_series_add
         self.data_series = self.__raw_data
@@ -245,9 +243,11 @@ class DataTimeSeries(DataSequence):
             self.__compute_exponential_weights()
             self.__filter_data()
             self.data_series = self.__filtered_data
-        self.__time = time.time()
+        if timestamp is None:
+            timestamp = time.time()
+        self.timestamp.add(timestamp)
 
-    def __initial_series_add(self, data):
+    def __initial_series_add(self, data, timestamp=None):
         """
         Repeats everytime 'add' is called until the data series has been completely initialized/filled with data.
         """
@@ -259,15 +259,17 @@ class DataTimeSeries(DataSequence):
             self.__compute_exponential_weights()
         self.__add(data)
 
-    def __add(self, data):
+    def __add(self, data, timestamp=None):
         """The optimised version of the `add` function."""
         self.data_series = self.__raw_data
         super().add(data)
-        self.__tdelta[self.head] = time.time() - self.__time
+        if timestamp is None:
+            timestamp = time.time()
+        self.tdelta.add(timestamp - self.timestamp[0][0])
         if self.__filtered_data is not None:
             self.__filter_data()
             self.data_series = self.__filtered_data
-        self.__time = time.time()
+        self.timestamp.add(timestamp)
 
     def __filter_data(self):
         self.data_series = self.__raw_data
