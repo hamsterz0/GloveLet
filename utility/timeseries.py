@@ -172,22 +172,21 @@ class DataTimeSeries(DataSequence):
 
     def calc_ewma(self):
         """
-        Calculate the Exponential Weighted Moving Average
-        over the initialized values of the data series and return the result.
+        Calculate the Exponential Weighted Moving Average over the data series.\n
+        Uninitialized values will be ignored
         """
         result = np.zeros((self.ndim), self.dtype)
         it = self.head
-        for i in range(self.nsamples):
+        for i in range(self.added):
             if it < 0:
-                it = self.nsamples - 1
-            result += (self.__exp_weights[it] * self.data_series[it, :])
+                it = self.added - 1
+            result += (self.__exp_weights[i] * self.data_series[it, :])
             it -= 1
         return result / self.__denom
 
     def calc_sma(self):
         """
-        Calculate the Simple Moving Average over the
-        initialized values of the data series and return the result.
+        Calculate the Simple Moving Average over the data series.
         """
         result = np.zeros(self.ndim, self.dtype)
         it = self.head
