@@ -1,6 +1,5 @@
 import time
 import numpy as np
-from ctypes import c_float
 
 
 __all__ = ["DataTimeSeries", "DataSequence"]
@@ -10,7 +9,7 @@ class DataSequence:
     """
     Base class of DataTimeSeries.\n
     Allows for sequential access of data values.
-    Old values are overwritten as new values are added.
+    Old samples are overwritten as new samples are recorded in the series.
     Does not record time deltas or time stamps.
     """
 
@@ -22,6 +21,7 @@ class DataSequence:
         self.__head = 0
         # initialize data series
         self.data_series = np.zeros((samples, dimensions), dtype)
+        self.__dtype = self.data_series.dtype
 
     @property
     def nsamples(self):
@@ -43,11 +43,15 @@ class DataSequence:
     def added(self):
         return self.__added
 
+    @property
+    def dtype(self):
+        return self.__dtype
+
     def add(self, data):
         """
         Add a data sample to the time series.\n
         If the time series is filled, the oldest value in the time series is overwritten.\t
-        :param data:    The data. Must be of length `ndim` dimensions. Can be any iterable.
+        :param data: The data. Must be of length `ndim` dimensions. Can be any iterable.
         """
         self._increment_added()
         self._increment_head()
@@ -63,18 +67,6 @@ class DataSequence:
         index = self._get_real_index(index)
         out = self.data2str(index)
         print(out + '  :  dt=' + str(self.__tdelta[index]))
-
-    def data2str(self, index=0):
-        """
-        Returns a data sample as a string.
-
-        By default, the most recent data sample is returned as a string.
-        Otherwise, specifiy the index of the data sample to return.
-        \t
-        \tindex:    The index of the data to convert to string.
-        \t          The most recent data sample is selected by default.
-        """
-        return np.array2string(self.data_series[index], precision=4)
 
     def _increment_head(self):
         self.__head += 1
@@ -96,7 +88,7 @@ class DataSequence:
         size = stop - start
         if stop >= self.__added:
             size = self.__added
-        result = np.zeros((size, self.__ndim), c_float)
+        result = np.zeros((size, self.__ndim), self.dtype)
         start_ind = self._get_real_index(start)
         end_ind = self._get_real_index(stop)
         if end_ind >= start_ind:
@@ -136,19 +128,19 @@ class DataTimeSeries(DataSequence):
                  pre_filter=None, post_filter=None):
         super().__init__(nsamples, ndim, dtype)
         self.__factor = factor
-        self.__exp_weights = np.zeros((nsamples), c_float)
+        self.__exp_weights = np.zeros((nsamples), 'f')
         self.__weight = 0.0
         self.__denom = 0.0
         self.tdelta = DataSequence(nsamples, 1)
         self.timestamp = DataSequence(nsamples, 1, dtype=float)
         # bind initial function for adding data to the series
         self.add = self.__initial_time_add
-        self.__raw_data = np.zeros((nsamples, ndim), c_float)
+        self.__raw_data = np.zeros((nsamples, ndim), self.dtype)
         # initialize data series
         self.data_series = self.__raw_data   # use raw data if not auto-filtered.
         self.__filtered_data = None
         if auto_filter:
-            self.__filtered_data = np.zeros(self.shape, c_float)
+            self.__filtered_data = np.zeros(self.shape, self.dtype)
             self.data_series = self.__filtered_data  # use filtered data if auto-filtered.
         # bind auto-filter function
         self.__filter = self.calc_ewma
@@ -158,18 +150,23 @@ class DataTimeSeries(DataSequence):
         self.pre_filter = pre_filter
         self.post_filter = post_filter
 
-    def add(self, data):
+    def add(self, data, timestamp=None, pre_arg=(), post_arg=()):
         """
         Add a data sample to the time series.\n
         If the time series is filled, the oldest value in the time series is overwritten.\t
-        :param data:    The data. Must be of length `ndim` dimensions. Can be any iterable.
+        :param data:      The data to insert into the series. Can be any iterable of length `ndim` dimensions.\t
+        :param timestamp: *optional* specify the timestamp of this data sample\t
+        :param pre_arg: tuple of arguments to pass to `pre_filter` callable\t
+        :param post_arg: tuple of arguments to pass to `post_filter` callable\t
         """
         # NOTE: `add` is rebound at DataTimeSeries object creation
         pass
 
     def get_tdelta(self, index=0):
         """
-        Returns the most recent time delta.
+        **Depreicated** Use `my_timeseries.tdelta[sample_index][0]` to retrieve the time delta of a sample.\n
+        Returns the most the time delta for the specified sample.\n
+        By default, the most recent sample is returned.
         """
         return self.tdelta[index][0]
 
@@ -178,7 +175,7 @@ class DataTimeSeries(DataSequence):
         Calculate the Exponential Weighted Moving Average
         over the initialized values of the data series and return the result.
         """
-        result = np.zeros((self.ndim), c_float)
+        result = np.zeros((self.ndim), self.dtype)
         it = self.head
         for i in range(self.nsamples):
             if it < 0:
@@ -192,7 +189,7 @@ class DataTimeSeries(DataSequence):
         Calculate the Simple Moving Average over the
         initialized values of the data series and return the result.
         """
-        result = np.zeros(self.ndim, c_float)
+        result = np.zeros(self.ndim, self.dtype)
         it = self.head
         for i in range(self.added):
             if it < 0:
@@ -212,15 +209,12 @@ class DataTimeSeries(DataSequence):
         out = self.data2str(index)
         print(out + '  :  dt=' + str(self.__tdelta[index]))
 
-    def data2str(self, index=-1):
+    def data2str(self, index=0):
         """
-        Returns a data sample as a string.
-
+        Returns a data sample as a string.\n
         By default, the most recent data sample is returned as a string.
-        Otherwise, specifiy the index of the data sample to return.
-        \t
-        \tindex:    The index of the data to convert to string.
-        \t          The most recent data sample is selected by default.
+        Otherwise, specifiy the index of the data sample to return.\t
+        :param index: The index of the data to convert to string. The most recent data sample is selected by default.
         """
         index = self._get_real_index(index)
         return np.array2string(self.data_series[index], precision=4)
@@ -232,20 +226,20 @@ class DataTimeSeries(DataSequence):
             self.__exp_weights[i] = self.__weight**(i * self.__factor)
             self.__denom += self.__exp_weights[i]
 
-    def __initial_time_add(self, data, timestamp=None):
+    def __initial_time_add(self, data, timestamp=None, pre_arg=(), post_arg=()):
         # bind next function for adding data to series until series is fully initialized
         self.add = self.__initial_series_add
         self.data_series = self.__raw_data
         super().add(data)
         if self.__filtered_data is not None:
             self.__compute_exponential_weights()
-            self.__filter_data()
+            self.__filter_data(pre_arg, post_arg)
             self.data_series = self.__filtered_data
         if timestamp is None:
             timestamp = time.time()
         self.timestamp.add(timestamp)
 
-    def __initial_series_add(self, data, timestamp=None):
+    def __initial_series_add(self, data, timestamp=None, pre_arg=(), post_arg=()):
         """
         Repeats everytime 'add' is called until the data series has been completely initialized/filled with data.
         """
@@ -257,7 +251,7 @@ class DataTimeSeries(DataSequence):
             self.__compute_exponential_weights()
         self.__add(data)
 
-    def __add(self, data, timestamp=None):
+    def __add(self, data, timestamp=None, pre_arg=(), post_arg=()):
         """The optimised version of the `add` function."""
         self.data_series = self.__raw_data
         super().add(data)
@@ -266,19 +260,19 @@ class DataTimeSeries(DataSequence):
         dt = timestamp - self.timestamp[0][0]
         self.tdelta.add(dt)
         if self.__filtered_data is not None:
-            self.__filter_data()
+            self.__filter_data(pre_arg, post_arg)
             self.data_series = self.__filtered_data
         self.timestamp.add(timestamp)
 
-    def __filter_data(self):
+    def __filter_data(self, pre_arg=(), post_arg=()):
         self.data_series = self.__raw_data
         if callable(self.pre_filter):
             # pre-filter callable must take DataTimeSeries and return single data record.
-            self.__filtered_data[self.head, :] = self.pre_filter(self)
+            self.__filtered_data[self.head, :] = self.pre_filter(self, *pre_arg)
         self.__filtered_data[self.head, :] = self.__filter()
         if callable(self.post_filter):
             # post-filter callable must take DataTimeSeries and return single data record.
-            self.__filtered_data[self.head, :] = self.post_filter(self)
+            self.__filtered_data[self.head, :] = self.post_filter(self, *post_arg)
 
     def __str__(self):
         output = list()
