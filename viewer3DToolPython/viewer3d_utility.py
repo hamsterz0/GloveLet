@@ -1,4 +1,4 @@
-#!venv/bin/python
+#!../venv/bin/python
 import OpenGL.GL as gl
 import OpenGL.GLUT as glut
 import numpy as np
@@ -12,7 +12,9 @@ from worldobject import WorldObject
 from shaders import Shader
 from shadermanager import ShaderProgramManager
 from mesh import RectPrismMesh
-from timeseries import DataTimeSeries
+from glovelet.utility.timeseries import DataTimeSeries
+from glovelet.sensorapi.sensorstream import SensorStream
+from glovelet.sensorapi.glovelet_sensormonitor import GloveletBNO055IMUSensorMonitor
 
 
 # glut & window values
@@ -56,6 +58,9 @@ _YAW_NORM = None
 _GRAV_MAGNITUDE = 0.0
 _GRAV_VECTOR = glm.vec3(0, dtype=c_float)
 _VELOCITY = np.zeros((3), c_float)
+# SensorStream
+_SENSOR_STREAM = None
+_IMU_MONITOR = GloveletBNO055IMUSensorMonitor()
 
 
 def print_fps(tdelta):
@@ -65,11 +70,16 @@ def print_fps(tdelta):
 def draw():
     global _OBJ, _FRAME_TIME, _PROJECTION_MTRX, _VIEW_LOOKAT, _VELOCITY
     # pre-process data
-    vel, rot, att = get_motion_data()
-    _VELOCITY += vel
+    # vel, rot, att = get_motion_data()
     # _OBJ.move(vel)
+    _SENSOR_STREAM.update()
+    rot = _IMU_MONITOR.get_rotation()
+    chg_vel = _IMU_MONITOR.get_chg_velocity()
+    if _IMU_MONITOR.is_moving(norm_threshold=0.25):
+        _VELOCITY += chg_vel * 0.05
+    else:
+        _VELOCITY[:] = (0, 0, 0)
     # _OBJ.move(_VELOCITY)
-    # _OBJ.set_rotation(rot)
     _OBJ.set_local_rotation(rot)
     tdelta = time.time() - _FRAME_TIME
     if tdelta > _MAX_TDELTA:
@@ -192,22 +202,28 @@ def update_time_series():
 
 
 def init_serial_connection():
-    global _SERIAL, _PORT, _BAUD, _SUCCESS_STR, _SERIES_SIZE,\
-        _GRAV_MAGNITUDE, _GRAV_VECTOR, _DATA_SERIES
-    _SERIAL = serial.Serial(_PORT, _BAUD, timeout=1)
-    # check for successful connection
-    while True:
-        data = read_data()
-        if len(data) == 3 and data[2] == _SUCCESS_STR:
-            break
-    # initialize time series
-    _GRAV_VECTOR = np.zeros(4, c_float)
-    # Values of IMU don't stablize until after about _SERIES_SIZE records.
-    # Do extra updates of the time series in order to insure correct mean calculations.
-    for i in range(_SERIES_SIZE * 3):
-        update_time_series()
-    _GRAV_VECTOR = glm.vec4()
-    _GRAV_VECTOR[:3] = _DATA_SERIES.calc_sma()[:3]
+    global _SENSOR_STREAM, _IMU_MONITOR, _PORT, _BAUD
+    _SENSOR_STREAM = SensorStream(_PORT, _BAUD)
+    _SENSOR_STREAM.register_monitor(_IMU_MONITOR)
+    _SENSOR_STREAM.open()
+
+# def init_serial_connection():
+#     global _SERIAL, _PORT, _BAUD, _SUCCESS_STR, _SERIES_SIZE,\
+#         _GRAV_MAGNITUDE, _GRAV_VECTOR, _DATA_SERIES
+#     _SERIAL = serial.Serial(_PORT, _BAUD, timeout=1)
+#     # check for successful connection
+#     while True:
+#         data = read_data()
+#         if len(data) == 3 and data[2] == _SUCCESS_STR:
+#             break
+#     # initialize time series
+#     _GRAV_VECTOR = np.zeros(4, c_float)
+#     # Values of IMU don't stablize until after about _SERIES_SIZE records.
+#     # Do extra updates of the time series in order to insure correct mean calculations.
+#     for i in range(_SERIES_SIZE * 3):
+#         update_time_series()
+#     _GRAV_VECTOR = glm.vec4()
+#     _GRAV_VECTOR[:3] = _DATA_SERIES.calc_sma()[:3]
 
 
 def read_data():
@@ -234,7 +250,7 @@ def read_data():
 
 
 def init_object():
-    global _OBJ, _PREV_ATT, _DATA_SERIES
+    global _OBJ, _IMU_MONITOR
     color = np.array([[1.0, 0.0, 0.0, 1.0],
                       [0.5, 0.0, 0.0, 1.0],
                       [0.0, 1.0, 0.0, 1.0],
@@ -243,11 +259,24 @@ def init_object():
                       [0.0, 0.0, 0.5, 1.0]], c_float)
     mesh = RectPrismMesh(0.05, 0.01, 0.05, face_colors=color)
     _OBJ = WorldObject(mesh)
-    acc = _DATA_SERIES[0][:3]
-    _PREV_ATT = np.zeros(3, c_float)
-    att_est = attitude_estimation(acc)
-    _OBJ.set_local_rotation(glm.tquat(glm.vec3(att_est)))
-    _PREV_ATT = att_est
+    _OBJ.set_local_rotation(_IMU_MONITOR.get_rotation())
+
+
+# def init_object():
+#     global _OBJ, _PREV_ATT, _DATA_SERIES
+#     color = np.array([[1.0, 0.0, 0.0, 1.0],
+#                       [0.5, 0.0, 0.0, 1.0],
+#                       [0.0, 1.0, 0.0, 1.0],
+#                       [0.0, 0.5, 0.0, 1.0],
+#                       [0.0, 0.0, 1.0, 1.0],
+#                       [0.0, 0.0, 0.5, 1.0]], c_float)
+#     mesh = RectPrismMesh(0.05, 0.01, 0.05, face_colors=color)
+#     _OBJ = WorldObject(mesh)
+#     acc = _DATA_SERIES[0][:3]
+#     _PREV_ATT = np.zeros(3, c_float)
+#     att_est = attitude_estimation(acc)
+#     _OBJ.set_local_rotation(glm.tquat(glm.vec3(att_est)))
+#     _PREV_ATT = att_est
 
 
 def init_shaders():
