@@ -21,7 +21,7 @@ class SensorStreamConnectionStatus(int, Enum):
     PAUSED = 4
 
 
-class DataReadException(Exception):
+class SensorStreamReadException(Exception):
     pass
 
 
@@ -110,14 +110,14 @@ class SensorStream:
 
     def update(self):
         """Issues an update to all of the registered sensors."""
-        data = self.get_data()
+        data = self.read_data()
         if data is None:
             return
         for monitor in self.__registered_monitors:
             start, stop = monitor.sensor.channel.get_start(), monitor.sensor.channel.get_stop()
             monitor.update(data[start:stop])
 
-    def get_data(self):
+    def read_data(self):
         """Read from stream."""
         if self.is_open():
             line = self.__readline()
@@ -125,18 +125,18 @@ class SensorStream:
             data = None
             try:
                 if len(line) != self.__channel_width:
-                    raise DataReadException('Incorrect number of data dimensions read from serial device.')
+                    raise SensorStreamReadException('Incorrect number of data dimensions read from serial device.')
                 data = np.array(line, c_float)
             except UnicodeDecodeError as e:
                 self.__logger.error(str(e))
                 self.__logger.warning('Unable to parse data as float.')
             except ValueError as e:
                 self.__logger.warning(str(e))
-            except DataReadException as e:
+            except SensorStreamReadException as e:
                 self.__logger.warning(str(e))
             return data
         else:
-            self.__logger.warning('Attempt to invoke `get_data` while connection is closed.')
+            self.__logger.warning('Attempt to invoke `read_data` while connection is closed.')
             return None
 
     def register_monitor(self, monitor):

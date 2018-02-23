@@ -162,26 +162,14 @@ class DataTimeSeries(DataSequence):
         # NOTE: `add` is rebound at DataTimeSeries object creation
         pass
 
-    def get_tdelta(self, index=0):
-        """
-        **Depreicated** Use `my_timeseries.tdelta[sample_index][0]` to retrieve the time delta of a sample.\n
-        Returns the most the time delta for the specified sample.\n
-        By default, the most recent sample is returned.
-        """
-        return self.tdelta[index][0]
-
     def calc_ewma(self):
         """
         Calculate the Exponential Weighted Moving Average over the data series.\n
         Uninitialized values will be ignored
         """
         result = np.zeros((self.ndim), self.dtype)
-        it = self.head
         for i in range(self.added):
-            if it < 0:
-                it = self.added - 1
-            result += (self.__exp_weights[i] * self.data_series[it, :])
-            it -= 1
+            result += (self.__exp_weights[i] * self[i][:])
         return result / self.__denom
 
     def calc_sma(self):
@@ -189,34 +177,9 @@ class DataTimeSeries(DataSequence):
         Calculate the Simple Moving Average over the data series.
         """
         result = np.zeros(self.ndim, self.dtype)
-        it = self.head
         for i in range(self.added):
-            if it < 0:
-                it = self.added - 1
-            result += self.data_series[it, :]
-            it -= 1
+            result += self[i][:]
         return result / self.added
-
-    def print_data(self, index=0):
-        """
-        Prints a data sample and associated time delta.\n
-        By default, the most recent data sample is printed.\t
-        Otherwise, specifiy the index of the data sample to print.\t
-        :param index: The index of the data to convert to string. The most recent data sample is selected by default.
-        """
-        index = self._get_real_index(index)
-        out = self.data2str(index)
-        print(out + '  :  dt=' + str(self.__tdelta[index]))
-
-    def data2str(self, index=0):
-        """
-        Returns a data sample as a string.\n
-        By default, the most recent data sample is returned as a string.
-        Otherwise, specifiy the index of the data sample to return.\t
-        :param index: The index of the data to convert to string. The most recent data sample is selected by default.
-        """
-        index = self._get_real_index(index)
-        return np.array2string(self.data_series[index], precision=4)
 
     def __compute_exponential_weights(self):
         self.__weight = 1 - (2.0 / (self.added + 1))
@@ -230,8 +193,8 @@ class DataTimeSeries(DataSequence):
         self.add = self.__initial_series_add
         self.data_series = self.__raw_data
         super().add(data)
+        self.__compute_exponential_weights()
         if self.__filtered_data is not None:
-            self.__compute_exponential_weights()
             self.__filter_data(pre_arg, post_arg)
             self.data_series = self.__filtered_data
         if timestamp is None:
@@ -245,9 +208,7 @@ class DataTimeSeries(DataSequence):
         if self.added >= self.nsamples:
             # rebind once series had bee initialized/filled with data
             self.add = self.__add
-        if self.__filtered_data is not None:
-            # weights for EWMA must be recomputed each time __added is incremented
-            self.__compute_exponential_weights()
+        self.__compute_exponential_weights()
         self.__add(data)
 
     def __add(self, data, timestamp=None, pre_arg=(), post_arg=()):
