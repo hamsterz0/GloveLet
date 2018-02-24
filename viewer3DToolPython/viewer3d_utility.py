@@ -6,6 +6,7 @@ import glm
 import serial
 import time
 import sys
+import argparse
 from ctypes import c_float, c_int, c_uint, c_void_p
 
 from worldobject import WorldObject
@@ -51,7 +52,7 @@ _MAG_VREF = 3.46
 _MAG_SENSITIVITY = 16384
 # time series & pre-processing
 _UPDATE_TIME = time.time()
-_SERIES_SIZE = 25
+_SERIES_SIZE = 10
 _DATA_SERIES = None
 _PREV_ATT = None
 _YAW_NORM = None
@@ -74,12 +75,9 @@ def draw():
     # _OBJ.move(vel)
     _SENSOR_STREAM.update()
     rot = _IMU_MONITOR.get_rotation()
-    chg_vel = _IMU_MONITOR.get_chg_velocity()
-    if _IMU_MONITOR.is_moving(norm_threshold=0.25):
-        _VELOCITY += chg_vel * 0.05
-    else:
-        _VELOCITY[:] = (0, 0, 0)
-    # _OBJ.move(_VELOCITY)
+    # vel = _IMU_MONITOR.get_velocity()
+    # _OBJ.move(vel)
+    sys.stdout.write('is_moving = {}                           \r'.format(int(_IMU_MONITOR.is_moving())))
     _OBJ.set_local_rotation(rot)
     tdelta = time.time() - _FRAME_TIME
     if tdelta > _MAX_TDELTA:
@@ -349,4 +347,6 @@ def main():
 
 
 if __name__ == '__main__':
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--port', '-p', )
     main()
