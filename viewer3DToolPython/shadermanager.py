@@ -1,6 +1,10 @@
 from shaders import ShaderProgram
 import OpenGL.GL as gl
 
+
+__all__ = ['ShaderProgramManager', 'CURRENT_PROGRAM']
+
+
 CURRENT_PROGRAM = None
 
 _UNIFORM_TYPE_INT = 0
