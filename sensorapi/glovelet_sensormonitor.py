@@ -5,6 +5,7 @@ from glovelet.sensorapi.sensor import Sensor
 from multiprocessing import Lock
 import glm
 import numpy as np
+from scipy.integrate import cumtrapz
 
 
 __all__ = ['GloveletBNO055IMUSensorMonitor']
@@ -60,7 +61,8 @@ class GloveletBNO055IMUSensorMonitor(SensorDataMonitor):
 
     def update(self, data):
         self.__acc_timeseries.add(data[:3])
-        self.__rot_timeseries.add((data[3:]))
+        self.__rot_timeseries.add((data[3:]), self.__acc_timeseries.timestamp[0])
+        self.__update_velocity()
 
     def get_acceleration(self):
         acceleration = np.array(self.__acc_timeseries[0][0:3])
@@ -80,13 +82,29 @@ class GloveletBNO055IMUSensorMonitor(SensorDataMonitor):
         return dt
 
     def get_velocity(self):
-        dt = self.__acc_timeseries.tdelta[0]
-        acc = delta_scale(self.get_acceleration(), 200.0, 0.15, 0)
+        # dt = self.__acc_timeseries.tdelta[0]
+        # acc = delta_scale(self.get_acceleration(), 200.0, 0.15, 0)
         # bin_acc = np.zeros(3, 'd')
         # for i in range(len(acc)):
         #     bin_acc[i] = binary_convert(acc[i])
         # self.__velocity[:] *= bin_acc[:]
-        self.__velocity[:] += (acc * dt)
+        # self.__velocity[:] += (acc * dt)
+        return self.__velocity
+
+    def __update_velocity(self):
+        # dt = self.__acc_timeseries.tdelta[0]
+        # acc = delta_scale(self.get_acceleration(), 200.0, 0.15, 0)
+        # bin_acc = np.zeros(3, 'd')
+        # for i in range(len(acc)):
+        #     bin_acc[i] = binary_convert(acc[i])
+        # self.__velocity[:] *= bin_acc[:]
+        # self.__velocity[:] += (acc * dt)
+        acc = self.__acc_timeseries[0]
+        prev_acc = self.__acc_timeseries[1]
+        dt = self.__acc_timeseries.tdelta[0]
+        self.__velocity[0] = cumtrapz((prev_acc[0], acc[0]), dx=dt)
+        self.__velocity[1] = cumtrapz((prev_acc[1], acc[1]), dx=dt)
+        self.__velocity[2] = cumtrapz((prev_acc[2], acc[2]), dx=dt)
         return self.__velocity
 
     def get_acceleration_norm(self):
