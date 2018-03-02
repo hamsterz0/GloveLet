@@ -3,15 +3,16 @@ import OpenGL.GL as gl
 import OpenGL.GLUT as glut
 import numpy as np
 import glm
-import serial
 import time
 import sys
+import argparse
 from ctypes import c_float, c_int, c_uint, c_void_p
 
-from worldobject import WorldObject
-from shaders import Shader
-from shadermanager import ShaderProgramManager
-from mesh import RectPrismMesh
+
+from glovelet.viewer3DToolPython.worldobject import WorldObject
+from glovelet.viewer3DToolPython.shaders import Shader
+from glovelet.viewer3DToolPython.shadermanager import ShaderProgramManager
+from glovelet.viewer3DToolPython.mesh import RectPrismMesh
 from glovelet.utility.timeseries import DataTimeSeries
 from glovelet.sensorapi.sensorstream import SensorStream
 from glovelet.sensorapi.glovelet_sensormonitor import GloveletBNO055IMUSensorMonitor
@@ -51,7 +52,7 @@ _MAG_VREF = 3.46
 _MAG_SENSITIVITY = 16384
 # time series & pre-processing
 _UPDATE_TIME = time.time()
-_SERIES_SIZE = 25
+_SERIES_SIZE = 10
 _DATA_SERIES = None
 _PREV_ATT = None
 _YAW_NORM = None
@@ -71,15 +72,11 @@ def draw():
     global _OBJ, _FRAME_TIME, _PROJECTION_MTRX, _VIEW_LOOKAT, _VELOCITY
     # pre-process data
     # vel, rot, att = get_motion_data()
-    # _OBJ.move(vel)
     _SENSOR_STREAM.update()
     rot = _IMU_MONITOR.get_rotation()
-    chg_vel = _IMU_MONITOR.get_chg_velocity()
-    if _IMU_MONITOR.is_moving(norm_threshold=0.25):
-        _VELOCITY += chg_vel * 0.05
-    else:
-        _VELOCITY[:] = (0, 0, 0)
-    # _OBJ.move(_VELOCITY)
+    vel = _IMU_MONITOR.get_velocity()
+    _OBJ.move(vel)
+    sys.stdout.write('is_moving = {}                           \r'.format(int(_IMU_MONITOR.is_moving())))
     _OBJ.set_local_rotation(rot)
     tdelta = time.time() - _FRAME_TIME
     if tdelta > _MAX_TDELTA:
@@ -285,6 +282,7 @@ def init_shaders():
                            _SHADER_DIR + _VERTEX_SHADER_SOURCE)
     fragment_shader = Shader(gl.GL_FRAGMENT_SHADER,
                              _SHADER_DIR + _FRAGMENT_SHADER_SOURCE)
+    vertex_shader.compile()
     _SHADER = ShaderProgramManager((vertex_shader, fragment_shader), True)
     return _SHADER.is_linked()
 
@@ -349,4 +347,10 @@ def main():
 
 
 if __name__ == '__main__':
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--port', '-p', default='/dev/ttyACM0', type=str, help='the serial port to read from.')
+    parser.add_argument('--baud', '-b', default=115200, type=int, help='the baudrate of the serial port device.')
+    args = parser.parse_args()
+    _PORT = args.port
+    _BAUD = args.baud
     main()
