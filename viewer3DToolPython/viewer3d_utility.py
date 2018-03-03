@@ -72,11 +72,10 @@ def draw():
     global _OBJ, _FRAME_TIME, _PROJECTION_MTRX, _VIEW_LOOKAT, _VELOCITY
     # pre-process data
     # vel, rot, att = get_motion_data()
-    # _OBJ.move(vel)
     _SENSOR_STREAM.update()
     rot = _IMU_MONITOR.get_rotation()
-    # vel = _IMU_MONITOR.get_velocity()
-    # _OBJ.move(vel)
+    vel = _IMU_MONITOR.get_velocity()
+    _OBJ.move(vel)
     sys.stdout.write('is_moving = {}                           \r'.format(int(_IMU_MONITOR.is_moving())))
     _OBJ.set_local_rotation(rot)
     tdelta = time.time() - _FRAME_TIME

@@ -1,0 +1,17 @@
+cycler==0.10.0
+future==0.16.0
+iso8601==0.1.12
+matplotlib==2.1.2
+numpy==1.14.0
+pkg-resources==0.0.0
+pydbus==0.6.0
+PyGLM==0.2.1a1
+PyOpenGL==3.1.1a1
+pyparsing==2.2.0
+pyserial==3.4
+python-dateutil==2.6.1
+pytz==2018.3
+PyYAML==3.12
+scikit-learn==0.19.1
+scipy==1.0.0
+six==1.11.0
