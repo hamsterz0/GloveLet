@@ -56,7 +56,6 @@ class EventDispatcher:
 class EventListener:
     pass
 
-
 class ExampleEventListener(EventListener):
     def __init__(self, on_example, on_example2):
         if isinstance(on_example, callable) and isinstance(on_example2, callable):
