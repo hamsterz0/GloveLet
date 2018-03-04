@@ -3,7 +3,7 @@ import glm
 import numpy as np
 from ctypes import c_float
 
-import shadermanager as sm
+import glovelet.viewer3DToolPython.shadermanager as sm
 
 
 def _convert2tvec3(arr3):

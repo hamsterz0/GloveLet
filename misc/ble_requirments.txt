@@ -1,0 +1,5 @@
+Adafruit-BluefruitLE==0.9.9
+dbus-python==1.2.4
+future==0.16.0
+vext==0.7.0
+vext.gi==0.6.8

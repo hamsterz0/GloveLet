@@ -1,6 +1,9 @@
 import OpenGL.GL as gl
 
 
+__all__ = ['Shader', 'ShaderProgram']
+
+
 class Shader:
     def __init__(self, shader_type, shader_source, do_compile=False):
         self._path = shader_source
