@@ -15,12 +15,11 @@ class Example2Event:
 
 class EventDispatcher:
     def __init__(self):
-        self.type1 = type(ExampleEvent)
-        self.type2 = type(Example2Event)
-        self.event_queues = {self.type1: Queue(1), self.type2: Queue(1)}
-        self.listeners = dict({self.type1: list(), self.type2: list()})
+        self.event_types = (type(ExampleEvent), type(Example2Event))
+        self.event_queues = {self.event_types[0]: Queue(1), self.event_types[1]: Queue(1)}
+        self.listeners = {self.event_types[0]: list(), self.event_types[1]: list()}
         self.process = Process(target=self.run,\
-            args=(self.event_queues[self.type1], self.event_queues[self.type2]))
+            args=(self.event_queues[self.event_types[0]], self.event_queues[self.event_types[1]]))
 
     def start(self):
         self.process.start()
@@ -34,7 +33,15 @@ class EventDispatcher:
                 self.listeners[event_type].append(listener)
 
     def dispatch(self):
-        pass
+        for event_type in self.listeners:
+            if not self.event_queues[event_type].empty():
+                for listener in self.listeners[event_type]:
+                    e = None
+                    if event_type == type(ExampleEvent):
+                        e = ExampleEvent('example 1')
+                    elif event_type == type(Example2Event):
+                        e = ExampleEvent('example 2')
+                    listener.event_callbacks[event_type](e)
 
     def run(self, exmpl_queue, exmpl2_queue):
         for i in range(25):
@@ -46,21 +53,19 @@ class EventDispatcher:
                 exmpl2_queue.put(Example2Event)
 
 
-
 class EventListener:
+    pass
+
+
+class ExampleEventListener(EventListener):
+    def __init__(self, on_example, on_example2):
+        if isinstance(on_example, callable) and isinstance(on_example2, callable):
+            self.event_callbacks = {type(ExampleEvent): on_example, type(Example2Event): on_example2}
+
+
+class TestEventListener(ExampleEventListener):
     def __init__(self):
-        self.event_callbacks = {type(ExampleEvent): self.on_example, type(Example2Event): self.on_example2}
-
-    def on_example(self, event):
-        raise NotImplementedError
-
-    def on_example2(self, event):
-        raise NotImplementedError
-
-
-class TestEventListener(EventListener):
-    def __init__(self):
-        pass
+        super().__init__(self.on_example, self.on_example2)
 
     def on_example(self, event):
         print(event.msg)
