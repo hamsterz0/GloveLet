@@ -9,70 +9,11 @@ import logging
 from ast import literal_eval
 import sys
 from PIL import Image
-from glovelet.utility.motion_multiplier import motion_multiplier
+from motion_multiplier import motion_multiplier
 
 
 def callback(value):
 	pass
-
-
-class StoreGestures:
-	GESTURE_MAX_DIM = 1024.0
-
-	def __init__(self, points, name):
-		self.points = np.array(points, dtype=np.float)
-		self.name = name
-		self.normalize_points()
-		scale_factor = self.calculate_scale_factor()
-		self.points *= scale_factor
-		self.distance, self.distance_idx = self.calculate_curve_len()
-
-	def normalize_points(self):
-		return self.points - self.points[0]
-
-	def calculate_scale_factor(self):
-		xMin, xMax, yMin, yMax = sys.maxsize, -sys.maxsize, sys.maxsize, -sys.maxsize
-		for x, y in self.points:
-			if abs(x) < xMin: 
-				xMin = abs(x)
-			if abs(x) > xMax: 
-				xMax = abs(x)
-			if abs(y) < yMin: 
-				yMin = abs(y)
-			if abs(y) > yMin: 
-				yMax = abs(y)
-		return ( self.GESTURE_MAX_DIM / max(yMax-yMin, xMax-xMin) )
-
-	def calculate_curve_len(self):
-		idx = np.empty(len(points))
-		total_dist = 0
-		idx[0] = 0
-		for i in xrange(1, len(self.points)):
-			total_dist += self.distance(points[i], points[i-1])
-			idx[i] = total_dist
-		return total_dist, idx
-
-	def distance(self, point1, point2):
-		return ((point1[0] - point2[0])**2 + (point1[1] - point2[1])**2)**0.5
-
-
-class Gesture:
-	def __init__(self):
-		self.point_count = 256
-		self.predefined_gestures = []
-
-	def __circle_gesture(self):
-		radius = 512
-		cc_points = [(radius*math.cos(t), radius*math.sin(t)) \
-			for t in np.linspace(0, 2*math.pi, num=self.point_count)]
-		c_points = [(radius*math.cos(t), -radius*math.sin(t)) \
-			for t in np.linspace(0, 2*math.pi, num=self.point_count)]
-		counter_clockwise = StoreGestures(cc_points, "Counter Clockwise")
-		clockwise = StoreGestures(c_points, "Clockwise")
-		self.predefined_gestures += [counter_clockwise, clockwise]
-
-
-
 
 class Vision:
 	FINGER1 = 'finger1' # finger 1 tag
@@ -88,15 +29,16 @@ class Vision:
 		root = tkinter.Tk()
 		root.withdraw()
 		# member variables
-		self.webcam = cv2.VideoCapture(0)
+		self.webcam = cv2.VideoCapture(1)
 		self.screen_width = root.winfo_screenwidth()
 		self.screen_height = root.winfo_screenheight()
 		self.cameraWidth = self.screen_width / 2
 		self.cameraHeight = self.screen_height / 2
-		self.webcam.set(cv2.CAP_PROP_FRAME_WIDTH, self.cameraWidth)
-		self.webcam.set(cv2.CAP_PROP_FRAME_HEIGHT, self.cameraHeight)
+		self.webcam.set(cv2.CAP_PROP_FRAME_WIDTH, self.screen_width*0.7)
+		self.webcam.set(cv2.CAP_PROP_FRAME_HEIGHT, self.screen_height*0.7)
 		self.logger = logging.getLogger(__name__)
 		self.output = {}
+		self.click_queue = {}
 		self.handContour = {}
 		self.canvas = None
 		self.handMoment = {}
@@ -109,7 +51,7 @@ class Vision:
 		self.queue = []
 		self.dx = 0
 		self.dy = 0
-		self.clickThresh = 100
+		self.clickThresh = 45
 		self.clickCounter = 0
 		self.pinched = False
 		# self.window = DataTimeSeries(2, self.WINDOW_SIZE, auto_filter=True)
@@ -117,7 +59,7 @@ class Vision:
 		self.cursor_history = []
 		self.movement_history = {}
 		self.parser = argparse.ArgumentParser()
-		self.parser.add_argument('-f', '--find_range', 
+		self.parser.add_argument('-r', '--find_range', 
 			help="Find the range from within the program", 
 			action="store_true", default=False)
 		self.args = self.parser.parse_args()
@@ -125,6 +67,7 @@ class Vision:
 		self.boundaries = {}
 		self.counter = 0
 		self.prev_mouse = ()
+		self.prev_rmouse = ()
 		self.__init_mem_vars()
 
 	def __init_mem_vars(self):
@@ -135,6 +78,7 @@ class Vision:
 			self.stationary[finger] = False
 			self.realX[finger] = 0
 			self.realY[finger] = 0
+			self.click_queue[finger] = 0
 			self.mouseX = int(self.screen_width/2)
 			self.mouseY = int(self.screen_height/2)
 			self.movement_history[finger] = []
@@ -157,10 +101,10 @@ class Vision:
 				if len(self.boundaries.keys()) < len(self.ACTIVE_FINGERS):
 					raise Exception
 			except IOError:
-				print('Config file not found. Run the program with -f flag.')
+				print('Config file not found. Run the program with -r flag.')
 				sys,exit()
 			except Exception:
-				print('Not all the fingers have colors configured. Run with -f flag')
+				print('Not all the fingers have colors configured. Run with -r flag')
 				sys.exit()
 
 	def __find_range(self):
@@ -188,7 +132,7 @@ class Vision:
 			thresh = cv2.inRange(image, tuple(lower), tuple(upper))
 			# layout = np.vstack((thresh, image))
 			cv2.imshow('Thresh', thresh)
-			cv2.imshow('Image', image)
+			# cv2.imshow('Image', image)
 			if cv2.waitKey(1) & 0xFF is ord('q'):
 				cv2.destroyAllWindows()
 				return tuple([lower, upper]) 
@@ -213,8 +157,11 @@ class Vision:
 		lower = np.array(lower, dtype="uint8")
 		upper = np.array(upper, dtype="uint8")
 		mask = cv2.inRange(self.frame, lower, upper)
+		kernel = np.ones((5,5),np.uint8)
 		self.output[finger] = cv2.bitwise_and(self.frame, self.frame, mask=mask)
 		self.output[finger] = cv2.cvtColor(self.output[finger], cv2.COLOR_BGR2GRAY)
+		self.output[finger] = cv2.erode(self.output[finger],kernel,iterations = 1)
+		self.output[finger] = cv2.dilate(self.output[finger],kernel,iterations = 3)
 	
 	def __extract_contours(self, finger):
 		'''
@@ -271,40 +218,23 @@ class Vision:
 		self.movement_history[finger] += [(self.realX[finger], self.realY[finger])]
 		self.__check_stationary(finger)
 
+	
 	def __move_cursor(self, finger):
 		'''
-		Function to move the cursor on the screen. 
+			Just simpler to create a new function to calculate the mouse pos,
+			I'm not fucking messing with Git ever again. This is too much for me to
+			handle.
 		'''
 		self.cursor_history.append([self.realX[finger], self.realY[finger]])
 		if len(self.cursor_history) < self.PREV_MEMORY:
 			return
-		dx = self.cursor_history[1][0] - self.cursor_history[0][0]
-		dy = self.cursor_history[1][1] - self.cursor_history[0][1]
+		# dx = self.cursor_history[1][0] - self.cursor_history[0][0]
+		# dy = self.cursor_history[1][1] - self.cursor_history[0][1]
 		
 		self.x = self.realX[finger] * (self.screen_width / self.frame.shape[1]) # * ((self.screen_width + buff))
 		self.y = self.realY[finger] * (self.screen_height / self.frame.shape[0]) # * ((self.screen_height + buff))
 
-
-		if len(self.prev_mouse) == 0:
-			self.prev_mouse = (self.x, self.y)
-			return 
-		
-		# X axis
-		self.mouseX = motion_multiplier(self.prev_mouse[0], dx)
-		self.mouseY = motion_multiplier(self.prev_mouse[1], dy)
-	
-		print('MX: {} MY: {} RX: {} RY: {}'.format(self.mouseX, 
-			self.mouseY,
-			self.realX[finger],
-			self.realY[finger]))
-
-		if self.mouseX > self.screen_width:
-			self.mouseX = self.screen_width
-		if self.mouseY > self.screen_height:
-			self.mouseY = self.screen_height
-
-		pyautogui.moveTo(self.mouseX, self.mouseY)
-		del self.cursor_history[0]
+		pyautogui.moveTo(self.x, self.y)
 		
 	def __check_pinch(self):
 		'''
@@ -314,14 +244,16 @@ class Vision:
 							   (self.realY[self.FINGER1] - self.realY[self.FINGER2])**2)
 		print('Finger Distance: {}'.format(fingerDist))
 		if fingerDist < self.clickThresh:
-			if self.clickCounter > 3:
-				pyautogui.click()
-				self.pinched = True
-				self.clickCounter = 0
-			else:
-				self.clickCounter += 1
+			self.stationary[self.TRACKER_FINGER] = True
+			pyautogui.mouseDown()
+			self.pinched = True
+			self.clickCounter = 0
 		else:
+			pyautogui.mouseUp()
 			self.pinched = False
+			self.stationary[self.TRACKER_FINGER] = False
+		
+		# print('{} {}'.format(self.realY[self.FINGER2],self.realY[self.FINGER2]))
 
 	def __draw(self, finger):
 		# if self.realX[finger] != 0 and self.realY[finger] != 0:
@@ -337,8 +269,8 @@ class Vision:
 					(25*i, 255, 25*i), -1)
 
 	def __frame_outputs(self, finger):
-		# cv2.imshow('Output ' + finger, self.output[finger])
-		cv2.imshow('Canvas', self.canvas)
+		cv2.imshow('Output ' + finger, self.output[finger])
+		# cv2.imshow('Canvas' + finger, self.canvas)
 		pass
 
 	def start_process(self):
@@ -357,9 +289,9 @@ class Vision:
 				self.__frame_outputs(finger)
 
 			# Check if the user pinched his finger for left click
-			if self.FINGER1 in self.ACTIVE_FINGERS \
-				and self.FINGER2 in self.ACTIVE_FINGERS:
-				self.__check_pinch()
+			# if self.FINGER1 in self.ACTIVE_FINGERS \
+			# 	and self.FINGER2 in self.ACTIVE_FINGERS:
+			# 	self.__check_pinch()
 			
 			# Update the cursor location with the new finger location.
 			if not self.stationary[self.TRACKER_FINGER]:
