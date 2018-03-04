@@ -34,8 +34,8 @@ class Vision:
 		self.screen_height = root.winfo_screenheight()
 		self.cameraWidth = self.screen_width / 2
 		self.cameraHeight = self.screen_height / 2
-		self.webcam.set(cv2.CAP_PROP_FRAME_WIDTH, self.screen_width*0.7)
-		self.webcam.set(cv2.CAP_PROP_FRAME_HEIGHT, self.screen_height*0.7)
+		self.webcam.set(cv2.CAP_PROP_FRAME_WIDTH, self.cameraWidth)
+		self.webcam.set(cv2.CAP_PROP_FRAME_HEIGHT, self.cameraHeight)
 		self.logger = logging.getLogger(__name__)
 		self.output = {}
 		self.click_queue = {}
@@ -218,7 +218,6 @@ class Vision:
 		self.movement_history[finger] += [(self.realX[finger], self.realY[finger])]
 		self.__check_stationary(finger)
 
-	
 	def __move_cursor(self, finger):
 		'''
 			Just simpler to create a new function to calculate the mouse pos,
@@ -270,6 +269,7 @@ class Vision:
 
 	def __frame_outputs(self, finger):
 		cv2.imshow('Output ' + finger, self.output[finger])
+		cv2.imshow('Frame' + finger, self.frame)
 		# cv2.imshow('Canvas' + finger, self.canvas)
 		pass
 
