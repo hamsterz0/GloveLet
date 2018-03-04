@@ -1,5 +1,5 @@
-from vision import VisionTracking
+from glovelet.vision.vision import Vision
 
 if __name__ == '__main__':
-    tracking = VisionTracking()
-    tracking.get_coordinates()
+    tracking = Vision()
+    tracking.start_process()
