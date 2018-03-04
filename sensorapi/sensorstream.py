@@ -86,7 +86,7 @@ class SensorStream:
         self.__serial = serial.Serial(timeout=conn_timeout)
         self.__serial.port = port
         self.__serial.baudrate = baud
-        self.__channel_width = 0
+        self.__ndatapoints = 0
         self.__success_str = conn_success_str
         self.__timeout = conn_timeout
         self.__conn_status = SensorStreamConnectionStatus.CLOSED
@@ -124,7 +124,7 @@ class SensorStream:
             line = line.strip().split(" ")
             data = None
             try:
-                if len(line) != self.__channel_width:
+                if len(line) != self.__ndatapoints:
                     raise SensorStreamReadException('Incorrect number of data dimensions read from serial device.')
                 data = np.array(line, c_float)
             except UnicodeDecodeError as e:
@@ -214,7 +214,7 @@ class SensorStream:
                 ch_offset = s.channel.get_stop()
         sensor.set_channel_offset(ch_offset)
         self.__registered_sensors[sensor.name] = sensor
-        self.__channel_width += sensor.ndatapoints
+        self.__ndatapoints += sensor.ndatapoints
 
     def __set_conn_status(self, status):
         self.__logger.debug(status.name)
