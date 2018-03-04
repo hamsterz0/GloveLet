@@ -48,11 +48,9 @@ class EventDispatcher:
     def dispatch(self):
         for event_type in self.listeners:
             if not self.event_queues[event_type].empty():
-                print("dispatching: " + str(event_type))
                 for listener in self.listeners[event_type]:
                     e = self.event_queues[event_type].get()
                     listener.event_callbacks[event_type](e)
-        print('dispatched')
 
     # `run()` should take the same number of queues as its arguments as
     # the dispatcher has types of events
