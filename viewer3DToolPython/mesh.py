@@ -1,7 +1,12 @@
 from ctypes import c_uint, c_float, c_void_p, sizeof
 import OpenGL.GL as gl
 import numpy as np
-import shadermanager as sm
+
+import glovelet.viewer3DToolPython.shadermanager as sm
+
+
+__all__ = ['Mesh', 'RectPrismMesh']
+
 
 DEFAULT_RENDER_MODE = gl.GL_TRIANGLES
 DEFAULT_BUFFER_USAGE = gl.GL_DYNAMIC_DRAW

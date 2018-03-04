@@ -1,90 +1,16 @@
 import serial
 from enum import Enum
 import numpy as np
-import threading
+from multiprocessing import Lock
 import time
 import logging
 import sys
+from glovelet.sensorapi.sensorstreamchannel import SensorStreamDataChannel
+from glovelet.sensorapi.sensor import Sensor
 from ctypes import c_float
 
 
-__all__ = [
-    'SensorStreamDataChannel', 'SensorStreamConnectionStatus', 'SensorDataMonitor', 'SensorStream',
-    'CH_ACCELEROMETER', 'CH_GYROSCOPE', 'CH_MAGNETOMETER', 'CH_FLEX_SENSOR01', 'CH_FLEX_SENSOR02',
-    'CH_FLEX_SENSOR03', 'CH_FLEX_SENSOR04', 'CH_FLEX_SENSOR05', 'CH_IMU_6DOF', 'CH_IMU_9DOF', 'CH_ALL',
-    'DEFAULT_CHANNELS'
-]
-
-
-class SensorStreamDataChannel:
-    def __init__(self, name, ch_range):
-        if not isinstance(ch_range, tuple) or len(ch_range) != 2:
-            raise TypeError('Expected tuple of length 2 for argument \'ch_range\'.')
-        self.__name = name
-        self.__ch_range = range(*ch_range)
-
-    def get_name(self):
-        """
-        Get channel name.\n
-        This is the channel name.
-        """
-        return self.__name
-
-    def get_range(self):
-        return self.__ch_range
-
-    def get_start(self):
-        return self.__ch_range.start
-
-    def get_stop(self):
-        return self.__ch_range.stop
-
-    def get_width(self):
-        """
-        Get channel width.\n
-        This is the number of data features this channel monitors.\t
-        :returns: `int`
-        """
-        return len(self.__ch_range)
-
-
-# DEFAULT_CHANNELS keys
-_CH_ACCELEROMETER = 'accelerometer'
-_CH_GYROSCOPE = 'gyroscope'
-_CH_MAGNETOMETER = 'magnetometer'
-_CH_FLEX_SENSOR01 = 'flexsensor01'
-_CH_FLEX_SENSOR02 = 'flexsensor02'
-_CH_FLEX_SENSOR03 = 'flexsensor03'
-_CH_FLEX_SENSOR04 = 'flexsensor04'
-_CH_FLEX_SENSOR05 = 'flexsensor05'
-_CH_IMU_6DOF = 'imu6dof'
-_CH_IMU_9DOF = 'imu9dof'
-_CH_ALL = 'all'
-# DEFAULT_CHANNELS dict initialization
-DEFAULT_CHANNELS = {
-    _CH_ACCELEROMETER: SensorStreamDataChannel(_CH_ACCELEROMETER, (0, 3)),
-    _CH_GYROSCOPE: SensorStreamDataChannel(_CH_GYROSCOPE, (3, 6)),
-    _CH_MAGNETOMETER: SensorStreamDataChannel(_CH_MAGNETOMETER, (6, 9)),
-    _CH_FLEX_SENSOR01: SensorStreamDataChannel(_CH_FLEX_SENSOR01, (9, 10)),
-    _CH_FLEX_SENSOR02: SensorStreamDataChannel(_CH_FLEX_SENSOR02, (10, 11)),
-    _CH_FLEX_SENSOR03: SensorStreamDataChannel(_CH_FLEX_SENSOR03, (11, 12)),
-    _CH_FLEX_SENSOR04: SensorStreamDataChannel(_CH_FLEX_SENSOR04, (12, 13)),
-    _CH_FLEX_SENSOR05: SensorStreamDataChannel(_CH_FLEX_SENSOR05, (13, 14)),
-    _CH_IMU_6DOF: SensorStreamDataChannel(_CH_IMU_6DOF, (0, 6)),
-    _CH_IMU_9DOF: SensorStreamDataChannel(_CH_IMU_9DOF, (0, 9)),
-    _CH_ALL: SensorStreamDataChannel(_CH_ALL, (0, 14))
-}
-CH_ACCELEROMETER = DEFAULT_CHANNELS[_CH_ACCELEROMETER]
-CH_GYROSCOPE = DEFAULT_CHANNELS[_CH_GYROSCOPE]
-CH_MAGNETOMETER = DEFAULT_CHANNELS[_CH_MAGNETOMETER]
-CH_FLEX_SENSOR01 = DEFAULT_CHANNELS[_CH_FLEX_SENSOR01]
-CH_FLEX_SENSOR02 = DEFAULT_CHANNELS[_CH_FLEX_SENSOR02]
-CH_FLEX_SENSOR03 = DEFAULT_CHANNELS[_CH_FLEX_SENSOR03]
-CH_FLEX_SENSOR04 = DEFAULT_CHANNELS[_CH_FLEX_SENSOR04]
-CH_FLEX_SENSOR05 = DEFAULT_CHANNELS[_CH_FLEX_SENSOR05]
-CH_IMU_6DOF = DEFAULT_CHANNELS[_CH_IMU_6DOF]
-CH_IMU_9DOF = DEFAULT_CHANNELS[_CH_IMU_9DOF]
-CH_ALL = DEFAULT_CHANNELS[_CH_ALL]
+__all__ = ['SensorStreamConnectionStatus', 'SensorDataMonitor', 'SensorStream']
 
 
 class SensorStreamConnectionStatus(int, Enum):
@@ -95,7 +21,7 @@ class SensorStreamConnectionStatus(int, Enum):
     PAUSED = 4
 
 
-class DataReadException(Exception):
+class SensorStreamReadException(Exception):
     pass
 
 
@@ -105,29 +31,28 @@ class SensorDataMonitor:
     Optionally define `on_register` to perform subroutine on registration with a `SensorStream` object.
     """
 
-    def __init__(self):
-        self.__channel = None
+    def __init__(self, sensor):
+        if not isinstance(sensor, Sensor):
+            raise TypeError('Expected `Sensor` object for argument `sensor`.')
+        self.__sensor = sensor
 
-    def get_data_channel(self):
-        """
-        Get data channel.\n
-        :returns: `SensorStreamDataChannel`
-        """
-        return self.__channel
+    @property
+    def sensor(self):
+        return self.__sensor
 
-    def set_data_channel(self, channel):
+    def set_sensor(self, sensor):
         """
-        Set the data channel to monitor.\n
+        Set the sensor to monitor.\n
         WARNING:\t
         \tUnder normal circumstances, do not call this method.\t
         \tThe `SensorStream` class uses this method to set the\t
-        \tdata channel when registering a `SensorDataMonitor`.\t
-        :param `channel`: `SensorStreamDataChannel`
+        \tsensor when registering a `SensorDataMonitor`. If it\t
+        \tis necessary to monitor another
+        :param `sensor`: `Sensor`
         """
-        if isinstance(channel, SensorStreamDataChannel):
-            self.__channel = channel
-        else:
-            raise TypeError('sensorapi.SensorStreamDataChannel object expected as argument.')
+        if not isinstance(sensor, Sensor):
+            raise TypeError('Expected `SensorStreamDataChannel` object for `channel` argument.')
+        self.__sensor = sensor
 
     def update(self, data):
         """
@@ -149,28 +74,24 @@ class SensorDataMonitor:
 class SensorStream:
     """Streams sensor data to registered `SensorDataMonitor` objects."""
     # Default channels defined as globals here for convenience.
-    global CH_ACCELEROMETER, CH_GYROSCOPE, CH_MAGNETOMETER, CH_FLEX_SENSOR01, CH_FLEX_SENSOR02,\
-        CH_FLEX_SENSOR03, CH_FLEX_SENSOR04, CH_FLEX_SENSOR05, CH_IMU_6DOF, CH_IMU_9DOF, CH_ALL
 
-    def __init__(self, port, baud, channel_width, conn_success_str='successful@', conn_timeout=10.0):
+    def __init__(self, port, baud, conn_success_str='successful@', conn_timeout=10.0):
         """
         Construct a SensorStream object.\n
         :param `port`: `str` path to port\t
         :param `baud`: `int` baudrate of port\t
-        :param `channel_width`: `int` number of data features per sample\t
         :param `conn_success_str`: `str` The string sent by the serial device to indicate successful connection established.\t
         :param `conn_timeout`: `float` seconds before connection attempt times out
         """
         self.__serial = serial.Serial(timeout=conn_timeout)
         self.__serial.port = port
         self.__serial.baudrate = baud
-        self.__channel_width = channel_width
+        self.__ndatapoints = 0
         self.__success_str = conn_success_str
         self.__timeout = conn_timeout
         self.__conn_status = SensorStreamConnectionStatus.CLOSED
         self.__registered_monitors = set()
-        self.__channels = dict()
-        self.__init_default_channels()
+        self.__registered_sensors = dict()
         # TODO: Remove logging module and statements once project-wide logging is implemented
         self.__logger = logging.Logger(name='SensorStream', level=logging.DEBUG)
         handler = logging.StreamHandler(sys.stdout)
@@ -178,10 +99,6 @@ class SensorStream:
         fmt = logging.Formatter('[%(levelname)s][%(name)s]: %(message)s')
         handler.setFormatter(fmt)
         self.__logger.addHandler(handler)
-
-    def get_channels(self):
-        """Get key values of registered channels."""
-        return self.__channels.keys()
 
     def get_connection_status(self):
         """
@@ -193,50 +110,62 @@ class SensorStream:
 
     def update(self):
         """Issues an update to all of the registered sensors."""
-        data = self.get_data()
+        data = self.read_data()
+        if data is None:
+            return
         for monitor in self.__registered_monitors:
-            ch = monitor.get_data_channel()
-            monitor.update(data[ch.get_start():ch.get_stop()])
+            start, stop = monitor.sensor.channel.get_start(), monitor.sensor.channel.get_stop()
+            monitor.update(data[start:stop])
 
-    def get_data(self):
+    def read_data(self):
         """Read from stream."""
         if self.is_open():
             line = self.__readline()
             line = line.strip().split(" ")
-            data = np.zeros(self.__channel_width, c_float)
+            data = None
             try:
-                n = len(line)
-                if n != self.__channel_width:
-                    raise DataReadException('get_data:  Incorrect sample width read from serial device.')
+                if len(line) != self.__ndatapoints:
+                    raise SensorStreamReadException('Incorrect number of data dimensions read from serial device.')
                 data = np.array(line, c_float)
             except UnicodeDecodeError as e:
                 self.__logger.error(str(e))
-                self.__logger.warning('get_data:  Unable to parse data as float.')
-            except DataReadException as e:
-                self.__logger.error(str(e))
+                self.__logger.warning('Unable to parse data as float.')
+            except ValueError as e:
+                self.__logger.warning(str(e))
+            except SensorStreamReadException as e:
+                self.__logger.warning(str(e))
             return data
         else:
-            self.__logger.error('get_data:  Serial connection is closed.')
+            self.__logger.warning('Attempt to invoke `read_data` while connection is closed.')
             return None
 
-    def register_monitor(self, monitor, channel):
+    def register_monitor(self, monitor):
         """
-        Register a `SensorDataMonitor` object to recieve data updates on the specified data channel.\n
+        Register a `SensorDataMonitor` object.\n
+        Registered monitors recieve updates on the channel they specify.\t
+        On registering a new monitor, the channel offset will be set such that the new monitor's
+        channel offset starts where the previously registered monitor's channel ends. This means that
+        monitors should be registered in the order that their data values are read from each
+        line of serial output.\t
+        I.E:\t
+        \t
+        \tserial output:  0 0 0 0 0 0 0 0 0\t
+        \t                ^         ^ ^ ^ ^\t
+        \t                imu       f f f f\t
+        \t                          l l l l\t
+        \t                          e e e e\t
+        \t                          x x x x\t
+        \t                          0 1 2 3\t
+        \t
+        \tadd in order: imu, flex0, flex1, flex2, flex3
         :param monitor: `SensorDataMonitor` object to register for updates\t
-        :param data_channel: `SensorDataChannel` channel enum value
         """
         if not isinstance(monitor, SensorDataMonitor):
             raise TypeError('Expected SensorDataMonitor object, received ' + type(monitor) + ' instead.')
-        if channel.get_name() not in self.__channels:
-            raise KeyError('Channel \'' + channel.get_name() + '\' not found in registered channels.')
-        monitor.set_data_channel(channel)
-        # TODO: Consider making a 'proxy' SensorStream class that only and passing that instead
+        # TODO: Consider making a 'proxy' SensorStream class and passing that instead
+        self.__register_sensor(monitor.sensor)
         monitor.on_register(self)
         self.__registered_monitors.add(monitor)
-
-    def register_channel(self, channel_name, channel_range):
-        channel = SensorStreamDataChannel(channel_name, channel_range)
-        self.__channels[channel_name] = channel
 
     def open(self):
         """
@@ -273,6 +202,20 @@ class SensorStream:
             self.__serial.close()
             self.__set_conn_status(SensorStreamConnectionStatus.CLOSED)
 
+    def __register_channel(self, channel):
+        if not isinstance(channel, SensorStreamDataChannel):
+            raise TypeError('Expected `SensorStreamDataChannel` object for argument `channel`.')
+        self.__channels[channel.get_name()] = channel
+
+    def __register_sensor(self, sensor, ch_offset=0):
+        """Registers a `Sensor` object with the stream."""
+        for s in self.__registered_sensors.items():
+            if s.channel.get_stop() > ch_offset:
+                ch_offset = s.channel.get_stop()
+        sensor.set_channel_offset(ch_offset)
+        self.__registered_sensors[sensor.name] = sensor
+        self.__ndatapoints += sensor.ndatapoints
+
     def __set_conn_status(self, status):
         self.__logger.debug(status.name)
         self.__conn_status = status
@@ -288,9 +231,6 @@ class SensorStream:
                 self.__logger.warning(e)
                 continue
         return line
-
-    def __init_default_channels(self):
-        self.__channels = DEFAULT_CHANNELS
 
     def __del__(self):
         self.close()
