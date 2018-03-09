@@ -1,15 +1,14 @@
+__all__ = ['GloveletBNO055IMUSensorMonitor', 'GloveletFlexSensorMonitor']
+
+
 from glovelet.utility.timeseries import DataTimeSeries, DataSequence
 from glovelet.utility.motion_multiplier import delta_scale, motion_multiplier
 from glovelet.sensorapi.sensorstream import SensorDataMonitor
 from glovelet.sensorapi.sensor import Sensor
-from multiprocessing import Lock
 import glm
 import numpy as np
 from scipy.integrate import cumtrapz
 from scipy.signal import filtfilt, butter
-
-
-__all__ = ['GloveletBNO055IMUSensorMonitor']
 
 
 class Bno055Sensor(Sensor):
@@ -151,6 +150,18 @@ class GloveletFlexSensorMonitor(SensorDataMonitor):
     def __init__(self, series_sz=10):
         super().__init__(FLEX_SENSORS)
         self.__timeseries = DataTimeSeries(series_sz, FLEX_SENSORS.ndatapoints, auto_filter=True)
+
+    @property
+    def data_sequence(self):
+        return self.__timeseries[:]
+
+    @property
+    def timestamps(self):
+        return self.__timeseries.timestamp[:]
+
+    @property
+    def time_elapsed(self):
+        return self.__timeseries.time_elapsed[:]
 
     def update(self, data):
         self.__timeseries.add(data)
