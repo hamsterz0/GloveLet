@@ -1,11 +1,13 @@
 #!../venv/bin/python
 import OpenGL.GL as gl
 import OpenGL.GLUT as glut
+import OpenGL.GLUT.freeglut
 import numpy as np
 import glm
 import time
 import sys
 import argparse
+import atexit
 from ctypes import c_float, c_int, c_uint, c_void_p
 
 
@@ -16,6 +18,8 @@ from glovelet.viewer3DToolPython.mesh import RectPrismMesh
 from glovelet.utility.timeseries import DataTimeSeries
 from glovelet.sensorapi.sensorstream import SensorStream
 from glovelet.sensorapi.glovelet_sensormonitor import GloveletBNO055IMUSensorMonitor
+from glovelet.eventapi.event import EventDispatcherManager
+from glovelet.eventapi.glovelet_hardware_events import GloveletImuEventDispatcher, GloveletImuListener
 
 
 # glut & window values
@@ -62,6 +66,17 @@ _VELOCITY = np.zeros((3), c_float)
 # SensorStream
 _SENSOR_STREAM = None
 _IMU_MONITOR = GloveletBNO055IMUSensorMonitor()
+# Event API
+_EVENT_DISPATCHER = None
+_LISTENER = GloveletImuListener()
+_EVENT_MANAGER = EventDispatcherManager()
+
+
+def on_exit():
+    print('='*10 + 'END' + '='*10)
+    _EVENT_MANAGER.end_dispatcher()
+    while not _EVENT_DISPATCHER.is_deployed:
+        continue
 
 
 def print_fps(tdelta):
@@ -72,12 +87,14 @@ def draw():
     global _OBJ, _FRAME_TIME, _PROJECTION_MTRX, _VIEW_LOOKAT, _VELOCITY
     # pre-process data
     # vel, rot, att = get_motion_data()
-    _SENSOR_STREAM.update()
-    rot = _IMU_MONITOR.get_rotation()
-    vel = _IMU_MONITOR.get_velocity()
-    _OBJ.move(vel)
-    sys.stdout.write('is_moving = {}                           \r'.format(int(_IMU_MONITOR.is_moving())))
-    _OBJ.set_local_rotation(rot)
+    # _SENSOR_STREAM.update()
+    # rot = _IMU_MONITOR.get_rotation()
+    # vel = _IMU_MONITOR.get_velocity()
+    # _OBJ.move(vel)
+    # sys.stdout.write('is_moving = {}                           \r'.format(int(_IMU_MONITOR.is_moving())))
+    _EVENT_MANAGER.invoke_dispatch()
+    print(_LISTENER.orientation[0])
+    _OBJ.set_local_rotation(_LISTENER.orientation[0])
     tdelta = time.time() - _FRAME_TIME
     if tdelta > _MAX_TDELTA:
         # rot = np.zeros(3, c_float)
@@ -256,7 +273,7 @@ def init_object():
                       [0.0, 0.0, 0.5, 1.0]], c_float)
     mesh = RectPrismMesh(0.05, 0.01, 0.05, face_colors=color)
     _OBJ = WorldObject(mesh)
-    _OBJ.set_local_rotation(_IMU_MONITOR.get_rotation())
+    _OBJ.set_local_rotation(_LISTENER.orientation[0])
 
 
 # def init_object():
@@ -312,15 +329,24 @@ def init_window():
 
 
 def main():
-    global _PROJECTION_MTRX, _VIEW_LOOKAT, _ASPECT_RATIO, _FRAME_TIME, _DATA_SERIES
+    global _PROJECTION_MTRX, _VIEW_LOOKAT, _ASPECT_RATIO, _FRAME_TIME, _DATA_SERIES, _EVENT_DISPATCHER
     _DATA_SERIES = DataTimeSeries(_SERIES_SIZE, 6, auto_filter=True, post_filter=convert_raw_data)
+    atexit.register(on_exit)
     # OpenGL initialization.
+    print(sys.argv)
     glut.glutInit(sys.argv)
+    OpenGL.GLUT.freeglut.glutSetOption(OpenGL.GLUT.GLUT_ACTION_ON_WINDOW_CLOSE, OpenGL.GLUT.GLUT_ACTION_GLUTMAINLOOP_RETURNS)
     # Initialize buffer and OpenGL settings.
     # glut.glutInitDisplayMode(
     #     glut.GLUT_DOUBLE | glut.GLUT_RGB | glut.GLUT_DEPTH)
     init_window()
-    init_serial_connection()
+    # init_serial_connection()
+    _EVENT_DISPATCHER = GloveletImuEventDispatcher(_PORT, _BAUD)
+    _EVENT_MANAGER.register_dispatcher(_EVENT_DISPATCHER)
+    _EVENT_MANAGER.register_listener(_LISTENER)
+    _EVENT_MANAGER.deploy_dispatcher()
+    while _LISTENER.acceleration is None:
+        _EVENT_MANAGER.invoke_dispatch()
     init_object()
     glut.glutShowWindow()
     # Initialize shaders.
@@ -344,6 +370,8 @@ def main():
     # Begin main loop.
     _FRAME_TIME = time.time()
     glut.glutMainLoop()
+    _EVENT_MANAGER.end_dispatcher()
+    exit()
 
 
 if __name__ == '__main__':

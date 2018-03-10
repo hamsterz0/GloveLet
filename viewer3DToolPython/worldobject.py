@@ -23,13 +23,12 @@ def _convert2tquat(rot):
         if len(rot) == 3:
             return glm.tquat(glm.vec3(rot[0], rot[1], rot[2]), dtype=c_float)
         elif len(rot) == 4:
-            return glm.tquat(glm.vec3((rot[0], rot[1], rot[2], rot[3])), dtype=c_float)
+            return glm.tquat(rot[0], rot[1], rot[2], rot[3], dtype=c_float)
     else:
         return glm.tquat((0, 0, 0, 1), dtype=c_float)
 
 
 class WorldObject:
-
     def __init__(self, mesh,
                  position=glm.vec3((0, 0, 0), dtype=c_float),
                  local_position=glm.vec3((0, 0, 0), dtype=c_float),
