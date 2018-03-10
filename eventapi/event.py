@@ -54,11 +54,15 @@ class EventDispatcher:
     def deploy(self):
         self.__is_deployed = True
         _args = (self.__child_conn, self.event_child_conns)
-        self.process = Process(target=self.__deploy, args=_args)
+        self.process = Process(name="glovelet", target=self.__deploy, args=_args)
         self.process.start()
 
     def end(self):
         self.__parent_conn.send('term')
+        while True:
+            if self.__parent_conn.poll() and self.__parent_conn.recv() == 'end':
+                self.__is_deployed = False
+                break
         self.process.terminate()
 
     def register(self, listener):
@@ -73,6 +77,10 @@ class EventDispatcher:
     def dispatch(self):
         if not self.is_deployed:
             raise EventAPIException('`EventDispatcher` cannot dispatch events while not deployed.')
+        if self.__parent_conn.poll():
+            if self.__parent_conn.recv() == 'end':
+                self.__is_deployed = False
+                return
         for event_type in self.event_parent_conns:
             event = None
             if self.event_parent_conns[event_type].poll():
@@ -132,12 +140,12 @@ class EventDispatcher:
                     event_conns[type(event)].send(event)
                 # Get communications from parent process
                 if command_conn.poll():
-                    cmd = command_conn.rec()
+                    cmd = command_conn.recv()
                     if cmd == 'term':
                         is_deployed = False
         finally:
-            command_conn.send('end')
             self.finish(*args, **kwargs)
+            command_conn.send('end')
 
 
 class EventDispatcherManager:

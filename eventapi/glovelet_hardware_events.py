@@ -44,14 +44,16 @@ class GloveletFlexEvent(Event):
 
 
 class GloveletImuEventDispatcher(EventDispatcher):
-    def __init__(self, sensor_stream, acc_series_sz=50, rot_series_sz=5, flipped=False):
+    def __init__(self, port, baud, acc_series_sz=50, rot_series_sz=5):
         super().__init__(GloveletImuEvent)
-        self.__stream = sensor_stream
+        self.__stream = None
+        self._port = port
+        self._baud = baud
         self.__acc_series_sz = acc_series_sz
         self.__rot_series_sz = rot_series_sz
-        self.__flipped = flipped
 
     def init(self):
+        self.__stream = SensorStream(self._port, self._baud)
         imu_monitor = GloveletBNO055IMUSensorMonitor(acc_series_sz=self.__acc_series_sz,
                                                      rot_series_sz=self.__rot_series_sz)
         self.__stream.register_monitor(imu_monitor)

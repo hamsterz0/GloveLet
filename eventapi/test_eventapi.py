@@ -99,6 +99,7 @@ def run_test01():
     manager.register_listener(listener_test01, listener_test02)
     manager.deploy_dispatcher()
     for i in range(100):
+        sleep(0.1)
         manager.invoke_dispatch()
         if i % 8 == 4:
             print(listener_test01.msg)
@@ -121,7 +122,8 @@ def run_test02():
     while True:
         # sleep(0.1)
         event_manager.invoke_dispatch()
-        print('acceleration: {}'.format(listener.acceleration[0]))
+        # print('acceleration: {}'.format(listener.acceleration[0]))
+        print('orientation: {}'.format(listener.orientation[0]))
         # if i % 12 == 8:
         #     print('acceleration: {}'.format(listener.acceleration))
         # elif i % 12 == 4:
@@ -132,5 +134,5 @@ def run_test02():
 
 
 if __name__ == '__main__':
-    run_test01()
+    # run_test01()
     run_test02()

@@ -1,3 +1,6 @@
+__all__ = ['SensorStreamConnectionStatus', 'SensorDataMonitor', 'SensorStream']
+
+
 import serial
 from enum import Enum
 import numpy as np
@@ -8,9 +11,6 @@ import sys
 from glovelet.sensorapi.sensorstreamchannel import SensorStreamDataChannel
 from glovelet.sensorapi.sensor import Sensor
 from ctypes import c_float
-
-
-__all__ = ['SensorStreamConnectionStatus', 'SensorDataMonitor', 'SensorStream']
 
 
 class SensorStreamConnectionStatus(int, Enum):
