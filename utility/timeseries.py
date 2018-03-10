@@ -1,25 +1,9 @@
+__all__ = ["DataTimeSeries", "DataSequence"]
+
 import time
 import numpy as np
 from collections import Iterable
 from scipy.signal import butter, filtfilt
-from enum import Enum, auto
-
-
-__all__ = ["DataTimeSeries", "DataSequence"]
-
-
-class TimeSeriesFilterID(int, Enum):
-    EWMA = 0
-    SMA = auto()
-    LOWPASS = auto()
-    HIGHPASS = auto()
-    BANDPASS = auto()
-
-
-# class TimeSeriesFilter:
-#     def __init__(self, filter_id):
-#         if not isinstance(filter_id, TimeSeriesFilterID):
-#
 
 
 class DataSequence:
@@ -286,7 +270,7 @@ class DataTimeSeries(DataSequence):
             self.pre_filter = pre_filter
             self.post_filter = post_filter
 
-    def add(self, data, timestamp=None, tdelta=None, pre_args=(), post_args=()):
+    def add(self, data, timestamp=None, tdelta=None, time_elapsed=None, pre_args=(), post_args=()):
         """
         Add a data sample to the time series.\n
         If the time series is filled, the oldest value in the time series is overwritten.\t
@@ -353,16 +337,16 @@ class DataTimeSeries(DataSequence):
         if self.__filtered_data is not None:
             self.__filter_data(pre_args, post_args)
 
-    def __initialize_series_add(self, data, timestamp=None, tdelta=None, time_elapsed=None, pre_args=(), post_args=()):
+    def __initialize_series_add(self, *args, **kwargs):
         """
         Repeats everytime 'add' is called until the data series has been completely initialized/filled with data,
         at which point `add` is bound to `__add` to optimize performance.
         """
         if self.added >= self.nsamples:
-            # rebind once series had bee initialized/filled with data
+            # Rebind add method once series has been initialized/filled with data
             self.add = self.__add
         self.__compute_exponential_weights()
-        self.__add(data, timestamp, tdelta, time_elapsed, pre_args, post_args)
+        self.__add(*args, **kwargs)
 
     def __add(self, data, timestamp=None, tdelta=None, time_elapsed=None, pre_args=(), post_args=()):
         """The optimized version of the `add` function."""
