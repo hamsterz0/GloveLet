@@ -71,12 +71,13 @@ _EVENT_DISPATCHER = None
 _LISTENER = GloveletImuListener()
 _EVENT_MANAGER = EventDispatcherManager()
 
+np.set_printoptions(precision=4, suppress=True)
+
 
 def on_exit():
     print('='*10 + 'END' + '='*10)
     _EVENT_MANAGER.end_dispatcher()
-    while not _EVENT_DISPATCHER.is_deployed:
-        continue
+    time.sleep(0.8)
 
 
 def print_fps(tdelta):
@@ -93,7 +94,8 @@ def draw():
     # _OBJ.move(vel)
     # sys.stdout.write('is_moving = {}                           \r'.format(int(_IMU_MONITOR.is_moving())))
     _EVENT_MANAGER.invoke_dispatch()
-    print(_LISTENER.orientation[0])
+    # _OBJ.move(_LISTENER.velocity[1] * 0.01)
+    _OBJ.move(_LISTENER.velocity[4] * 0.01)
     _OBJ.set_local_rotation(_LISTENER.orientation[0])
     tdelta = time.time() - _FRAME_TIME
     if tdelta > _MAX_TDELTA:
@@ -126,10 +128,6 @@ def get_motion_data():
     if _DOF == 9:
         mag = data[6:9]
     tdelta = _DATA_SERIES.get_tdelta()
-    # acc_norm = np.linalg.norm(acc)
-    # print(acc_norm)
-    # gyr_norm = np.linalg.norm(gyr)
-    # print(gyr_norm)
     print(np.array2string(acc, precision=4) + " :: " + np.array2string(gyr, precision=4))
     attitude_est = attitude_estimation(acc)
     rotation = complementary_filter(attitude_est)
@@ -333,7 +331,6 @@ def main():
     _DATA_SERIES = DataTimeSeries(_SERIES_SIZE, 6, auto_filter=True, post_filter=convert_raw_data)
     atexit.register(on_exit)
     # OpenGL initialization.
-    print(sys.argv)
     glut.glutInit(sys.argv)
     OpenGL.GLUT.freeglut.glutSetOption(OpenGL.GLUT.GLUT_ACTION_ON_WINDOW_CLOSE, OpenGL.GLUT.GLUT_ACTION_GLUTMAINLOOP_RETURNS)
     # Initialize buffer and OpenGL settings.
