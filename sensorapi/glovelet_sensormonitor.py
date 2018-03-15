@@ -30,7 +30,7 @@ class FingerFlexGroup(Sensor):
 
 def accel_post_filter(time_series):
     data = time_series[0]
-    data[1], data[2] = data[2], -data[1]
+    data[1], data[2] = -data[2], -data[1]
     return data
 
 
@@ -51,8 +51,8 @@ FLEX_SENSORS = FingerFlexGroup('flexsensors', 3)
 
 class GloveletBNO055IMUSensorMonitor(SensorDataMonitor):
     def __init__(self, acc_series_sz=20, rot_series_sz=5,
-                 lowpass_order=4, lowpass_critcal=0.075,
-                 highpass_order=4, highpass_critical=0.5):
+                 lowpass_order=2, lowpass_critcal=0.15,
+                 highpass_order=2, highpass_critical=0.09):
         super().__init__(BNO055)
         self.__acc_timeseries = DataTimeSeries(acc_series_sz, 3,
                                            auto_filter=True,
@@ -66,7 +66,7 @@ class GloveletBNO055IMUSensorMonitor(SensorDataMonitor):
         self.__bttr_numtr_low, self.__bttr_denom_low =\
             butter(lowpass_order, lowpass_critcal, btype='lowpass')
         self.__bttr_numtr_hi, self.__bttr_denom_hi =\
-            butter(highpass_order, highpass_critical, btype='highpass')
+            butter(highpass_order, [highpass_critical, 0.75], btype='bandpass')
 
     @property
     def tdelta(self):
@@ -83,6 +83,7 @@ class GloveletBNO055IMUSensorMonitor(SensorDataMonitor):
     @property
     def velocity_timeseries(self):
         return self.__vel_hipassed
+        # return self.__velocity
 
     @property
     def orientation_timeseries(self):
@@ -91,12 +92,12 @@ class GloveletBNO055IMUSensorMonitor(SensorDataMonitor):
     def update(self, data):
         b, a = self.__bttr_numtr_low, self.__bttr_denom_low
         self.__acc_timeseries.add(data[:3])
-        self.__acc_lowpassed.add(data[:3])
+        # self.__acc_timeseries.add(delta_scale(data[:3], k_max=4, k_min=0.17, n=0))
         self.__rot_timeseries.add((data[3:]), self.__acc_timeseries.timestamp[0])
-        if self.__acc_lowpassed.added > 15:
-            self.__acc_lowpassed[:, 0] = filtfilt(b, a, self.__acc_timeseries[:, 0])
-            self.__acc_lowpassed[:, 1] = filtfilt(b, a, self.__acc_timeseries[:, 1])
-            self.__acc_lowpassed[:, 2] = filtfilt(b, a, self.__acc_timeseries[:, 2])
+        # if self.__acc_lowpassed.added > 15:
+        self.__acc_lowpassed[:, 0] = filtfilt(b, a, self.__acc_timeseries[:, 0])
+        self.__acc_lowpassed[:, 1] = filtfilt(b, a, self.__acc_timeseries[:, 1])
+        self.__acc_lowpassed[:, 2] = filtfilt(b, a, self.__acc_timeseries[:, 2])
         self.__update_velocity()
 
     def get_acceleration(self):
@@ -120,20 +121,33 @@ class GloveletBNO055IMUSensorMonitor(SensorDataMonitor):
         return self.__vel_hipassed[0]
 
     def __update_velocity(self):
-        acc = self.__acc_lowpassed[0]
-        prev_acc = self.__acc_lowpassed[1]
-        dt = self.__acc_timeseries.tdelta[0]
-        vel = np.zeros(3, 'f')
-        vel[0] = cumtrapz((prev_acc[0], acc[0]), dx=dt)
-        vel[1] = cumtrapz((prev_acc[1], acc[1]), dx=dt)
-        vel[2] = cumtrapz((prev_acc[2], acc[2]), dx=dt)
-        self.__velocity.add(self.__velocity[0] + vel)
-        self.__vel_hipassed.add(self.__velocity[0])
-        if self.__vel_hipassed.added > 15:
-            b, a = self.__bttr_numtr_hi, self.__bttr_denom_hi
-            self.__vel_hipassed[:, 0] = filtfilt(b, a, self.__vel_hipassed[:, 0])
-            self.__vel_hipassed[:, 1] = filtfilt(b, a, self.__vel_hipassed[:, 1])
-            self.__vel_hipassed[:, 2] = filtfilt(b, a, self.__vel_hipassed[:, 2])
+        acc = self.__acc_lowpassed
+        t_elapsed = self.__acc_timeseries.time_elapsed
+        # print(acc[0])
+        # for i in range(self.__acc_lowpassed.shape[1]):
+        #     self.__vel_hipassed
+        # self.__velocity[:, 0] = cumtrapz(acc[:, 0], t_elapsed[:], initial=0)
+        # self.__velocity[:, 1] = cumtrapz(acc[:, 1], t_elapsed[:], initial=0)
+        # self.__velocity[:, 2] = cumtrapz(acc[:, 2], t_elapsed[:], initial=0)
+        # self.__velocity[:, 0] = cumtrapz(acc[:, 0], t_elapsed[:], initial=self.__vel_hipassed[:, 0][0])
+        # self.__velocity[:, 1] = cumtrapz(acc[:, 1], t_elapsed[:], initial=self.__vel_hipassed[:, 1][0])
+        # self.__velocity[:, 2] = cumtrapz(acc[:, 2], t_elapsed[:], initial=self.__vel_hipassed[:, 2][0])
+        self.__velocity[:, 0] += cumtrapz(acc[:, 0], t_elapsed[:], initial=0)
+        self.__velocity[:, 1] += cumtrapz(acc[:, 1], t_elapsed[:], initial=0)
+        self.__velocity[:, 2] += cumtrapz(acc[:, 2], t_elapsed[:], initial=0)
+        b, a = self.__bttr_numtr_hi, self.__bttr_denom_hi
+        # self.__velocity[:, 0] += filtfilt(b, a, self.__vel_hipassed[:, 0])
+        # self.__velocity[:, 1] += filtfilt(b, a, self.__vel_hipassed[:, 1])
+        # self.__velocity[:, 2] += filtfilt(b, a, self.__vel_hipassed[:, 2])
+        self.__vel_hipassed[:, 0] = filtfilt(b, a, self.__velocity[:, 0])
+        self.__vel_hipassed[:, 1] = filtfilt(b, a, self.__velocity[:, 1])
+        self.__vel_hipassed[:, 2] = filtfilt(b, a, self.__velocity[:, 2])
+        # self.__velocity[:, 0] = cumtrapz(self.__vel_hipassed[:, 0], t_elapsed[:], initial=self.__vel_hipassed[:, 0][0])
+        # self.__velocity[:, 1] = cumtrapz(self.__vel_hipassed[:, 1], t_elapsed[:], initial=self.__vel_hipassed[:, 1][0])
+        # self.__velocity[:, 2] = cumtrapz(self.__vel_hipassed[:, 2], t_elapsed[:], initial=self.__vel_hipassed[:, 2][0])
+        # self.__velocity[:, 0] = cumtrapz(acc[:, 0], t_elapsed[:], initial=self.__vel_hipassed[:, 0][0])
+        # self.__velocity[:, 1] = cumtrapz(acc[:, 1], t_elapsed[:], initial=self.__vel_hipassed[:, 1][0])
+        # self.__velocity[:, 2] = cumtrapz(acc[:, 2], t_elapsed[:], initial=self.__vel_hipassed[:, 2][0])
 
     def get_acceleration_norm(self):
         acc = self.get_acceleration()
