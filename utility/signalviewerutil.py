@@ -58,7 +58,7 @@ def hardware_stream(stream, monitor, q):
             tm = t[0] + monitor.tdelta[0]
             t.add(tm)
             imu_pltevnt = ImuPlotEvent(monitor.acceleration_timeseries,
-                                          monitor.velocity_timeseries,
+                                          monitor.velocity_timeseries[:],
                                           monitor.orientation_timeseries,
                                           monitor.tdelta, t)
             if q.full():
@@ -92,9 +92,9 @@ def plot_imu_data(nsamples=2500):
     line1, = acc_ax.plot(t_seq, pltevnt.accel_x, 'r-', label='x')
     line2, = acc_ax.plot(t_seq, pltevnt.accel_y, 'g-', label='y')
     line3, = acc_ax.plot(t_seq, pltevnt.accel_z, 'b-', label='z')
-    vel_x, = vel_ax.plot(t_seq, pltevnt.vel_x, 'r-', label='x')
-    vel_y, = vel_ax.plot(t_seq, pltevnt.vel_y, 'g-', label='y')
-    vel_z, = vel_ax.plot(t_seq, pltevnt.vel_z, 'b-', label='z')
+    vel_x, = vel_ax.plot(t_seq[:], pltevnt.vel_x, 'r-', label='x')
+    vel_y, = vel_ax.plot(t_seq[:], pltevnt.vel_y, 'g-', label='y')
+    vel_z, = vel_ax.plot(t_seq[:], pltevnt.vel_z, 'b-', label='z')
     t_seq_quat = t_seq[:shape_orient[0]]
     quat_line1, quat_line2,\
     quat_line3, quat_line4 = quat_ax.plot(t_seq_quat, pltevnt.orient_w, 'k-',
@@ -112,11 +112,11 @@ def plot_imu_data(nsamples=2500):
             line3.set_data(t_seq, pltevnt.accel_z)
             acc_ax.set_ylim((min(pltevnt.accel_min, -5), max(pltevnt.accel_max, 5)))
             acc_ax.set_xlim((min(t_seq), max(t_seq)))
-            vel_x.set_data(t_seq, pltevnt.vel_x)
-            vel_y.set_data(t_seq, pltevnt.vel_y)
-            vel_z.set_data(t_seq, pltevnt.vel_z)
-            vel_ax.set_ylim((min(pltevnt.vel_min, -5), max(pltevnt.vel_max, 5)))
-            vel_ax.set_xlim((min(t_seq), max(t_seq)))
+            vel_x.set_data(t_seq[:], pltevnt.vel_x)
+            vel_y.set_data(t_seq[:], pltevnt.vel_y)
+            vel_z.set_data(t_seq[:], pltevnt.vel_z)
+            vel_ax.set_ylim((min(pltevnt.vel_min, -2), max(pltevnt.vel_max, 2)))
+            vel_ax.set_xlim((min(t_seq[:]), max(t_seq[:])))
             t_seq_quat = t_seq[:shape_orient[0]]
             quat_line1.set_data(t_seq_quat, pltevnt.orient_w)
             quat_line2.set_data(t_seq_quat, pltevnt.orient_x)

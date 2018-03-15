@@ -88,25 +88,29 @@ class DataSequence:
             self.__added += 1
 
     def _get_real_index(self, from_head):
-        result = self.__head - from_head
+        result = self.head - from_head
         if result < 0:
-            result += self.__added
+            result += self.nsamples
         return result
 
     def __extract_range(self, start=-1, stop=-1, step=1):
         step = -step
-        if stop >= self.added:
-            shape = self.current_shape
+        if stop > self.nsamples:
+            shape = self.shape
         else:
-            shape = (stop - start,) + self.current_shape[1:]
+            shape = (stop - start,) + self.shape[1:]
         result = np.zeros(shape, self.dtype)
+        # print('stop - start = {}, shape:{}'.format(stop - start, str(shape)))
         start_ind = self._get_real_index(start)
         end_ind = self._get_real_index(stop)
         if end_ind >= start_ind:
             n = start_ind + 1
             result[:n] = self.data_series[start_ind::step]
-            result[n:] = self.data_series[self.added:end_ind:step]
+            result[n:] = self.data_series[self.nsamples:end_ind:step]
         else:
+            # print('start:{}, end:{}'.format(start, stop))
+            # print('start_ind:{}, end_ind:{}'.format(start_ind, end_ind))
+            # print('result.shape:{}, slice_shape:{}'.format(str(result.shape), str(self.data_series[start_ind:end_ind:step].shape)))
             result[:] = self.data_series[start_ind:end_ind:step]
         return result
 
@@ -117,18 +121,25 @@ class DataSequence:
         if start is None:
             start = 0
         if stop is None:
-            stop = self.added
+            stop = self.nsamples
         step = -step
-        if stop >= self.added:
-            stop = self.added
+        if stop >= self.nsamples:
+            stop = self.nsamples
         start_ind = self._get_real_index(start)
         end_ind = self._get_real_index(stop)
         if end_ind >= start_ind:
             n = start_ind + 1
-            self.data_series[start_ind::step, slices[1]] = value[:n]
-            self.data_series[self.added:end_ind:step, slices[1]] = value[n:]
+            if len(slices) == 2:
+                self.data_series[start_ind::step, slices[1]] = value[:n]
+                self.data_series[self.nsamples:end_ind:step, slices[1]] = value[n:]
+            else:
+                self.data_series[start_ind::step] = value[:n]
+                self.data_series[self.nsamples:end_ind:step] = value[n:]
         else:
-            self.data_series[start_ind:end_ind:step, slices[1]] = value[:]
+            if len(slices) == 2:
+                self.data_series[start_ind:end_ind:step, slices[1]] = value[:]
+            else:
+                self.data_series[start_ind:end_ind:step] = value[:]
 
     def __setitem__(self, key, value):
         if isinstance(key, tuple) and len(key) <= 2:
@@ -151,7 +162,7 @@ class DataSequence:
             if start is None:
                 start = 0
             if stop is None:
-                stop = self.__added
+                stop = self.nsamples
             return self.__extract_range(start, stop, step)
         else:
             i = self._get_real_index(key)
