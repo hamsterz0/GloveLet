@@ -1,5 +1,6 @@
 from glovelet.vision.gesture import Gesture
 import numpy as np
+import math
 
 
 class PreDefinedGestures:
@@ -14,7 +15,7 @@ class PreDefinedGestures:
                      for t in np.linspace(0, 2*math.pi, num=self.point_count)]
         c_points = [(radius*math.cos(t), -radius*math.sin(t))
                     for t in np.linspace(0, 2*math.pi, num=self.point_count)]
-        counter_clockwise = StoreGestures(cc_points, "CCW Circle")
-        clockwise = StoreGestures(c_points, "CW Circle")
+        counter_clockwise = Gesture(cc_points, "CCW Circle")
+        clockwise = Gesture(c_points, "CW Circle")
         self.predefined_gestures += [counter_clockwise, clockwise]
 

@@ -9,6 +9,8 @@ import logging
 from ast import literal_eval
 import sys
 import cv2
+from gesture import Gesture
+from gestureAPI import PreDefinedGestures  
 
 def callback(value):
     """callback
@@ -39,9 +41,7 @@ class Vision:
         self.cameraHeight = self.screen_height / 2
         self.webcam.set(cv2.CAP_PROP_FRAME_WIDTH, self.cameraWidth)
         self.webcam.set(cv2.CAP_PROP_FRAME_HEIGHT, self.cameraHeight)
-        self.logger = logging.getLogger(__name__)
         self.output = {}
-        self.click_queue = {}
         self.handContour = {}
         self.canvas = None
         self.handMoment = {}
@@ -52,26 +52,20 @@ class Vision:
         self.mouseX = self.screen_width/2
         self.mouseY = self.screen_height/2
         self.queue = []
-        self.dx = 0
-        self.dy = 0
         self.clickThresh = 45
-        self.clickCounter = 0
         self.pinched = False
-        # self.window = DataTimeSeries(2, self.WINDOW_SIZE, auto_filter=True)
         self.window = {}
-        self.cursor_history = []
         self.movement_history = {}
         self.parser = argparse.ArgumentParser()
         self.parser.add_argument('-r', '--find_range',
                                  help="Find the range from within the program",
                                  action="store_true", default=False)
         self.args = self.parser.parse_args()
-        # self.data = np.zeros(4, np.float32)
         self.boundaries = {}
-        self.counter = 0
-        self.prev_mouse = ()
-        self.prev_rmouse = ()
+        self.record = False
+        self.end_gesture = False
         self.init_mem_vars()
+        self.init_gestures()
 
     def init_mem_vars(self):
         # initializing member variables with initial values.
@@ -81,9 +75,6 @@ class Vision:
             self.stationary[finger] = False
             self.realX[finger] = 0
             self.realY[finger] = 0
-            self.click_queue[finger] = 0
-            self.mouseX = int(self.screen_width/2)
-            self.mouseY = int(self.screen_height/2)
             self.movement_history[finger] = []
             self.window[finger] = DataTimeSeries(
                 self.WINDOW_SIZE, 2, auto_filter=True)
@@ -110,6 +101,12 @@ class Vision:
             except Exception:
                 print('Not all the fingers have colors configured. Run with -r flag')
                 sys.exit()
+
+    def init_gestures(self):
+        self.gestures = PreDefinedGestures()
+        self.gesture_names = []
+        for gesture in self.gestures.predefined_gestures:
+            self.gesture_names.append(gesture.name)
 
     def find_range(self):
         range_filter = 'HSV'
@@ -230,17 +227,8 @@ class Vision:
                 I'm not fucking messing with Git ever again. This is too much for me to
                 handle.
         '''
-        self.cursor_history.append([self.realX[finger], self.realY[finger]])
-        if len(self.cursor_history) < self.PREV_MEMORY:
-            return
-        # dx = self.cursor_history[1][0] - self.cursor_history[0][0]
-        # dy = self.cursor_history[1][1] - self.cursor_history[0][1]
-
-        # * ((self.screen_width + buff))
         self.x = self.realX[finger] * (self.screen_width / self.frame.shape[1])
-        # * ((self.screen_height + buff))
-        self.y = self.realY[finger] * \
-            (self.screen_height / self.frame.shape[0])
+        self.y = self.realY[finger] * (self.screen_height / self.frame.shape[0])
 
         #  pyautogui.moveTo(self.x, self.y)
 
@@ -255,7 +243,6 @@ class Vision:
             self.stationary[self.TRACKER_FINGER] = True
             pyautogui.mouseDown()
             self.pinched = True
-            self.clickCounter = 0
         else:
             pyautogui.mouseUp()
             self.pinched = False
@@ -309,7 +296,6 @@ class Vision:
             # Update the cursor location with the new finger location.
             if not self.stationary[self.TRACKER_FINGER]:
                 self.move_cursor(self.TRACKER_FINGER)
-            self.counter += 1
 
             # Exit out of this hell hole.
             if cv2.waitKey(1) & 0xFF is ord('q'):
