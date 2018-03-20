@@ -73,7 +73,6 @@ class Vision:
         self.prev_rmouse = ()
         self.init_mem_vars()
 
-    @property
     def init_mem_vars(self):
         # initializing member variables with initial values.
         for finger in self.ACTIVE_FINGERS:
@@ -112,7 +111,6 @@ class Vision:
                 print('Not all the fingers have colors configured. Run with -r flag')
                 sys.exit()
 
-    @property
     def find_range(self):
         range_filter = 'HSV'
         cv2.namedWindow("Trackbar", 0)
@@ -140,10 +138,7 @@ class Vision:
                 return tuple([lower, upper])
 
     def read_webcam(self):
-        '''
-        Reading the webcam, flipping the frame vertically by 180 degrees and 
-        creating canvas for all the ACTIVE_FINGERS. Also converting the frame into HSV colorspace
-        '''
+        """read_webcam"""
         _, self.frame = self.webcam.read()
         self.frame = cv2.flip(self.frame, 1)
         # for finger in self.ACTIVE_FINGERS:
@@ -151,10 +146,10 @@ class Vision:
         self.frame = cv2.cvtColor(self.frame, cv2.COLOR_BGR2HSV)
 
     def threshold(self, finger):
-        '''
-        adding the color threshold to the frame captured by the webcam.
-        The threshold boundaries are specified in advance.
-        '''
+        """threshold
+
+        :param finger: The finger name
+        """
         (lower, upper) = self.boundaries[finger]
         lower = np.array(lower, dtype="uint8")
         upper = np.array(upper, dtype="uint8")
@@ -170,9 +165,10 @@ class Vision:
             self.output[finger], kernel, iterations=3)
 
     def extract_contours(self, finger):
-        '''
-        Extracting the contours and finding the maximum amount of area that is being tracked.
-        '''
+        """extract_contours from the frame. 
+
+        :param finger: Name of the finger working on. 
+        """
         _, self.contours, _ = cv2.findContours(
             self.output[finger].copy(), cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
         maxArea, idx = 0, 0
@@ -246,7 +242,7 @@ class Vision:
         self.y = self.realY[finger] * \
             (self.screen_height / self.frame.shape[0])
 
-        pyautogui.moveTo(self.x, self.y)
+        #  pyautogui.moveTo(self.x, self.y)
 
     def __check_pinch(self):
         '''
