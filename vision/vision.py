@@ -21,11 +21,6 @@ def callback(value):
 
 
 class Vision:
-    FINGER1 = 'finger1'  # finger 1 tag
-    FINGER2 = 'finger2'  # finger 2 tag
-    ACTIVE_FINGERS = [FINGER1]  # Number of fingers tracking
-    TOTAL_FINGERS = [FINGER1, FINGER2]   # Total numbers of fingers
-    TRACKER_FINGER = FINGER1    # The cursor tracker finger
     WINDOW_SIZE = 4  # The window size for calculating hte average
     PREV_MEMORY = 2  # Previous points stored.
 
@@ -61,40 +56,34 @@ class Vision:
                                  help="Find the range from within the program",
                                  action="store_true", default=False)
         self.args = self.parser.parse_args()
+        self.record = {}
+        self.gesture_points = []
+        self.can_do_gesture = False
         self.boundaries = {}
-        self.record = False
-        self.end_gesture = False
         self.init_mem_vars()
+        self.handMoment = (0, 0)
+        self.foundContour = True
+        self.stationary = False
+        self.record = False
+        self.realX = 0
+        self.realY = 0
+        self.movement_history = []
+        self.window = DataTimeSeries(
+                self.WINDOW_SIZE, 2, auto_filter=True)
         self.init_gestures()
 
     def init_mem_vars(self):
-        # initializing member variables with initial values.
-        for finger in self.ACTIVE_FINGERS:
-            self.handMoment[finger] = (0, 0)
-            self.foundContour[finger] = True
-            self.stationary[finger] = False
-            self.realX[finger] = 0
-            self.realY[finger] = 0
-            self.movement_history[finger] = []
-            self.window[finger] = DataTimeSeries(
-                self.WINDOW_SIZE, 2, auto_filter=True)
-
         if self.args.find_range:
             with open('.vision.config', 'w') as file:
-                for finger in self.ACTIVE_FINGERS:
-                    value = self.find_range()
-                    self.boundaries[finger] = value
-                    file.write('{}:{}\n'.format(finger, str(value)))
+                value = self.find_range()
+                self.boundaries = value
+                file.write('{}\n'.format(str(value)))
         else:
             try:
-                finger_map = {}
                 with open('.vision.config', 'r') as file:
                     for line in file:
-                        [finger_name, finger_tuple] = line.split(':')
-                        finger_tuple = literal_eval(finger_tuple)
-                        self.boundaries[finger_name] = finger_tuple
-                if len(self.boundaries.keys()) < len(self.ACTIVE_FINGERS):
-                    raise Exception
+                        values = literal_eval(line)
+                        self.boundaries = values
             except IOError:
                 print('Config file not found. Run the program with -r flag.')
                 sys, exit()
@@ -103,9 +92,10 @@ class Vision:
                 sys.exit()
 
     def init_gestures(self):
-        self.gestures = PreDefinedGestures()
+        self.defined_gestures = PreDefinedGestures()
+        self.gestures = self.defined_gestures.predefined_gestures
         self.gesture_names = []
-        for gesture in self.gestures.predefined_gestures:
+        for gesture in self.gestures:
             self.gesture_names.append(gesture.name)
 
     def find_range(self):
@@ -142,38 +132,38 @@ class Vision:
         self.canvas = np.zeros(self.frame.shape, np.uint8)
         self.frame = cv2.cvtColor(self.frame, cv2.COLOR_BGR2HSV)
 
-    def threshold(self, finger):
+    def threshold(self):
         """threshold
 
         :param finger: The finger name
         """
-        (lower, upper) = self.boundaries[finger]
+        (lower, upper) = self.boundaries
         lower = np.array(lower, dtype="uint8")
         upper = np.array(upper, dtype="uint8")
         mask = cv2.inRange(self.frame, lower, upper)
         kernel = np.ones((5, 5), np.uint8)
-        self.output[finger] = cv2.bitwise_and(
+        self.output = cv2.bitwise_and(
             self.frame, self.frame, mask=mask)
-        self.output[finger] = cv2.cvtColor(
-            self.output[finger], cv2.COLOR_BGR2GRAY)
-        self.output[finger] = cv2.erode(
-            self.output[finger], kernel, iterations=1)
-        self.output[finger] = cv2.dilate(
-            self.output[finger], kernel, iterations=3)
+        self.output = cv2.cvtColor(
+            self.output, cv2.COLOR_BGR2GRAY)
+        self.output = cv2.erode(
+            self.output, kernel, iterations=1)
+        self.output = cv2.dilate(
+            self.output, kernel, iterations=3)
 
-    def extract_contours(self, finger):
+    def extract_contours(self):
         """extract_contours from the frame. 
 
         :param finger: Name of the finger working on. 
         """
         _, self.contours, _ = cv2.findContours(
-            self.output[finger].copy(), cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
+            self.output.copy(), cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
         maxArea, idx = 0, 0
         if len(self.contours) == 0:
-            self.foundContour[finger] = False
+            self.foundContour = False
             return
         else:
-            self.foundContour[finger] = True
+            self.foundContour = True
 
         for i in range(len(self.contours)):
             area = cv2.contourArea(self.contours[i])
@@ -182,32 +172,44 @@ class Vision:
                 idx = i
         self.realHandContour = self.contours[idx]
         self.realHandLength = cv2.arcLength(self.realHandContour, True)
-        self.handContour[finger] = cv2.approxPolyDP(
+        self.handContour = cv2.approxPolyDP(
             self.realHandContour, 0.001 * self.realHandLength, True)
 
-    def __check_stationary(self, finger):
+    def __check_stationary(self):
         '''
         Finding the absolute deviation from the mean to find if the finger is stationary. 
         '''
-        factor = 0.02
-        for [x, y] in self.window[finger].data_series:
-            if (x-self.realX[finger])**2 + (y-self.realY[finger]) > factor * \
-                                            min(self.cameraWidth, self.cameraHeight):
-                self.stationary[finger] = False
-                return
-        self.stationary[finger] = True
+        search_len = 3
+        val = -1 * (search_len + 1)
+        self.prev_record_state = self.record
+        if self.can_do_gesture:
+            xPoints = [pt[0] for pt in self.movement_history[val:-1]]
+            yPoints = [pt[0] for pt in self.movement_history[val:-1]]
+            xAvg = np.average(xPoints)
+            yAvg = np.average(yPoints)
+            factor = 0.02
+            for [x, y] in self.movement_history[-(search_len + 1):-1]:
+                if (x-xAvg)**2 + (y-yAvg) > factor * \
+                                                min(self.cameraWidth, self.cameraHeight):
+                    if self.stationary:
+                        self.record = True
+                    self.stationary = False
+                    return
+            if not self.stationary:
+                self.record = False
+            self.stationary = True
 
-    def find_center(self, finger):
+    def find_center(self):
         '''
         Finding the center of the contour of the finger that we are tracking.
         '''
-        self.moments = cv2.moments(self.handContour[finger])
+        self.moments = cv2.moments(self.handContour)
         if self.moments["m00"] != 0:
             self.handX = int(self.moments["m10"] / self.moments["m00"])
             self.handY = int(self.moments["m01"] / self.moments["m00"])
-            self.handMoment[finger] = (self.handX, self.handY)
+            self.handMoment = (self.handX, self.handY)
 
-    def normalize_center(self, finger):
+    def normalize_center(self):
         '''
         Using the time series data to normalize the data. 
         This is calling the Mean function in the window[finger] object and 
@@ -215,59 +217,73 @@ class Vision:
         The realX and realY are basically are just the mean of n handX and handY 
         values (to stop the gitter)
         '''
-        self.window[finger].add(self.handMoment[finger])
-        self.realX[finger], self.realY[finger] = self.window[finger][0]
-        self.movement_history[finger] += [
-            (self.realX[finger], self.realY[finger])]
-        self.__check_stationary(finger)
+        self.window.add(self.handMoment)
+        self.realX, self.realY = self.window[0]
+        self.movement_history += [(self.realX, self.realY)]
+        self.__check_stationary()
 
-    def move_cursor(self, finger):
+    def move_cursor(self):
         '''
                 Just simpler to create a new function to calculate the mouse pos,
                 I'm not fucking messing with Git ever again. This is too much for me to
                 handle.
         '''
-        self.x = self.realX[finger] * (self.screen_width / self.frame.shape[1])
-        self.y = self.realY[finger] * (self.screen_height / self.frame.shape[0])
+        x = self.realX * (self.screen_width / self.frame.shape[1])
+        y = self.realY * (self.screen_height / self.frame.shape[0])
 
-        #  pyautogui.moveTo(self.x, self.y)
+        #  pyautogui.moveTo(x, y)
 
-    def __check_pinch(self):
-        '''
-        The left click action on the screen.
-        '''
-        fingerDist = math.sqrt((self.realX[self.FINGER1] - self.realX[self.FINGER2])**2 +
-                               (self.realY[self.FINGER1] - self.realY[self.FINGER2])**2)
-        print('Finger Distance: {}'.format(fingerDist))
-        if fingerDist < self.clickThresh:
-            self.stationary[self.TRACKER_FINGER] = True
-            pyautogui.mouseDown()
-            self.pinched = True
+    def check_can_perform_gesture(self):
+        if len(self.movement_history) > 10:
+            self.can_do_gesture = True
         else:
-            pyautogui.mouseUp()
-            self.pinched = False
-            self.stationary[self.TRACKER_FINGER] = False
+            self.can_do_gesture = False
 
-        # print('{} {}'.format(self.realY[self.FINGER2],self.realY[self.FINGER2]))
+    def find_gesture(self):
+        min_error = 2**31 - 1
+        min_error_idx = -1
+        self.human_gesture = Gesture(self.gesture_points,"Human Gesture")
+        likelihoodscores = [0]*len(self.gestures)
+        assessments = [{}] * len(self.gestures)
+        for i in range(len(self.gestures)):
+            assessments[i] = Gesture.compare_gesture(self.gestures[i],
+                                                  self.human_gesture)
+        error_list = [assessments[i]['totalError'] for i in range(len(assessments))]
+        index = error_list.index(min(error_list))
+        template_gesture_ratio = max((self.gestures[index].distance / self.human_gesture.distance),
+                                     (self.human_gesture.distance / self.gestures[index].distance))
+        distance_diff_ratio = assessments[index]['totalDistance'] / min(self.gestures[index].distance,
+                                                                        self.human_gesture.distance)
+        print('{} {}'.format(template_gesture_ratio, distance_diff_ratio))
+        if template_gesture_ratio < 1.50 and distance_diff_ratio < 2:
+            return index
+    
+    def determine_if_gesture(self):
+        if self.record:
+            self.gesture_points += [self.movement_history[-1]]
+        elif self.prev_record_state == True and not self.record:
+            min_gesture_points = 5
+            if len(self.movement_history) > min_gesture_points:
+                gesture_index = self.find_gesture()
+                if gesture_index != None:
+                    print('Gesture Performed: {}'.format(self.gesture_names[gesture_index]))
+            self.gesture_points = []
 
-    def draw(self, finger):
-        # if self.realX[finger] != 0 and self.realY[finger] != 0:
-        # 	cv2.circle(self.canvas[finger], (self.realX[finger], self.realY[finger]),10, (255, 0, 0), -2)
-        # cv2.drawContours(self.canvas[finger], [self.handContour[finger]], 0, (0, 255, 0), 1)
+    def draw(self):
         cv2.drawContours(
-            self.canvas, [self.handContour[finger]], 0, (0, 255, 0), 1)
-        cv2.circle(self.canvas, tuple([self.realX[finger], self.realY[finger]]),
+            self.canvas, [self.handContour], 0, (0, 255, 0), 1)
+        cv2.circle(self.canvas, tuple([self.realX, self.realY]),
                    10, (255, 0, 0), -2)
-        recent_positions = self.movement_history[finger][-30:]
+        recent_positions = self.movement_history[-30:]
         if len(recent_positions) != 0:
             for i in range(len(recent_positions)):
                 cv2.circle(self.canvas, recent_positions[i], 5,
                            (25*i, 255, 25*i), -1)
 
-    def frame_outputs(self, finger):
-        cv2.imshow('Output ' + finger, self.output[finger])
-        cv2.imshow('Frame' + finger, self.frame)
-        # cv2.imshow('Canvas' + finger, self.canvas)
+    def frame_outputs(self):
+        #  cv2.imshow('Output ' + finger, self.output[finger])
+        #  cv2.imshow('Frame' + finger, self.frame)
+        cv2.imshow('Canvas', self.canvas)
         pass
 
     def start_process(self):
@@ -276,27 +292,20 @@ class Vision:
         movement are called. This is the master function.
         """
         while True:
-            for finger in self.ACTIVE_FINGERS:
-                self.read_webcam()
-                self.threshold(finger)
-                self.extract_contours(finger)
-                if self.foundContour[finger]:
-                    self.find_center(finger)
-                    self.normalize_center(finger)
-                else:
-                    self.stationary[self.TRACKER_FINGER] = True
-                self.draw(finger)
-                self.frame_outputs(finger)
-
-            # Check if the user pinched his finger for left click
-            # if self.FINGER1 in self.ACTIVE_FINGERS \
-            # 	and self.FINGER2 in self.ACTIVE_FINGERS:
-            # 	self.__check_pinch()
-
-            # Update the cursor location with the new finger location.
-            if not self.stationary[self.TRACKER_FINGER]:
-                self.move_cursor(self.TRACKER_FINGER)
-
+            self.read_webcam()
+            self.threshold()
+            self.extract_contours()
+            if self.foundContour:
+                self.find_center()
+                self.normalize_center()
+            else:
+                self.stationary = True
+            self.draw()
+            self.frame_outputs()
+            self.check_can_perform_gesture()
+            self.determine_if_gesture()
+            if not self.stationary:
+                self.move_cursor()
             # Exit out of this hell hole.
             if cv2.waitKey(1) & 0xFF is ord('q'):
                 break

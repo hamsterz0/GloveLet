@@ -53,7 +53,7 @@ class Gesture:
         start = 0
         end = len(template.distance_index)
         while True:
-            mid = (start + end)/2
+            mid = int((start + end)/2)
             if template.distance_index[mid] == template_distance:
                 return max(mid-1, 0), min(mid+1, len(template.distance_index)-1)
             elif start == end:
@@ -89,7 +89,7 @@ class Gesture:
             compare_point = Gesture.linear_template(template, to_find)
             # Calculating how different the two points are
             distance = Gesture.calculate_distance(compare_point, human_gesture.points[i])
-            total_distance = min(distance)
+            total_distance += distance
             distances += [distance]
             total_error += distance**2
         min_distance = min(distances)
