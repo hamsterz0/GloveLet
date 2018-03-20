@@ -86,7 +86,7 @@ class Vision:
             self.mouseY = int(self.screen_height/2)
             self.movement_history[finger] = []
             self.window[finger] = DataTimeSeries(
-                2, self.WINDOW_SIZE, auto_filter=True)
+                self.WINDOW_SIZE, 2, auto_filter=True)
 
         if self.args.find_range:
             with open('.vision.config', 'w') as file:
@@ -219,7 +219,7 @@ class Vision:
         values (to stop the gitter)
         '''
         self.window[finger].add(self.handMoment[finger])
-        self.realX[finger], self.realY[finger] = self.window[finger].get_data()
+        self.realX[finger], self.realY[finger] = self.window[finger][0]
         self.movement_history[finger] += [
             (self.realX[finger], self.realY[finger])]
         self.__check_stationary(finger)
