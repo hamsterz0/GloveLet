@@ -184,10 +184,10 @@ class Vision:
         self.prev_record_state = self.record
         if self.can_do_gesture:
             xPoints = [pt[0] for pt in self.movement_history[val:-1]]
-            yPoints = [pt[0] for pt in self.movement_history[val:-1]]
+            yPoints = [pt[1] for pt in self.movement_history[val:-1]]
             xAvg = np.average(xPoints)
             yAvg = np.average(yPoints)
-            factor = 0.02
+            factor = 0.04
             for [x, y] in self.movement_history[-(search_len + 1):-1]:
                 if (x-xAvg)**2 + (y-yAvg) > factor * \
                                                 min(self.cameraWidth, self.cameraHeight):
@@ -231,7 +231,7 @@ class Vision:
         x = self.realX * (self.screen_width / self.frame.shape[1])
         y = self.realY * (self.screen_height / self.frame.shape[0])
 
-        #  pyautogui.moveTo(x, y)
+        pyautogui.moveTo(x, y)
 
     def check_can_perform_gesture(self):
         if len(self.movement_history) > 10:
@@ -254,8 +254,7 @@ class Vision:
                                      (self.human_gesture.distance / self.gestures[index].distance))
         distance_diff_ratio = assessments[index]['totalDistance'] / min(self.gestures[index].distance,
                                                                         self.human_gesture.distance)
-        print('{} {}'.format(template_gesture_ratio, distance_diff_ratio))
-        if template_gesture_ratio < 1.50 and distance_diff_ratio < 2:
+        if template_gesture_ratio < 2.2 and distance_diff_ratio < 30:
             return index
     
     def determine_if_gesture(self):
@@ -281,8 +280,8 @@ class Vision:
                            (25*i, 255, 25*i), -1)
 
     def frame_outputs(self):
-        #  cv2.imshow('Output ' + finger, self.output[finger])
-        #  cv2.imshow('Frame' + finger, self.frame)
+        #  cv2.imshow('Output ', self.output)
+        #  cv2.imshow('Frame', self.frame)
         cv2.imshow('Canvas', self.canvas)
         pass
 
@@ -304,8 +303,7 @@ class Vision:
             self.frame_outputs()
             self.check_can_perform_gesture()
             self.determine_if_gesture()
-            if not self.stationary:
-                self.move_cursor()
+            self.move_cursor()
             # Exit out of this hell hole.
             if cv2.waitKey(1) & 0xFF is ord('q'):
                 break
