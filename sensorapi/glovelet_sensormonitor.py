@@ -24,8 +24,8 @@ class Mpu6050Sensor(Sensor):
 
 
 class FingerFlexGroup(Sensor):
-    def __init__(self, name, size):
-        super().__init__(name, size)
+    def __init__(self, name, size, offset):
+        super().__init__(name, size, ch_offset=offset)
 
 
 def accel_post_filter(time_series):
@@ -46,7 +46,7 @@ def binary_convert(b):
 
 MPU6050 = None
 BNO055 = Bno055Sensor('bno055', 7)
-FLEX_SENSORS = FingerFlexGroup('flexsensors', 4)
+FLEX_SENSORS = FingerFlexGroup('flexsensors', 4, 7)
 
 
 class GloveletBNO055IMUSensorMonitor(SensorDataMonitor):
@@ -170,15 +170,15 @@ class GloveletFlexSensorMonitor(SensorDataMonitor):
 
     @property
     def data_sequence(self):
-        return self.__timeseries[:]
+        return self.__timeseries
 
     @property
     def timestamps(self):
-        return self.__timeseries.timestamp[:]
+        return self.__timeseries.timestamp
 
     @property
     def time_elapsed(self):
-        return self.__timeseries.time_elapsed[:]
+        return self.__timeseries.time_elapsed
 
     def update(self, data):
         self.__timeseries.add(data)
