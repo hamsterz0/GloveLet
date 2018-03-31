@@ -218,7 +218,7 @@ class SensorStream:
 
     def __register_sensor(self, sensor, ch_offset=0):
         """Registers a `Sensor` object with the stream."""
-        for s in self.__registered_sensors.items():
+        for name, s in self.__registered_sensors.items():
             if s.channel.get_stop() > ch_offset:
                 ch_offset = s.channel.get_stop()
         sensor.set_channel_offset(ch_offset)
