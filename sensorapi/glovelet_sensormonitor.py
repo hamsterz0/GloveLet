@@ -46,7 +46,7 @@ def binary_convert(b):
 
 MPU6050 = None
 BNO055 = Bno055Sensor('bno055', 7)
-FLEX_SENSORS = FingerFlexGroup('flexsensors', 3)
+FLEX_SENSORS = FingerFlexGroup('flexsensors', 4)
 
 
 class GloveletBNO055IMUSensorMonitor(SensorDataMonitor):
@@ -69,19 +69,35 @@ class GloveletBNO055IMUSensorMonitor(SensorDataMonitor):
             butter(highpass_order, highpass_critical, btype='highpass')
 
     @property
-    def tdelta(self):
+    def accel_timestamp(self):
+        return self.__acc_timeseries.timestamp
+
+    @property
+    def accel_tdelta(self):
         return self.__acc_timeseries.tdelta
 
     @property
-    def time_elapsed(self):
+    def accel_time_elapsed(self):
         return self.__acc_timeseries.time_elapsed
 
     @property
-    def acceleration_timeseries(self):
+    def orient_timestamp(self):
+        return self.__rot_timeseries.timestamp
+
+    @property
+    def orient_tdelta(self):
+        return self.__rot_timeseries.tdelta
+
+    @property
+    def orient_time_elapsed(self):
+        return self.__rot_timeseries.time_elapsed
+
+    @property
+    def acceleration_sequence(self):
         return self.__acc_lowpassed
 
     @property
-    def velocity_timeseries(self):
+    def velocity_sequence(self):
         return self.__vel_hipassed
         # return self.__velocity
 
@@ -150,7 +166,7 @@ class GloveletBNO055IMUSensorMonitor(SensorDataMonitor):
 class GloveletFlexSensorMonitor(SensorDataMonitor):
     def __init__(self, series_sz=10):
         super().__init__(FLEX_SENSORS)
-        self.__timeseries = DataTimeSeries(series_sz, FLEX_SENSORS.ndatapoints, auto_filter=True)
+        self.__timeseries = DataTimeSeries(series_sz, FLEX_SENSORS.ndatapoints, auto_filter=False)
 
     @property
     def data_sequence(self):
