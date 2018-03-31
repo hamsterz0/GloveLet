@@ -100,6 +100,7 @@ class SensorStream:
         self.__conn_status = SensorStreamConnectionStatus.CLOSED
         self.__registered_monitors = set()
         self.__registered_sensors = dict()
+        self.__read_offset = None
         # TODO: Remove logging module and statements once project-wide logging is implemented
         self.__logger = logging.Logger(name='SensorStream', level=logging.DEBUG)
         handler = logging.StreamHandler(sys.stdout)
@@ -211,18 +212,15 @@ class SensorStream:
             self.__serial.close()
             self.__set_conn_status(SensorStreamConnectionStatus.CLOSED)
 
-    def __register_channel(self, channel):
-        if not isinstance(channel, SensorStreamDataChannel):
-            raise TypeError('Expected `SensorStreamDataChannel` object for argument `channel`.')
-        self.__channels[channel.get_name()] = channel
-
-    def __register_sensor(self, sensor, ch_offset=0):
+    def __register_sensor(self, sensor):
         """Registers a `Sensor` object with the stream."""
         for name, s in self.__registered_sensors.items():
-            if s.channel.get_stop() > ch_offset:
+            if s.channel.get_stop() > sensor.channel.offset:
                 ch_offset = s.channel.get_stop()
-        sensor.set_channel_offset(ch_offset)
+                sensor.set_channel_offset(ch_offset)
         self.__registered_sensors[sensor.name] = sensor
+        if self.__read_offset is None or self.__read_offset > sensor.channel_offset:
+            self.__read_offset = sensor.channel_offset
         self.__ndatapoints += sensor.ndatapoints
 
     def __set_conn_status(self, status):
