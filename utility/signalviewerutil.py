@@ -1,7 +1,7 @@
 import numpy as np
 import matplotlib.pyplot as plt
 from glovelet.sensorapi.sensorstream import SensorStream
-from glovelet.sensorapi.glovelet_sensormonitor import GloveletBNO055IMUSensorMonitor
+from glovelet.sensorapi.glovelet_sensormonitor import GloveletBNO055IMUSensorMonitor, GloveletFlexSensorMonitor
 from glovelet.utility.timeseries import DataSequence
 from multiprocessing import Process, Queue
 from serial.serialutil import SerialException
@@ -26,7 +26,6 @@ class ImuEvent:
 
 class ImuPlotEvent:
     def __init__(self, acc_timeseries, vel_timeseries, rot_timeseries, dt_seq, t_seq):
-        b, a = butter(4, 0.075, btype='lowpass')
         self.t_seq = np.flip(t_seq[:], 0)
         self.accel_x = np.flip(acc_timeseries[:, 0], 0)
         self.accel_y = np.flip(acc_timeseries[:, 1], 0)
@@ -44,23 +43,24 @@ class ImuPlotEvent:
         self.orient_w = np.flip(rot_timeseries[:, 3], 0)
 
 
-def hardware_stream(stream, monitor, q):
+class FlexPlotEvent:
+    def __init__(self, flex_data, t_elapsed):
+        self.index = np.flip(flex_data[:, 0], 0)
+        self.middle = np.flip(flex_data[:, 1], 0)
+        self.thumb0 = np.flip(flex_data[:, 2], 0)
+        self.thumb1 = np.flip(flex_data[:, 3], 0)
+        self.t_elapsed = np.flip(t_elapsed[:], 0)
+
+
+def imu_stream(stream, monitor, q):
     try:
         stream.open()
-        shape = monitor.tdelta.shape
-        t = DataSequence(shape[0], 1)
-        for i in range(shape[0]):
-            stream.update()
-            tm = t[0] + monitor.tdelta[0]
-            t.add(tm)
         while stream.is_open():
             stream.update()
-            tm = t[0] + monitor.tdelta[0]
-            t.add(tm)
-            imu_pltevnt = ImuPlotEvent(monitor.acceleration_timeseries,
-                                          monitor.velocity_timeseries[:],
+            imu_pltevnt = ImuPlotEvent(monitor.acceleration_sequence,
+                                          monitor.velocity_sequence,
                                           monitor.orientation_timeseries,
-                                          monitor.tdelta, t)
+                                          monitor.accel_tdelta, monitor.accel_time_elapsed)
             if q.full():
                 q.get()
             q.put(imu_pltevnt)
@@ -70,14 +70,29 @@ def hardware_stream(stream, monitor, q):
         stream.close()
 
 
-def plot_imu_data(nsamples=2500):
+def flex_stream(stream, monitor, q):
+    try:
+        stream.open()
+        while stream.is_open():
+            stream.update()
+            flex_pltevnt = FlexPlotEvent(monitor.data_sequence, monitor.time_elapsed)
+            if q.full():
+                q.get()
+            q.put(flex_pltevnt)
+    except SerialException as e:
+        print(e)
+    finally:
+        stream.close()
+
+
+def plot_imu_data(nsamples=None):
     if nsamples is None:
         nsamples = 500000
-    s = SensorStream(_PORT, _BAUD)
+    s = SensorStream(_PORT, _BAUD, do_success_check=False, conn_delay=500)
     m = GloveletBNO055IMUSensorMonitor(100)
     s.register_monitor(m)
     pltevntqueue = Queue(5)
-    stream_proc = Process(target=hardware_stream, args=(s, m, pltevntqueue))
+    stream_proc = Process(target=imu_stream, args=(s, m, pltevntqueue))
     stream_proc.start()
     plt.ion()
     fig = plt.figure(figsize=(8, 10))
@@ -126,7 +141,42 @@ def plot_imu_data(nsamples=2500):
             fig.canvas.draw()
 
 
+def plot_flex_data(nsamples=None):
+    if nsamples is None:
+        nsamples = 500000
+    s = SensorStream(_PORT, _BAUD, do_success_check=False, conn_delay=500)
+    m = GloveletFlexSensorMonitor(100)
+    s.register_monitor(m)
+    pltevntqueue = Queue(5)
+    stream_proc = Process(target=flex_stream, args=(s, m, pltevntqueue))
+    stream_proc.start()
+    plt.ion()
+    fig = plt.figure(figsize=(8, 10))
+    flex_plt = fig.add_subplot(111)
+    while pltevntqueue.empty():
+        continue
+    pltevnt = pltevntqueue.get()
+    t_seq = pltevnt.t_elapsed
+    line1, = flex_plt.plot(t_seq, pltevnt.index, 'r-', label='index')
+    line2, = flex_plt.plot(t_seq, pltevnt.middle, 'g-', label='middle')
+    line3, = flex_plt.plot(t_seq, pltevnt.thumb0, 'b-', label='thumb0')
+    line4, = flex_plt.plot(t_seq, pltevnt.thumb1, 'y-', label='thumb1')
+    plt.show()
+    for i in range(nsamples):
+        pltevnt = pltevntqueue.get()
+        if isinstance(pltevnt, FlexPlotEvent):
+            t_seq = pltevnt.t_elapsed
+            line1.set_data(t_seq, pltevnt.index)
+            line2.set_data(t_seq, pltevnt.middle)
+            line3.set_data(t_seq, pltevnt.thumb0)
+            line4.set_data(t_seq, pltevnt.thumb1)
+            flex_plt.set_ylim(-0.25, 1.25)
+            flex_plt.set_xlim((min(t_seq), max(t_seq)))
+            fig.canvas.draw()
+
+
 def main():
+    # plot_flex_data()
     plot_imu_data()
 
 
