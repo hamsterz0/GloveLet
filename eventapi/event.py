@@ -185,7 +185,7 @@ class EventDispatcher:
             command_conn.send('end')
 
 
-class EventDispatcherManager:
+class EventDispatchManager:
     """
     Manages `EventDispatcher` and `EventListener` objects.\n
     Dispatchers must be registered and deployed before the `invoke_dispatch` method will invoke
@@ -256,7 +256,7 @@ class EventDispatcherManager:
             for event_type in listener.event_callbacks:
                 self.__dispatchers[event_type].register(listener)
 
-    def deploy_dispatcher(self, event_type=None):
+    def deploy_dispatchers(self, event_type=None):
         """
         Begins registered `EventDispatcher` object's process.\n
         If `event_type` is `None`, all registered dispatchers not yet deployed will be deployed.
@@ -276,7 +276,7 @@ class EventDispatcherManager:
             if not self.__dispatchers[event_type].is_deployed:
                 dispatcher.deploy()
 
-    def end_dispatcher(self, event_type=None):
+    def end_dispatchers(self, event_type=None):
         """
         Ends registered `EventDispatcher` object's prcoess.\n
         If `event_type` is `None`, all registered dispatchers currently deployed will be terminated.
