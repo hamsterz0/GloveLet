@@ -6,7 +6,60 @@ from collections import Iterable
 from scipy.signal import butter, filtfilt
 
 
-class DataSequence:
+class DataSequence(np.ndarray):
+    def __new__(cls, nsamples, ndim, dtype='f'):
+        obj = super().__new__(cls, shape=(nsamples, ndim), dtype=dtype)
+        # obj.__nsamples = nsamples
+        # obj.__ndim = ndim
+        obj *= 0
+        return obj
+
+    def __array_finalize__(self, obj):
+        if obj is None:
+            return
+        # self.__nsamples = getattr(obj, '__nsamples', 1)
+        # self.__ndim = getattr(obj, '__ndim', 1)
+        self.__head = 0
+        self.__added = 0
+        self.__position = 0
+        print(self.__position)
+
+    @property
+    def nsamples(self):
+        return self.__nsamples
+
+    @property
+    def head(self):
+        return self.__head
+
+    @property
+    def added(self):
+        return self.__added
+
+    # def __iter__(self):
+    #     return self
+    #
+    # def __next__(self):
+    #     self.__position -= 1
+    #     if self.__position < self.head:
+    #         raise StopIteration
+    #     if self.__position < 0:
+    #         self.__position += self.nsamples
+    #     return self[self.__position]
+
+    # def __getslice__(self, start, stop):
+    #     return self.__getitem__(slice(start, stop))
+    #
+    # def __getitem__(self, key):
+    #     if isinstance(key, tuple):
+    #         print(key)
+    #     elif isinstance(key, slice):
+    #         print(key)
+    #     else:
+    #         return np.asarray(self.data)
+
+
+class DataSequenceOLD:
     """
     Base class of DataTimeSeries.\n
     Allows for sequential access of data samples.

@@ -75,23 +75,32 @@ class SensorStream:
     """Streams sensor data to registered `SensorDataMonitor` objects."""
     # Default channels defined as globals here for convenience.
 
-    def __init__(self, port, baud, conn_success_str='successful@', conn_timeout=10.0):
+    def __init__(self, port, baud,
+                 do_success_check=True,
+                 conn_success_str='successful@',
+                 conn_delay=0,
+                 conn_timeout=10.0):
         """
         Construct a SensorStream object.\n
         :param `port`: `str` path to port\t
         :param `baud`: `int` baudrate of port\t
+        :param `do_success_check`: `bool` will skip process of matching the success string when `False`
         :param `conn_success_str`: `str` The string sent by the serial device to indicate successful connection established.\t
+        :param `conn_delay`: `int` The number of milliseconds to delay connection (gives device a chance to run setup protocol).\t
         :param `conn_timeout`: `float` seconds before connection attempt times out
         """
         self.__serial = serial.Serial(timeout=conn_timeout)
         self.__serial.port = port
         self.__serial.baudrate = baud
+        self.__do_success_check = do_success_check
+        self.__conn_delay = conn_delay
         self.__ndatapoints = 0
         self.__success_str = conn_success_str
         self.__timeout = conn_timeout
         self.__conn_status = SensorStreamConnectionStatus.CLOSED
         self.__registered_monitors = set()
         self.__registered_sensors = dict()
+        self.__read_offset = None
         # TODO: Remove logging module and statements once project-wide logging is implemented
         self.__logger = logging.Logger(name='SensorStream', level=logging.DEBUG)
         handler = logging.StreamHandler(sys.stdout)
@@ -124,7 +133,7 @@ class SensorStream:
             line = line.strip().split(" ")
             data = None
             try:
-                if len(line) != self.__ndatapoints:
+                if len(line) < self.__ndatapoints:
                     raise SensorStreamReadException('Incorrect number of data dimensions read from serial device.')
                 data = np.array(line, c_float)
             except UnicodeDecodeError as e:
@@ -177,7 +186,7 @@ class SensorStream:
             self.__serial.open()
             t1 = time.time()
             # repeats until successful connection has been established or timeout occurs
-            while True:
+            while self.__do_success_check:
                 line = self.__readline()
                 data = line.strip().split(" ")
                 # check for the success string
@@ -186,6 +195,7 @@ class SensorStream:
                 if time.time() - t1 > self.__timeout:
                     self.close()
                     raise TimeoutError('SensorStream connection timeout.')
+            time.sleep(self.__conn_delay / 1000)
             self.__set_conn_status(SensorStreamConnectionStatus.OPEN)
 
     def is_open(self):
@@ -202,18 +212,15 @@ class SensorStream:
             self.__serial.close()
             self.__set_conn_status(SensorStreamConnectionStatus.CLOSED)
 
-    def __register_channel(self, channel):
-        if not isinstance(channel, SensorStreamDataChannel):
-            raise TypeError('Expected `SensorStreamDataChannel` object for argument `channel`.')
-        self.__channels[channel.get_name()] = channel
-
-    def __register_sensor(self, sensor, ch_offset=0):
+    def __register_sensor(self, sensor):
         """Registers a `Sensor` object with the stream."""
-        for s in self.__registered_sensors.items():
-            if s.channel.get_stop() > ch_offset:
+        for name, s in self.__registered_sensors.items():
+            if s.channel.get_stop() > sensor.channel.offset:
                 ch_offset = s.channel.get_stop()
-        sensor.set_channel_offset(ch_offset)
+                sensor.set_channel_offset(ch_offset)
         self.__registered_sensors[sensor.name] = sensor
+        if self.__read_offset is None or self.__read_offset > sensor.channel_offset:
+            self.__read_offset = sensor.channel_offset
         self.__ndatapoints += sensor.ndatapoints
 
     def __set_conn_status(self, status):
