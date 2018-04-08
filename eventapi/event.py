@@ -1,4 +1,4 @@
-event_type__all__ = ['Event', 'EventDispatcher', 'EventListener', 'EventAPIException', 'EventDispatcherManager']
+__all__ = ['Event', 'EventDispatcher', 'EventListener', 'EventAPIException', 'EventDispatchManager']
 
 
 from multiprocessing import Process, Pipe
@@ -28,7 +28,6 @@ class EventListener:
     \t\tA Python `dict` which has sublclasses of `Event` as keys
     \t\tand a `callable` function reference as its values.
     """
-
     def __init__(self, callbacks={}):
         type_err = '`EventListener` constructor requires a dict of `Event`'\
                  + ' type as key and `callable` callback function as value.'
@@ -68,35 +67,29 @@ class EventDispatcher:
                 raise TypeError(str(type(event_type)) + ' is not of type ' + str(Event))
             # Establish 1-way connections for sending events
             self.event_parent_conns[event_type], self.event_child_conns[event_type] = Pipe(duplex=False)
-            self.listeners[event_type] = list()
-        # Establish bi-way connection between the parent and child process
-        self.__child_conn, self.__parent_conn = Pipe(duplex=True)
-        # Init process
+            self.listeners[event_type] = set()
+        # Establish 1-way connection between the parent and child process for issuing termination command
+        self.__parent_conn, self.__child_conn = Pipe(duplex=True)
         self.process = None
 
     @property
     def is_deployed(self):
-        if self.__parent_conn.poll():
-            msg = self.__parent_conn.recv()
-            if msg == 'term':
-                self.__is_deployed = False
         return self.__is_deployed
 
     def deploy(self):
         """Start dispatcher process loop."""
         self.__is_deployed = True
-        _args = (self.__child_conn, self.event_child_conns)
-        self.process = Process(name="glovelet", target=self.__deploy, args=_args)
+        _args = (self.__parent_conn, self.event_child_conns)
+        self.process = Process(target=self.__deploy, args=_args)
         self.process.start()
 
     def end(self):
         """Terminate the dispatcher process."""
-        self.__parent_conn.send('term')
-        while True:
-            if self.__parent_conn.poll() and self.__parent_conn.recv() == 'end':
-                self.__is_deployed = False
-                break
+        self.__parent_conn.send('terminate')
         self.process.terminate()
+        while self.process.is_alive():
+            continue
+        self.__is_deployed = False
 
     def register(self, listener):
         if self.is_deployed:
@@ -105,7 +98,8 @@ class EventDispatcher:
             if event_type in self.listeners:
                 if not issubclass(type(listener), EventListener):
                     raise TypeError(str(listener) + ' is not of type ' + str(EventListener))
-                self.listeners[event_type].append(listener)
+                if listener not in self.listeners[event_type]:
+                    self.listeners[event_type].add(listener)
 
     def dispatch(self):
         """
@@ -113,13 +107,10 @@ class EventDispatcher:
         """
         if not self.is_deployed:
             raise EventAPIException('`EventDispatcher` cannot dispatch events while not deployed.')
-        if self.__parent_conn.poll():
-            if self.__parent_conn.recv() == 'end':
-                self.__is_deployed = False
-                return
         for event_type in self.event_parent_conns:
             event = None
-            if self.event_parent_conns[event_type].poll():
+            # Flush old events from pipe
+            while self.event_parent_conns[event_type].poll():
                 event = self.event_parent_conns[event_type].recv()
             if event is not None:
                 for listener in self.listeners[event_type]:
@@ -178,11 +169,10 @@ class EventDispatcher:
                 # Get communications from parent process
                 if command_conn.poll():
                     cmd = command_conn.recv()
-                    if cmd == 'term':
+                    if cmd == 'terminate':
                         is_deployed = False
         finally:
             self.finish(*args, **kwargs)
-            command_conn.send('end')
 
 
 class EventDispatchManager:
@@ -200,8 +190,9 @@ class EventDispatchManager:
 
     def __init__(self, *registrees):
         self.__dispatchers = dict()
-        dispatchers = tuple([dispatcher for dispatcher in registrees if issubclass(dispatcher, EventDispatcher)])
-        listeners = tuple([listener for listener in registrees if issubclass(listener, EventDispatcher)])
+        self.__dispatchers_set = set()
+        dispatchers = tuple([dispatcher for dispatcher in registrees if issubclass(type(dispatcher), EventDispatcher)])
+        listeners = tuple([listener for listener in registrees if issubclass(type(listener), EventListener)])
         self.register_dispatcher(*dispatchers)
         self.register_listener(*listeners)
 
@@ -218,7 +209,7 @@ class EventDispatchManager:
         \t\tyet deployed will be deployed.
         """
         if event_type is None:
-            for dispatcher in self.__dispatchers.values():
+            for dispatcher in self.__dispatchers_set:
                 if dispatcher.is_deployed:
                     dispatcher.dispatch()
         else:
@@ -245,6 +236,7 @@ class EventDispatchManager:
                 raise TypeError('Type {} is not subclass of type {}'.format(type(dispatcher), EventDispatcher))
             for event_type in dispatcher.event_types:
                 self.__dispatchers[event_type] = dispatcher
+            self.__dispatchers_set.add(dispatcher)
 
     def register_listener(self, *listeners):
         """
