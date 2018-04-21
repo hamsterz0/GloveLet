@@ -114,7 +114,7 @@ class GloveletBNO055IMUSensorMonitor(SensorDataMonitor):
         self.__acc_lowpassed[:, 0] = filtfilt(b, a, self.__acc_timeseries[:, 0])
         self.__acc_lowpassed[:, 1] = filtfilt(b, a, self.__acc_timeseries[:, 1])
         self.__acc_lowpassed[:, 2] = filtfilt(b, a, self.__acc_timeseries[:, 2])
-        self.__update_velocity()
+        # self.__update_velocity()
 
     def get_acceleration(self):
         acceleration = np.array(self.__acc_timeseries[0][0:3])
@@ -164,7 +164,7 @@ class GloveletBNO055IMUSensorMonitor(SensorDataMonitor):
 
 
 class GloveletFlexSensorMonitor(SensorDataMonitor):
-    def __init__(self, series_sz=10):
+    def __init__(self, series_sz=20):
         super().__init__(FLEX_SENSORS)
         self.__timeseries = DataTimeSeries(series_sz, FLEX_SENSORS.ndatapoints, auto_filter=False)
 
