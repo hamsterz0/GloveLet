@@ -10,9 +10,8 @@ from glovelet.sensorapi.glovelet_sensormonitor import GloveletBNO055IMUSensorMon
 
 
 class GloveletImuEvent(Event):
-    def __init__(self, accel, vel, orient, accel_elapsed, accel_timestamp, orient_timestamp):
+    def __init__(self, accel, orient, accel_elapsed, accel_timestamp, orient_timestamp):
         self.acceleration = accel[:]
-        self.velocity = vel[:]
         self.orientation = orient[:]
         self.motion_elapsed = accel_elapsed[:]
         self.motion_timestamp = accel_timestamp[:]
@@ -21,7 +20,10 @@ class GloveletImuEvent(Event):
 
 class GloveletFlexEvent(Event):
     def __init__(self, data, tstamps, time_elapsed):
-        self.data = data
+        self.index = data[:, 0]
+        self.middle = data[:, 1]
+        self.thumb0 = data[:, 2]
+        self.thumb1 = data[:, 3]
         self.tstamps = tstamps
         self.time_elapsed = time_elapsed
 
@@ -96,7 +98,6 @@ class GloveletSensorEventDispatcher(EventDispatcher):
         if stream.is_open():
             stream.update()
             imu_event = GloveletImuEvent(imu_monitor.acceleration_sequence,
-                                         imu_monitor.velocity_sequence,
                                          imu_monitor.orientation_timeseries,
                                          imu_monitor.accel_time_elapsed,
                                          imu_monitor.accel_timestamp,
@@ -110,7 +111,6 @@ class GloveletSensorEventDispatcher(EventDispatcher):
         stream.close()
 
 
-# TODO: Finish implementation!
 class GloveletSensorListener(EventListener):
     def __init__(self):
         callbacks = {GloveletImuEvent: self.on_imu_event, GloveletFlexEvent: self.on_flex_event}
