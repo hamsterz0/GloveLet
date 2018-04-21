@@ -1,6 +1,8 @@
 from glovelet.eventapi.event import EventDispatchManager, EventListener
 from glovelet.eventapi.glovelet_hardware_events import GloveletSensorEventDispatcher, GloveletImuEvent, GloveletFlexEvent
+from glovelet.eventapi.glovelet_vision_events import GloveletVisionEventDispatcher, GloveletVisionListener
 from pyautogui import mouseDown, mouseUp
+import pyautogui
 
 
 class SensorListener(EventListener):
@@ -50,7 +52,9 @@ class SensorListener(EventListener):
 def main():
     sensor_disp = GloveletSensorEventDispatcher('/dev/ttyACM0', 115200)
     sensor_list = SensorListener()
-    event_mgr = EventDispatchManager(sensor_disp, sensor_list)
+    vision_disp = GloveletVisionEventDispatcher()
+    vision_list = GloveletVisionListener()
+    event_mgr = EventDispatchManager(sensor_disp, sensor_list, vision_disp, vision_list)
     event_mgr.deploy_dispatchers()
     while True:
         event_mgr.invoke_dispatch()
@@ -58,4 +62,5 @@ def main():
 
 
 if __name__ == '__main__':
+    pyautogui.FAILSAFE = False
     main()

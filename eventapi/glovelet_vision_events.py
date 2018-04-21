@@ -18,7 +18,7 @@ class GloveletVisionEventDispatcher(EventDispatcher):
     def init(self):
         vision = Vision()
         return (vision, ), {}
-    
+
     def update(self, vision):
         vision.read_webcam()
         vision.threshold()
@@ -28,7 +28,7 @@ class GloveletVisionEventDispatcher(EventDispatcher):
             vision.normalize_center()
         else:
             vision.stationary = True
-        # vision.draw()
+        vision.draw()
         vision.frame_outputs()
         #  vision.check_can_perform_gesture()
         #  vision.determine_if_gesture()
@@ -37,7 +37,7 @@ class GloveletVisionEventDispatcher(EventDispatcher):
         # Exit out of this hell hole.
         vision.check_exit()
         return vision_event
-    
+
     def finish(self, *args, **kwargs):
         pass
 
@@ -45,7 +45,7 @@ class GloveletVisionListener(EventListener):
     def __init__(self):
         callbacks = {GloveletVisionEvent: self.on_vision_event}
         super().__init__(callbacks)
-        
+
     def on_vision_event(self, event):
         print('{} {}'.format(event.x, event.y))
-        # pyautogui.moveTo(event.x, event.y)
+        pyautogui.moveTo(event.x, event.y)
