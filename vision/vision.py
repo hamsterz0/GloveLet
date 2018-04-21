@@ -9,14 +9,11 @@ import logging
 from ast import literal_eval
 import sys
 import cv2
-from gesture import Gesture
-from gestureAPI import PreDefinedGestures  
+from glovelet.vision.gesture import Gesture
+from glovelet.vision.gestureAPI import PreDefinedGestures  
+from glovelet.eventapi.event import EventAPIException
 
 def callback(value):
-    """callback
-
-    :param value: None
-    """
     pass
 
 
@@ -125,7 +122,6 @@ class Vision:
                 return tuple([lower, upper])
 
     def read_webcam(self):
-        """read_webcam"""
         _, self.frame = self.webcam.read()
         self.frame = cv2.flip(self.frame, 1)
         # for finger in self.ACTIVE_FINGERS:
@@ -133,10 +129,6 @@ class Vision:
         self.frame = cv2.cvtColor(self.frame, cv2.COLOR_BGR2HSV)
 
     def threshold(self):
-        """threshold
-
-        :param finger: The finger name
-        """
         (lower, upper) = self.boundaries
         lower = np.array(lower, dtype="uint8")
         upper = np.array(upper, dtype="uint8")
@@ -152,10 +144,6 @@ class Vision:
             self.output, kernel, iterations=3)
 
     def extract_contours(self):
-        """extract_contours from the frame. 
-
-        :param finger: Name of the finger working on. 
-        """
         _, self.contours, _ = cv2.findContours(
             self.output.copy(), cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
         maxArea, idx = 0, 0
@@ -176,9 +164,6 @@ class Vision:
             self.realHandContour, 0.001 * self.realHandLength, True)
 
     def __check_stationary(self):
-        '''
-        Finding the absolute deviation from the mean to find if the finger is stationary. 
-        '''
         search_len = 3
         val = -1 * (search_len + 1)
         self.prev_record_state = self.record
@@ -200,9 +185,6 @@ class Vision:
             self.stationary = True
 
     def find_center(self):
-        '''
-        Finding the center of the contour of the finger that we are tracking.
-        '''
         self.moments = cv2.moments(self.handContour)
         if self.moments["m00"] != 0:
             self.handX = int(self.moments["m10"] / self.moments["m00"])
@@ -210,13 +192,6 @@ class Vision:
             self.handMoment = (self.handX, self.handY)
 
     def normalize_center(self):
-        '''
-        Using the time series data to normalize the data. 
-        This is calling the Mean function in the window[finger] object and 
-        then getting the data from it. 
-        The realX and realY are basically are just the mean of n handX and handY 
-        values (to stop the gitter)
-        '''
         self.window.add(self.handMoment)
         self.realX, self.realY = self.window[0]
         #  print('{}'.format(self.window.timestamp[0]))
@@ -224,15 +199,10 @@ class Vision:
         self.__check_stationary()
 
     def move_cursor(self):
-        '''
-                Just simpler to create a new function to calculate the mouse pos,
-                I'm not fucking messing with Git ever again. This is too much for me to
-                handle.
-        '''
         x = self.realX * (self.screen_width / self.frame.shape[1])
         y = self.realY * (self.screen_height / self.frame.shape[0])
-
-        pyautogui.moveTo(x, y)
+        # pyautogui.moveTo(x, y)
+        return (x, y)
 
     def check_can_perform_gesture(self):
         if len(self.movement_history) > 10:
@@ -286,6 +256,11 @@ class Vision:
         cv2.imshow('Canvas', self.canvas)
         pass
 
+    def check_exit(self):
+        if cv2.waitKey(1) & 0xFF is ord('q'):
+            cv2.destroyAllWindows()
+            raise EventAPIException('YOU DONE BAD.')
+
     def start_process(self):
         """start_process
         This is where all the functions for tracking the fingers and
@@ -304,7 +279,7 @@ class Vision:
             self.frame_outputs()
             #  self.check_can_perform_gesture()
             #  self.determine_if_gesture()
-            #  self.move_cursor()
+            x, y = self.move_cursor()
             # Exit out of this hell hole.
             if cv2.waitKey(1) & 0xFF is ord('q'):
                 break
@@ -352,5 +327,5 @@ class Vision:
             self.handContour, tuple(self.palmCenter), True)
 
 
-vision = Vision()
-vision.start_process()
+# vision = Vision()
+# vision.start_process()
