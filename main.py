@@ -1,13 +1,13 @@
 from glovelet.eventapi.event import EventDispatchManager, EventListener
 from glovelet.eventapi.glovelet_hardware_events import GloveletSensorEventDispatcher, GloveletImuEvent, GloveletFlexEvent
-from glovelet.eventapi.glovelet_vision_events import GloveletVisionEventDispatcher, GloveletVisionListener
+from glovelet.eventapi.glovelet_vision_events import GloveletVisionEventDispatcher, GloveletVisionListener, GloveletVisionEvent
 from pyautogui import mouseDown, mouseUp
 import pyautogui
 
 
-class SensorListener(EventListener):
+class GloveletListener(EventListener):
     def __init__(self):
-        callbacks = {GloveletImuEvent: self.on_imu_event, GloveletFlexEvent: self.on_flex_event}
+        callbacks = {GloveletImuEvent: self.on_imu_event, GloveletFlexEvent: self.on_flex_event, GloveletVisionEvent: self.on_vision_event}
         super().__init__(callbacks)
         self.accel = None
         self.orientation = None
@@ -48,12 +48,15 @@ class SensorListener(EventListener):
                     mouseDown(button='right')
                     print('right click')
 
+    def on_vision_event(self, event):
+        print('{} {}'.format(event.x, event.y))
+        pyautogui.moveTo(event.x, event.y)
+
 
 def main():
     sensor_disp = GloveletSensorEventDispatcher('/dev/ttyACM0', 115200)
-    sensor_list = SensorListener()
+    sensor_list = GloveletListener()
     vision_disp = GloveletVisionEventDispatcher()
-    vision_list = GloveletVisionListener()
     event_mgr = EventDispatchManager(sensor_disp, sensor_list, vision_disp, vision_list)
     event_mgr.deploy_dispatchers()
     while True:
