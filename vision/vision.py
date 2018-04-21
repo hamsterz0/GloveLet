@@ -10,7 +10,7 @@ from ast import literal_eval
 import sys
 import cv2
 from glovelet.vision.gesture import Gesture
-from glovelet.vision.gestureAPI import PreDefinedGestures  
+from glovelet.vision.gestureAPI import PreDefinedGestures
 from glovelet.eventapi.event import EventAPIException
 
 def callback(value):
@@ -70,7 +70,7 @@ class Vision:
         self.init_gestures()
 
     def init_mem_vars(self):
-        if self.args.find_range:
+        if not self.args.find_range:
             with open('.vision.config', 'w') as file:
                 value = self.find_range()
                 self.boundaries = value
@@ -227,7 +227,7 @@ class Vision:
                                                                         self.human_gesture.distance)
         if template_gesture_ratio < 2.2 and distance_diff_ratio < 30:
             return index
-    
+
     def determine_if_gesture(self):
         if self.record:
             self.gesture_points += [self.movement_history[-1]]
