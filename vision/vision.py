@@ -29,7 +29,7 @@ class Vision:
         root = tkinter.Tk()
         root.withdraw()
         # member variables
-        self.webcam = cv2.VideoCapture(1)
+        self.webcam = cv2.VideoCapture(0)
         self.screen_width = root.winfo_screenwidth()
         self.screen_height = root.winfo_screenheight()
         self.cameraWidth = self.screen_width / 2
@@ -219,6 +219,7 @@ class Vision:
         '''
         self.window.add(self.handMoment)
         self.realX, self.realY = self.window[0]
+        #  print('{}'.format(self.window.timestamp[0]))
         self.movement_history += [(self.realX, self.realY)]
         self.__check_stationary()
 
@@ -301,9 +302,9 @@ class Vision:
                 self.stationary = True
             self.draw()
             self.frame_outputs()
-            self.check_can_perform_gesture()
-            self.determine_if_gesture()
-            self.move_cursor()
+            #  self.check_can_perform_gesture()
+            #  self.determine_if_gesture()
+            #  self.move_cursor()
             # Exit out of this hell hole.
             if cv2.waitKey(1) & 0xFF is ord('q'):
                 break
