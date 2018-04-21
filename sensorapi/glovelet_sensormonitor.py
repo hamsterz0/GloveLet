@@ -24,8 +24,8 @@ class Mpu6050Sensor(Sensor):
 
 
 class FingerFlexGroup(Sensor):
-    def __init__(self, name, size):
-        super().__init__(name, size)
+    def __init__(self, name, size, offset):
+        super().__init__(name, size, ch_offset=offset)
 
 
 def accel_post_filter(time_series):
@@ -46,13 +46,13 @@ def binary_convert(b):
 
 MPU6050 = None
 BNO055 = Bno055Sensor('bno055', 7)
-FLEX_SENSORS = FingerFlexGroup('flexsensors', 3)
+FLEX_SENSORS = FingerFlexGroup('flexsensors', 4, 7)
 
 
 class GloveletBNO055IMUSensorMonitor(SensorDataMonitor):
     def __init__(self, acc_series_sz=20, rot_series_sz=5,
                  lowpass_order=2, lowpass_critcal=0.15,
-                 highpass_order=2, highpass_critical=0.09):
+                 highpass_order=2, highpass_critical=0.125):
         super().__init__(BNO055)
         self.__acc_timeseries = DataTimeSeries(acc_series_sz, 3,
                                            auto_filter=True,
@@ -66,22 +66,38 @@ class GloveletBNO055IMUSensorMonitor(SensorDataMonitor):
         self.__bttr_numtr_low, self.__bttr_denom_low =\
             butter(lowpass_order, lowpass_critcal, btype='lowpass')
         self.__bttr_numtr_hi, self.__bttr_denom_hi =\
-            butter(highpass_order, [highpass_critical, 0.75], btype='bandpass')
+            butter(highpass_order, highpass_critical, btype='highpass')
 
     @property
-    def tdelta(self):
+    def accel_timestamp(self):
+        return self.__acc_timeseries.timestamp
+
+    @property
+    def accel_tdelta(self):
         return self.__acc_timeseries.tdelta
 
     @property
-    def time_elapsed(self):
+    def accel_time_elapsed(self):
         return self.__acc_timeseries.time_elapsed
 
     @property
-    def acceleration_timeseries(self):
+    def orient_timestamp(self):
+        return self.__rot_timeseries.timestamp
+
+    @property
+    def orient_tdelta(self):
+        return self.__rot_timeseries.tdelta
+
+    @property
+    def orient_time_elapsed(self):
+        return self.__rot_timeseries.time_elapsed
+
+    @property
+    def acceleration_sequence(self):
         return self.__acc_lowpassed
 
     @property
-    def velocity_timeseries(self):
+    def velocity_sequence(self):
         return self.__vel_hipassed
         # return self.__velocity
 
@@ -124,30 +140,17 @@ class GloveletBNO055IMUSensorMonitor(SensorDataMonitor):
         acc = self.__acc_lowpassed
         t_elapsed = self.__acc_timeseries.time_elapsed
         # print(acc[0])
-        # for i in range(self.__acc_lowpassed.shape[1]):
-        #     self.__vel_hipassed
-        # self.__velocity[:, 0] = cumtrapz(acc[:, 0], t_elapsed[:], initial=0)
-        # self.__velocity[:, 1] = cumtrapz(acc[:, 1], t_elapsed[:], initial=0)
-        # self.__velocity[:, 2] = cumtrapz(acc[:, 2], t_elapsed[:], initial=0)
-        # self.__velocity[:, 0] = cumtrapz(acc[:, 0], t_elapsed[:], initial=self.__vel_hipassed[:, 0][0])
-        # self.__velocity[:, 1] = cumtrapz(acc[:, 1], t_elapsed[:], initial=self.__vel_hipassed[:, 1][0])
-        # self.__velocity[:, 2] = cumtrapz(acc[:, 2], t_elapsed[:], initial=self.__vel_hipassed[:, 2][0])
-        self.__velocity[:, 0] += cumtrapz(acc[:, 0], t_elapsed[:], initial=0)
-        self.__velocity[:, 1] += cumtrapz(acc[:, 1], t_elapsed[:], initial=0)
-        self.__velocity[:, 2] += cumtrapz(acc[:, 2], t_elapsed[:], initial=0)
+        self.__velocity[:, 0] = cumtrapz(acc[:, 0], t_elapsed[:], initial=0)
+        self.__velocity[:, 1] = cumtrapz(acc[:, 1], t_elapsed[:], initial=0)
+        self.__velocity[:, 2] = cumtrapz(acc[:, 2], t_elapsed[:], initial=0)
+        # self.__velocity[:, 0] = cumtrapz(acc[:, 0], t_elapsed[:], initial=acc[:, 0][0])
+        # self.__velocity[:, 1] = cumtrapz(acc[:, 1], t_elapsed[:], initial=acc[:, 1][0])
+        # self.__velocity[:, 2] = cumtrapz(acc[:, 2], t_elapsed[:], initial=acc[:, 2][0])
         b, a = self.__bttr_numtr_hi, self.__bttr_denom_hi
-        # self.__velocity[:, 0] += filtfilt(b, a, self.__vel_hipassed[:, 0])
-        # self.__velocity[:, 1] += filtfilt(b, a, self.__vel_hipassed[:, 1])
-        # self.__velocity[:, 2] += filtfilt(b, a, self.__vel_hipassed[:, 2])
-        self.__vel_hipassed[:, 0] = filtfilt(b, a, self.__velocity[:, 0])
-        self.__vel_hipassed[:, 1] = filtfilt(b, a, self.__velocity[:, 1])
-        self.__vel_hipassed[:, 2] = filtfilt(b, a, self.__velocity[:, 2])
-        # self.__velocity[:, 0] = cumtrapz(self.__vel_hipassed[:, 0], t_elapsed[:], initial=self.__vel_hipassed[:, 0][0])
-        # self.__velocity[:, 1] = cumtrapz(self.__vel_hipassed[:, 1], t_elapsed[:], initial=self.__vel_hipassed[:, 1][0])
-        # self.__velocity[:, 2] = cumtrapz(self.__vel_hipassed[:, 2], t_elapsed[:], initial=self.__vel_hipassed[:, 2][0])
-        # self.__velocity[:, 0] = cumtrapz(acc[:, 0], t_elapsed[:], initial=self.__vel_hipassed[:, 0][0])
-        # self.__velocity[:, 1] = cumtrapz(acc[:, 1], t_elapsed[:], initial=self.__vel_hipassed[:, 1][0])
-        # self.__velocity[:, 2] = cumtrapz(acc[:, 2], t_elapsed[:], initial=self.__vel_hipassed[:, 2][0])
+        self.__velocity[:, 0] = filtfilt(b, a, self.__velocity[:, 0])
+        self.__velocity[:, 1] = filtfilt(b, a, self.__velocity[:, 1])
+        self.__velocity[:, 2] = filtfilt(b, a, self.__velocity[:, 2])
+        self.__vel_hipassed.add(self.__vel_hipassed[0] + self.__velocity[4])
 
     def get_acceleration_norm(self):
         acc = self.get_acceleration()
@@ -163,19 +166,19 @@ class GloveletBNO055IMUSensorMonitor(SensorDataMonitor):
 class GloveletFlexSensorMonitor(SensorDataMonitor):
     def __init__(self, series_sz=10):
         super().__init__(FLEX_SENSORS)
-        self.__timeseries = DataTimeSeries(series_sz, FLEX_SENSORS.ndatapoints, auto_filter=True)
+        self.__timeseries = DataTimeSeries(series_sz, FLEX_SENSORS.ndatapoints, auto_filter=False)
 
     @property
     def data_sequence(self):
-        return self.__timeseries[:]
+        return self.__timeseries
 
     @property
     def timestamps(self):
-        return self.__timeseries.timestamp[:]
+        return self.__timeseries.timestamp
 
     @property
     def time_elapsed(self):
-        return self.__timeseries.time_elapsed[:]
+        return self.__timeseries.time_elapsed
 
     def update(self, data):
         self.__timeseries.add(data)
