@@ -57,7 +57,7 @@ def main():
     sensor_disp = GloveletSensorEventDispatcher('/dev/ttyACM0', 115200)
     sensor_list = GloveletListener()
     vision_disp = GloveletVisionEventDispatcher()
-    event_mgr = EventDispatchManager(sensor_disp, sensor_list, vision_disp, vision_list)
+    event_mgr = EventDispatchManager(sensor_disp, sensor_list, vision_disp)
     event_mgr.deploy_dispatchers()
     while True:
         event_mgr.invoke_dispatch()
