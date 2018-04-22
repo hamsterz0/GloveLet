@@ -18,7 +18,7 @@ def callback(value):
 
 
 class Vision:
-    WINDOW_SIZE = 4  # The window size for calculating hte average
+    WINDOW_SIZE = 50 # The window size for calculating hte average
     PREV_MEMORY = 2  # Previous points stored.
 
     def __init__(self):
