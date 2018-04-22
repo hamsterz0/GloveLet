@@ -28,7 +28,7 @@ class GloveletVisionEventDispatcher(EventDispatcher):
             vision.normalize_center()
         else:
             vision.stationary = True
-        # vision.draw()
+        vision.draw()
         vision.frame_outputs()
         #  vision.check_can_perform_gesture()
         #  vision.determine_if_gesture()

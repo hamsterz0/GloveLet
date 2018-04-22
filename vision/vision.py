@@ -18,7 +18,7 @@ def callback(value):
 
 
 class Vision:
-    WINDOW_SIZE = 20 # The window size for calculating hte average
+    WINDOW_SIZE = 15 # The window size for calculating hte average
     PREV_MEMORY = 2  # Previous points stored.
 
     def __init__(self):
@@ -194,8 +194,8 @@ class Vision:
 
     def normalize_center(self):
         self.window.add(self.handMoment)
-        self.realX = sum(self.window[:, 0])/len(self.window[:])
-        self.realY = sum(self.window[:, 1])/len(self.window[:])
+        self.realX = int(sum(self.window[:, 0])/len(self.window[:]))
+        self.realY = int(sum(self.window[:, 1])/len(self.window[:]))
         # self.realX, self.realY = self.window[0]
         #  print('{}'.format(self.window.timestamp[0]))
         self.movement_history += [(self.realX, self.realY)]
@@ -245,7 +245,7 @@ class Vision:
     def draw(self):
         cv2.drawContours(
             self.canvas, [self.handContour], 0, (0, 255, 0), 1)
-        cv2.circle(self.canvas, tuple([self.realX, self.realY]),
+        cv2.circle(self.canvas, tuple([int(self.realX), int(self.realY)]),
                    10, (255, 0, 0), -2)
         recent_positions = self.movement_history[-30:]
         if len(recent_positions) != 0:
