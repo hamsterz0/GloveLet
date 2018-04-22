@@ -189,10 +189,15 @@ class EventDispatchManager:
     """
 
     def __init__(self, *registrees):
+        # check that registrees are subclass of either `EventDispatcher` or `EventListener`
+        for reg in registrees:
+            if not (issubclass(type(reg), EventDispatcher) or issubclass(type(reg), EventListener)):
+                raise TypeError('Type {} is not subclass of type {} or {}'.format(type(reg), EventDispatcher, EventListener))
         self.__dispatchers = dict()
         self.__dispatchers_set = set()
-        dispatchers = tuple([dispatcher for dispatcher in registrees if issubclass(type(dispatcher), EventDispatcher)])
-        listeners = tuple([listener for listener in registrees if issubclass(type(listener), EventListener)])
+        self.__disp_events_set = set()
+        dispatchers = [dispatcher for dispatcher in registrees if issubclass(type(dispatcher), EventDispatcher)]
+        listeners = [listener for listener in registrees if issubclass(type(listener), EventListener)]
         self.register_dispatcher(*dispatchers)
         self.register_listener(*listeners)
 
@@ -224,16 +229,13 @@ class EventDispatchManager:
         __** _Parameters_ **__\n
         \tdispatchers:  the `EventDispatcher` object(s) to register
         """
-        for i in range(len(dispatchers)):
-            dispatcher = dispatchers[i]
-            if issubclass(type(dispatcher), EventDispatcher):
-                for event_type in dispatcher.event_types:
-                    for disp in self.__dispatchers.values():
-                        if event_type in disp.event_types:
-                            raise EventAPIException('Cannont register multiple `EventDispatcher`s \
-                                                    for same event type {}.'.format(event_type))
-            else:
-                raise TypeError('Type {} is not subclass of type {}'.format(type(dispatcher), EventDispatcher))
+        for dispatcher in dispatchers:
+            for event_type in dispatcher.event_types:
+                if event_type not in self.__disp_events_set:
+                    self.__disp_events_set.add(event_type)
+                else:
+                    raise EventAPIException('Cannont register multiple `EventDispatcher`s \
+                                             for same event type {}.'.format(event_type))
             for event_type in dispatcher.event_types:
                 self.__dispatchers[event_type] = dispatcher
             self.__dispatchers_set.add(dispatcher)
