@@ -18,7 +18,7 @@ def callback(value):
 
 
 class Vision:
-    WINDOW_SIZE = 50 # The window size for calculating hte average
+    WINDOW_SIZE = 20 # The window size for calculating hte average
     PREV_MEMORY = 2  # Previous points stored.
 
     def __init__(self):
@@ -190,10 +190,13 @@ class Vision:
             self.handX = int(self.moments["m10"] / self.moments["m00"])
             self.handY = int(self.moments["m01"] / self.moments["m00"])
             self.handMoment = (self.handX, self.handY)
+    
 
     def normalize_center(self):
         self.window.add(self.handMoment)
-        self.realX, self.realY = self.window[0]
+        self.realX = sum(self.window[:, 0])/len(self.window[:])
+        self.realY = sum(self.window[:, 1])/len(self.window[:])
+        # self.realX, self.realY = self.window[0]
         #  print('{}'.format(self.window.timestamp[0]))
         self.movement_history += [(self.realX, self.realY)]
         self.__check_stationary()
