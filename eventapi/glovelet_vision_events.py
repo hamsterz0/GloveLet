@@ -5,6 +5,7 @@ import pyautogui
 from glovelet.eventapi.event import Event, EventListener, EventDispatcher
 from glovelet.vision.vision import Vision
 
+
 class GloveletVisionEvent(Event):
     def __init__(self, x, y):
         self.x = x
@@ -18,7 +19,7 @@ class GloveletVisionEventDispatcher(EventDispatcher):
     def init(self):
         vision = Vision()
         return (vision, ), {}
-    
+
     def update(self, vision):
         vision.read_webcam()
         vision.threshold()
@@ -37,15 +38,16 @@ class GloveletVisionEventDispatcher(EventDispatcher):
         # Exit out of this hell hole.
         vision.check_exit()
         return vision_event
-    
+
     def finish(self, *args, **kwargs):
         pass
+
 
 class GloveletVisionListener(EventListener):
     def __init__(self):
         callbacks = {GloveletVisionEvent: self.on_vision_event}
         super().__init__(callbacks)
-        
+
     def on_vision_event(self, event):
         print('{} {}'.format(event.x, event.y))
         # pyautogui.moveTo(event.x, event.y)

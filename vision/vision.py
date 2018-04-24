@@ -13,12 +13,13 @@ from glovelet.vision.gesture import Gesture
 from glovelet.vision.gestureAPI import PreDefinedGestures
 from glovelet.eventapi.event import EventAPIException
 
+
 def callback(value):
     pass
 
 
 class Vision:
-    WINDOW_SIZE = 15 # The window size for calculating hte average
+    WINDOW_SIZE = 15  # The window size for calculating hte average
     PREV_MEMORY = 2  # Previous points stored.
 
     def __init__(self):
@@ -66,7 +67,7 @@ class Vision:
         self.realY = 0
         self.movement_history = []
         self.window = DataTimeSeries(
-                self.WINDOW_SIZE, 2, auto_filter=True)
+            self.WINDOW_SIZE, 2, auto_filter=True)
         self.init_gestures()
 
     def init_mem_vars(self):
@@ -175,7 +176,7 @@ class Vision:
             factor = 0.04
             for [x, y] in self.movement_history[-(search_len + 1):-1]:
                 if (x-xAvg)**2 + (y-yAvg) > factor * \
-                                                min(self.cameraWidth, self.cameraHeight):
+                        min(self.cameraWidth, self.cameraHeight):
                     if self.stationary:
                         self.record = True
                     self.stationary = False
@@ -190,7 +191,6 @@ class Vision:
             self.handX = int(self.moments["m10"] / self.moments["m00"])
             self.handY = int(self.moments["m01"] / self.moments["m00"])
             self.handMoment = (self.handX, self.handY)
-    
 
     def normalize_center(self):
         self.window.add(self.handMoment)
@@ -216,13 +216,14 @@ class Vision:
     def find_gesture(self):
         min_error = 2**31 - 1
         min_error_idx = -1
-        self.human_gesture = Gesture(self.gesture_points,"Human Gesture")
+        self.human_gesture = Gesture(self.gesture_points, "Human Gesture")
         likelihoodscores = [0]*len(self.gestures)
         assessments = [{}] * len(self.gestures)
         for i in range(len(self.gestures)):
             assessments[i] = Gesture.compare_gesture(self.gestures[i],
-                                                  self.human_gesture)
-        error_list = [assessments[i]['totalError'] for i in range(len(assessments))]
+                                                     self.human_gesture)
+        error_list = [assessments[i]['totalError']
+                      for i in range(len(assessments))]
         index = error_list.index(min(error_list))
         template_gesture_ratio = max((self.gestures[index].distance / self.human_gesture.distance),
                                      (self.human_gesture.distance / self.gestures[index].distance))
@@ -239,7 +240,8 @@ class Vision:
             if len(self.movement_history) > min_gesture_points:
                 gesture_index = self.find_gesture()
                 if gesture_index != None:
-                    print('Gesture Performed: {}'.format(self.gesture_names[gesture_index]))
+                    print('Gesture Performed: {}'.format(
+                        self.gesture_names[gesture_index]))
             self.gesture_points = []
 
     def draw(self):
