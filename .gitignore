@@ -109,4 +109,4 @@ venv.bak/
 .vscode/
 
 # Vision Config File
-.vision.conf
+.vision.config
