@@ -6,7 +6,6 @@ import cv2
 from glovelet.eventapi.event import Event, EventListener, EventDispatcher
 from glovelet.vision.vision import Vision
 
-
 class GloveletVisionEvent(Event):
     def __init__(self, x, y):
         self.x = x
@@ -32,7 +31,7 @@ class GloveletVisionEventDispatcher(EventDispatcher):
             vision.normalize_center()
         else:
             vision.stationary = True
-        # vision.draw()
+        vision.draw()
         vision.frame_outputs()
         # vision.check_can_perform_gesture()
         # vision.determine_if_gesture()
@@ -45,7 +44,6 @@ class GloveletVisionEventDispatcher(EventDispatcher):
     def finish(self, *args, **kwargs):
         pass
 
-
 class GloveletVisionListener(EventListener):
     def __init__(self):
         callbacks = {GloveletVisionEvent: self.on_vision_event}
@@ -53,4 +51,4 @@ class GloveletVisionListener(EventListener):
 
     def on_vision_event(self, event):
         print('{} {}'.format(event.x, event.y))
-        # pyautogui.moveTo(event.x, event.y)
+        pyautogui.moveTo(event.x, event.y)
