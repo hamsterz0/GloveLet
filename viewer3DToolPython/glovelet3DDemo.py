@@ -15,10 +15,12 @@ from glovelet.viewer3DToolPython.worldobject import WorldObject
 from glovelet.viewer3DToolPython.shaders import Shader
 from glovelet.viewer3DToolPython.shadermanager import ShaderProgramManager
 from glovelet.viewer3DToolPython.mesh import RectPrismMesh
-from glovelet.sensorapi.glovelet_sensormonitor import GloveletBNO055IMUSensorMonitor
 from glovelet.eventapi.event import EventDispatchManager, EventListener
 from glovelet.eventapi.glovelet_hardware_events import GloveletSensorEventDispatcher, GloveletImuEvent, GloveletFlexEvent
 
+np.seterr(divide='ignore', invalid='ignore')
+
+WIN_ID = 0
 ASPECT_RATIO = 1920 / 1080
 MAX_FPS = 60.00
 MAX_TDELTA = 1.0 / MAX_FPS
@@ -33,6 +35,7 @@ SHADER = None
 PROJECTION_MTRX = None
 LOOKAT_MTRX = None
 HAND = None
+PALM = None
 INDEX00 = None
 INDEX01 = None
 INDEX02 = None
@@ -70,13 +73,14 @@ class GloveletDemoController(EventListener):
     def __init__(self):
         callbacks = {GloveletImuEvent: self.on_imu_event, GloveletFlexEvent: self.on_flex_event}
         super().__init__(callbacks)
-        self.orientation = None
+        self.rotation = quat.tquat(1.0, 0.0, 0.0, 0.0)
         self.index = 0.0
         self.middle = 0.0
         self.thumb0 = 0.0
 
     def on_imu_event(self, event):
-        self.orientation = event.orientation[0]
+        self.rotation = quat.tquat(event.orientation[0][0], event.orientation[0][2], event.orientation[0][3], event.orientation[0][1])
+        self.rotation = self.rotation
 
     def on_flex_event(self, event):
         self.index = np.average(event.index)
@@ -86,7 +90,7 @@ class GloveletDemoController(EventListener):
 
 def draw():
     global FRAME_TIME, EVENT_MNGR, EVENT_LIST,\
-           HAND, INDEX00, INDEX01, INDEX02, MIDDLE00, MIDDLE01, MIDDLE02, THUMB00, THUMB01, THUMB02,\
+           HAND, PALM, INDEX00, INDEX01, INDEX02, MIDDLE00, MIDDLE01, MIDDLE02, THUMB00, THUMB01, THUMB02,\
            SHADER, LOOKAT_MTRX, PROJECTION_MTRX, MAX_TDELTA
     EVENT_MNGR.invoke_dispatch()
     tdelta = time.time() - FRAME_TIME
@@ -105,8 +109,10 @@ def draw():
         rot_delta_thumb00 = THUMB00_ROT_MAX * EVENT_LIST.thumb0
         rot_delta_thumb01 = THUMB01_ROT_MAX * EVENT_LIST.thumb0
         rot_delta_thumb02 = THUMB02_ROT_MAX * EVENT_LIST.thumb0
-        rot_hand = quat.tquat(tuple(EVENT_LIST.orientation))
-        HAND.set_rotation(rot_hand)
+        # rot_hand = quat.tquat(EVENT_LIST.orientation[0], EVENT_LIST.orientation[1], EVENT_LIST.orientation[3], EVENT_LIST.orientation[2])
+        HAND.set_rotation(EVENT_LIST.rotation)
+        # HAND.rotate_local(EVENT_LIST.orientation)
+        # PALM.set_local_rotation(rot_hand)
         INDEX00.set_rotation(rot_delta_index00 + INDEX00_ROT_MIN)
         INDEX01.set_rotation(rot_delta_index01 + INDEX01_ROT_MIN)
         INDEX02.set_rotation(rot_delta_index02 + INDEX02_ROT_MIN)
@@ -120,6 +126,12 @@ def draw():
         FRAME_TIME = time.time()
     glut.glutSwapBuffers()
     glut.glutPostRedisplay()
+
+
+def keyboard_handler(key, x, y):
+    if key == b'q':
+        print("Quitting. . .")
+        glut.glutLeaveMainLoop()
 
 
 def mouse_motion(x, y):
@@ -138,11 +150,14 @@ def mouse_motion(x, y):
     elif chg_y <= 0:
         MOUSE_POS.y -= 0.025
     euler = glm.vec3(chg_y * 0.025, chg_x * 0.025, 0.0)
-    HAND.rotate(euler)
+    rot = quat.tquat(euler) * HAND.local_rotation
+    # print(rot)
+    HAND.rotate_local(rot)
     MOUSE_POS = glm.vec2(x, y)
 
+
 def init_hand():
-    global HAND, INDEX00, INDEX01, INDEX02, MIDDLE00, MIDDLE01, MIDDLE02, THUMB00, THUMB01, THUMB02
+    global HAND, PALM, INDEX00, INDEX01, INDEX02, MIDDLE00, MIDDLE01, MIDDLE02, THUMB00, THUMB01, THUMB02
     color = np.array([[1.0, 0.0, 0.0, 1.0],
                       [0.5, 0.0, 0.0, 1.0],
                       [0.0, 1.0, 0.0, 1.0],
@@ -159,7 +174,6 @@ def init_hand():
     thumb00_dim = (5.0, 1.8, 5.0)
     thumb01_dim = (1.75, 1.5, 3.0)
     thumb02_dim = (1.65, 1.35, 2.5)
-    palm_mesh = RectPrismMesh(*palm_dim, face_colors=color)
     INDEX00 = WorldObject(RectPrismMesh(*index00_dim, face_colors=color))
     INDEX01 = WorldObject(RectPrismMesh(*index01_dim, face_colors=color))
     INDEX02 = WorldObject(RectPrismMesh(*index02_dim, face_colors=color))
@@ -169,17 +183,19 @@ def init_hand():
     THUMB00 = WorldObject(RectPrismMesh(*thumb00_dim, face_colors=color))
     THUMB01 = WorldObject(RectPrismMesh(*thumb01_dim, face_colors=color))
     THUMB02 = WorldObject(RectPrismMesh(*thumb02_dim, face_colors=color))
-    HAND = WorldObject(palm_mesh)
-    HAND.add_child(INDEX00)
+    PALM = WorldObject(RectPrismMesh(*palm_dim, face_colors=color))
+    HAND = WorldObject(WorldObject(RectPrismMesh(*(0, 0, 0), face_colors=color)))
+    HAND.add_child(PALM)
+    PALM.add_child(INDEX00)
+    HAND.set_position((0, -20.0, 50.0))
     INDEX00.add_child(INDEX01)
     INDEX01.add_child(INDEX02)
-    HAND.add_child(MIDDLE00)
+    PALM.add_child(MIDDLE00)
     MIDDLE00.add_child(MIDDLE01)
     MIDDLE01.add_child(MIDDLE02)
-    HAND.add_child(THUMB00)
+    PALM.add_child(THUMB00)
     THUMB00.add_child(THUMB01)
     THUMB01.add_child(THUMB02)
-    HAND.set_position((0, -20.0, 50.0))
     INDEX00.set_position((index00_dim[0] * 1.5, 0, palm_dim[2]))
     INDEX00.set_local_position((0, 0, index00_dim[2] * 1.2))
     INDEX01.set_position((0, 0, index00_dim[2]))
@@ -221,7 +237,7 @@ def init_shaders():
 
 
 def init_window():
-    global ASPECT_RATIO
+    global ASPECT_RATIO, WIN_ID
     disp_w = glut.glutGet(glut.GLUT_SCREEN_WIDTH)
     disp_h = glut.glutGet(glut.GLUT_SCREEN_HEIGHT)
     # Fixes an issue on where the display width/height of a multi-monitor
@@ -234,21 +250,22 @@ def init_window():
     elif int(disp_h * ASPECT_RATIO) > disp_w:
         disp_h = int(disp_w * ASPECT_RATIO**(-1))
     # Set the window position & size, and create the window.
-    width = int(disp_w / 2)
-    height = int(disp_h / 2)
-    win_x = width - int(width / 2)
-    win_y = height - int(height / 2)
+    percent = 0.75
+    width = int(disp_w * percent)
+    height = int(disp_h * percent)
+    win_x = width - int(width * 0.85)
+    win_y = height - int(height * 0.85)
     glut.glutInitWindowSize(width, height)
     glut.glutInitWindowPosition(win_x, win_y)
-    glut.glutCreateWindow('Glovelet 3D Demo')
+    WIN_ID = glut.glutCreateWindow('Glovelet 3D Demo')
     glut.glutHideWindow()
 
 
 def on_exit():
     global EVENT_MNGR
     print('='*10 + 'END' + '='*10)
-    # EVENT_MNGR.end_dispatcher()
     time.sleep(0.8)
+    glut.glutDestroyWindow(WIN_ID)
 
 
 def main():
@@ -256,6 +273,7 @@ def main():
             PROJECTION_MTRX, LOOKAT_MTRX, ASPECT_RATIO
     atexit.register(on_exit)
     glut.glutInit(sys.argv)
+    OpenGL.GLUT.freeglut.glutSetOption(OpenGL.GLUT.GLUT_ACTION_ON_WINDOW_CLOSE, OpenGL.GLUT.GLUT_ACTION_GLUTMAINLOOP_RETURNS)
     init_window()
     EVENT_DISP = GloveletSensorEventDispatcher('/dev/ttyACM0', 115200)
     EVENT_LIST = GloveletDemoController()
@@ -270,16 +288,17 @@ def main():
     gl.glEnable(gl.GL_DEPTH_TEST)
     # set render callback
     glut.glutDisplayFunc(draw)
-    glut.glutPassiveMotionFunc(mouse_motion)
+    glut.glutKeyboardFunc(keyboard_handler)
+    # glut.glutPassiveMotionFunc(mouse_motion)
     # init perspective matrices
     PROJECTION_MTRX = glm.perspective(glm.radians(45.0), ASPECT_RATIO, 0.1, 100.0)
-    LOOKAT_MTRX = glm.lookAt(glm.vec3((0.0, 2.0, -4), dtype='f'),   # eye
-                              glm.vec3((0.0, 1.0, 0.0),
-                                       dtype='f'),  # center
-                              glm.vec3((0.0, 1.0, 0.0), dtype='f'))  # up
+    LOOKAT_MTRX = glm.lookAt(glm.vec3((0.0, 2.0, -4.0), dtype='f'),  # eye
+                             glm.vec3((0.0, 1.0, 0.0), dtype='f'),  # center
+                             glm.vec3((0.0, 1.0, 0.0), dtype='f'))  # up
     # begin main loop
     EVENT_MNGR.deploy_dispatchers()
     glut.glutMainLoop()
+    EVENT_MNGR.end_dispatchers()
     exit()
 
 
