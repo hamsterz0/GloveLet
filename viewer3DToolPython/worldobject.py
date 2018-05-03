@@ -34,7 +34,7 @@ class WorldObject:
                  local_position=glm.vec3((0, 0, 0), dtype=c_float),
                  rotation=_convert2tquat((0, 0, 0)),
                  local_rotation=_convert2tquat((0, 0, 0)),
-                 parent=None, children=[], axis=None):
+                 parent=None, children=[], axis=None, disable_depth=False):
         # TODO: type check for 'mesh', 'parent', 'children', and 'axis' kwargs
         self._axis = axis               # TODO: Implement axis object
         self._mesh = mesh
@@ -44,6 +44,7 @@ class WorldObject:
         self.local_rotation = _convert2tquat(local_rotation)
         self._parent = parent
         self._children = children.copy()
+        self.disable_depth = disable_depth
 
     def render(self):
         trans_mat = glm.mat4(1.0, dtype=c_float)
@@ -59,8 +60,16 @@ class WorldObject:
         sm.CURRENT_PROGRAM.model_mat4(rot_mat.value)
         sm.CURRENT_PROGRAM.model_mat4(loc_trans_mat.value)
         sm.CURRENT_PROGRAM.model_mat4(loc_rot_mat.value)
+        # disable depth test if self.disable_depth is True
+        gl.glEnable(gl.GL_DEPTH_TEST)
+        # is_depth_enabled = gl.glIsEnabled(gl.GL_DEPTH_TEST)
+        # if self.disable_depth and is_depth_enabled:
+        #     gl.glDisable(gl.GL_DEPTH_TEST)
         # draw the mesh
         self._mesh.render()
+        # re-enable depth test if depth test was enabled prior to disabling
+        # if self.disable_depth and is_depth_enabled:
+        #     gl.glEnable(gl.GL_DEPTH_TEST)
         # render children
         for i in range(len(self._children)):
             # pushing here separates the transformations of the children from the parent
