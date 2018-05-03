@@ -3,11 +3,16 @@ from glovelet.eventapi.glovelet_hardware_events import GloveletSensorEventDispat
 from glovelet.eventapi.glovelet_vision_events import GloveletVisionEventDispatcher, GloveletVisionListener, GloveletVisionEvent
 from pyautogui import mouseDown, mouseUp, click, scroll
 import pyautogui
+<<<<<<< HEAD
 from numpy import average
 import numpy as np
 from glm.gtc import quaternion as quat
 from glm import vec3, vec4
 
+=======
+import sys
+import argparse
+>>>>>>> origin/master
 
 class GloveletListener(EventListener):
     def __init__(self):
@@ -79,17 +84,19 @@ class GloveletListener(EventListener):
             print('left click')
             mouseDown(button='left')
 
-
-
     def on_vision_event(self, event):
-        print('{} {}'.format(event.x, event.y))
+        # print('{} {}'.format(event.x, event.y))
         pyautogui.moveTo(event.x, event.y)
 
 
-def main():
+def main(default_value):
+    from argparse import ArgumentParser
+    parser = ArgumentParser()
+    parser.add_argument('--use-default', action='store_true', help='Use default HSV Values')
+    args = parser.parse_args()
     sensor_disp = GloveletSensorEventDispatcher('/dev/ttyACM0', 115200)
     sensor_list = GloveletListener()
-    vision_disp = GloveletVisionEventDispatcher()
+    vision_disp = GloveletVisionEventDispatcher(args.use_default)
     event_mgr = EventDispatchManager(sensor_disp, sensor_list, vision_disp)
     event_mgr.deploy_dispatchers()
     while True:
@@ -99,4 +106,7 @@ def main():
 
 if __name__ == '__main__':
     pyautogui.FAILSAFE = False
-    main()
+    if '--use-default' in sys.argv:
+        main(True)
+    else:
+        main(False)

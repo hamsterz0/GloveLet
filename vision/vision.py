@@ -1,6 +1,5 @@
 import numpy as np
 import tkinter
-import argparse
 import pyautogui
 import math
 from glovelet.utility.timeseries import DataTimeSeries
@@ -21,7 +20,7 @@ class Vision:
     WINDOW_SIZE = 4  # The window size for calculating hte average
     PREV_MEMORY = 2  # Previous points stored.
 
-    def __init__(self):
+    def __init__(self, default_values):
         pyautogui.FAILSAFE = False
         root = tkinter.Tk()
         root.withdraw()
@@ -48,16 +47,11 @@ class Vision:
         self.pinched = False
         self.window = {}
         self.movement_history = {}
-        self.parser = argparse.ArgumentParser()
-        self.parser.add_argument('-r', '--find_range',
-                                 help="Find the range from within the program",
-                                 action="store_true", default=False)
-        self.args = self.parser.parse_args()
         self.record = {}
         self.gesture_points = []
         self.can_do_gesture = False
         self.boundaries = {}
-        self.init_mem_vars()
+        self.init_mem_vars(default_values)
         self.handMoment = (0, 0)
         self.foundContour = True
         self.stationary = False
@@ -69,8 +63,8 @@ class Vision:
                 self.WINDOW_SIZE, 2, auto_filter=True)
         self.init_gestures()
 
-    def init_mem_vars(self):
-        if not self.args.find_range:
+    def init_mem_vars(self, default_values):
+        if not default_values:
             with open('.vision.config', 'w') as file:
                 value = self.find_range()
                 self.boundaries = value
@@ -225,6 +219,7 @@ class Vision:
                                      (self.human_gesture.distance / self.gestures[index].distance))
         distance_diff_ratio = assessments[index]['totalDistance'] / min(self.gestures[index].distance,
                                                                         self.human_gesture.distance)
+        print('TGR: {} DDR: {}'.format(template_gesture_ratio, distance_diff_ratio))
         if template_gesture_ratio < 2.2 and distance_diff_ratio < 30:
             return index
 
@@ -277,8 +272,8 @@ class Vision:
                 self.stationary = True
             self.draw()
             self.frame_outputs()
-            #  self.check_can_perform_gesture()
-            #  self.determine_if_gesture()
+            self.check_can_perform_gesture()
+            self.determine_if_gesture()
             x, y = self.move_cursor()
             # Exit out of this hell hole.
             if cv2.waitKey(1) & 0xFF is ord('q'):

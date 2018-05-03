@@ -1,6 +1,7 @@
 import numpy as np
 from multiprocessing import Queue
 import pyautogui
+import cv2
 
 from glovelet.eventapi.event import Event, EventListener, EventDispatcher
 from glovelet.vision.vision import Vision
@@ -12,11 +13,13 @@ class GloveletVisionEvent(Event):
 
 
 class GloveletVisionEventDispatcher(EventDispatcher):
-    def __init__(self):
+    def __init__(self, default_value):
         super().__init__(GloveletVisionEvent)
+        self.default_value = default_value
+        print('{} {}'.format('DISPATCHER', self.default_value))
 
     def init(self):
-        vision = Vision()
+        vision = Vision(self.default_value)
         return (vision, ), {}
 
     def update(self, vision):
@@ -30,8 +33,8 @@ class GloveletVisionEventDispatcher(EventDispatcher):
             vision.stationary = True
         vision.draw()
         vision.frame_outputs()
-        #  vision.check_can_perform_gesture()
-        #  vision.determine_if_gesture()
+        # vision.check_can_perform_gesture()
+        # vision.determine_if_gesture()
         x, y = vision.move_cursor()
         vision_event = GloveletVisionEvent(x, y)
         # Exit out of this hell hole.
