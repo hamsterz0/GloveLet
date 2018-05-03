@@ -1,3 +1,5 @@
+__all__ = ['Mesh', 'RectPrismMesh']
+
 from ctypes import c_uint, c_float, c_void_p, sizeof
 import OpenGL.GL as gl
 import numpy as np
@@ -5,7 +7,6 @@ import numpy as np
 import glovelet.viewer3DToolPython.shadermanager as sm
 
 
-__all__ = ['Mesh', 'RectPrismMesh']
 
 
 DEFAULT_RENDER_MODE = gl.GL_TRIANGLES
@@ -51,9 +52,13 @@ class Mesh:
 
     def render(self):
         # bind Vertex Array Object
-        sz = self.elements.size
+        sz = sizeof(c_uint)
+        per_elem = len(self.elements[0, :])
         gl.glBindVertexArray(self._vao)
-        gl.glDrawElements(self._render_mode, sz, gl.GL_UNSIGNED_INT, None)
+        sm.CURRENT_PROGRAM.color_vec4(self._color)
+        for i in range(len(self.elements)):
+            # gl.glDrawElements(self._render_mode, per_elem, gl.GL_UNSIGNED_INT, c_void_p(i * sz))
+            gl.glDrawArrays(self._render_mode, 0, 2)
 
     def set_render_mode(self, mode):
         if type(mode) == gl.constant.IntConstant:

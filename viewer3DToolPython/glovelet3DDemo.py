@@ -14,7 +14,7 @@ import atexit
 from glovelet.viewer3DToolPython.worldobject import WorldObject
 from glovelet.viewer3DToolPython.shaders import Shader
 from glovelet.viewer3DToolPython.shadermanager import ShaderProgramManager
-from glovelet.viewer3DToolPython.mesh import RectPrismMesh
+from glovelet.viewer3DToolPython.mesh import RectPrismMesh, Mesh
 from glovelet.eventapi.event import EventDispatchManager, EventListener
 from glovelet.eventapi.glovelet_hardware_events import GloveletSensorEventDispatcher, GloveletImuEvent, GloveletFlexEvent
 
@@ -63,6 +63,7 @@ THUMB02_ROT_MIN = glm.vec3(0, 0, 0)
 THUMB00_ROT_MAX = glm.vec3(0, 0, np.radians(-40))
 THUMB01_ROT_MAX = glm.vec3(np.radians(50), np.radians(0), np.radians(-20))
 THUMB02_ROT_MAX = glm.vec3(np.radians(80), np.radians(0), np.radians(-10))
+UP_VECTOR = None
 MOUSE_POS = None
 
 
@@ -79,18 +80,21 @@ class GloveletDemoController(EventListener):
         self.thumb0 = 0.0
 
     def on_imu_event(self, event):
+        global UP_VECTOR
         self.rotation = quat.tquat(event.orientation[0][0], event.orientation[0][2], event.orientation[0][3], event.orientation[0][1])
-        self.rotation = self.rotation
+        pos = glm.vec3(quat.mat4_cast(self.rotation) * glm.vec4(1.0, 0.0, 0.0, 0.0))
+        print(np.degrees(np.arctan2(pos[1], pos[0] + pos[2])))
 
     def on_flex_event(self, event):
         self.index = np.average(event.index)
         self.middle = np.average(event.middle)
         self.thumb0 = np.average(event.thumb0)
+        # print('{}'.format(self.thumb0))
 
 
 def draw():
     global FRAME_TIME, EVENT_MNGR, EVENT_LIST,\
-           HAND, PALM, INDEX00, INDEX01, INDEX02, MIDDLE00, MIDDLE01, MIDDLE02, THUMB00, THUMB01, THUMB02,\
+           HAND, PALM, INDEX00, INDEX01, INDEX02, MIDDLE00, MIDDLE01, MIDDLE02, THUMB00, THUMB01, THUMB02, UP_VECTOR,\
            SHADER, LOOKAT_MTRX, PROJECTION_MTRX, MAX_TDELTA
     EVENT_MNGR.invoke_dispatch()
     tdelta = time.time() - FRAME_TIME
@@ -157,7 +161,7 @@ def mouse_motion(x, y):
 
 
 def init_hand():
-    global HAND, PALM, INDEX00, INDEX01, INDEX02, MIDDLE00, MIDDLE01, MIDDLE02, THUMB00, THUMB01, THUMB02
+    global HAND, PALM, INDEX00, INDEX01, INDEX02, MIDDLE00, MIDDLE01, MIDDLE02, THUMB00, THUMB01, THUMB02, UP_VECTOR
     color = np.array([[1.0, 0.0, 0.0, 1.0],
                       [0.5, 0.0, 0.0, 1.0],
                       [0.0, 1.0, 0.0, 1.0],
@@ -223,6 +227,9 @@ def init_hand():
     THUMB00.set_local_rotation(THUMB00_ROT_MAX)
     THUMB01.set_rotation(THUMB01_ROT_MAX)
     THUMB02.set_rotation(THUMB02_ROT_MAX)
+    UP_VECTOR = WorldObject(Mesh(np.array([[0, 0, 0], [-20, 0, 0]], dtype='f'), np.array([[0, 1], [1, 1]], dtype='f'), render_mode=gl.GL_LINES))
+    HAND.add_child(UP_VECTOR)
+    UP_VECTOR.set_position((20, 0, 0))
 
 
 def init_shaders():
