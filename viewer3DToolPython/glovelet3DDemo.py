@@ -83,7 +83,7 @@ class GloveletDemoController(EventListener):
         global UP_VECTOR
         self.rotation = quat.tquat(event.orientation[0][0], event.orientation[0][2], event.orientation[0][3], event.orientation[0][1])
         pos = glm.vec3(quat.mat4_cast(self.rotation) * glm.vec4(1.0, 0.0, 0.0, 0.0))
-        print(np.degrees(np.arctan2(pos[1], pos[0] + pos[2])))
+        # print(np.degrees(np.arctan2(pos[1], pos[0] + pos[2])))
 
     def on_flex_event(self, event):
         self.index = np.average(event.index)
