@@ -1,3 +1,6 @@
+# Author:       Joseph Tompkins
+# Description:  Utility script for viewing 2D graphed data from the IMU and flex sensors.
+#               Intended for private use of the developers only.
 import numpy as np
 import matplotlib.pyplot as plt
 from glovelet.sensorapi.sensorstream import SensorStream
