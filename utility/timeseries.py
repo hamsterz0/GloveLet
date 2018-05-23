@@ -1,3 +1,8 @@
+# Author:       Joseph Tompkins
+# Description:  A set of wrapper classes for NumPy arrays providing data structures used to 
+#               capture a moving time series window of real-time data. 
+#               The DataTimeSeries class also offers 2 types of automatic averaging of data,
+#               which includes a Simple Moving Average and an Exponential Weighted Moving Average.
 __all__ = ["DataTimeSeries", "DataSequence"]
 
 import time
@@ -89,7 +94,6 @@ class DataSequence:
         else:
             shape = (stop - start,) + self.shape[1:]
         result = np.zeros(shape, self.dtype)
-        # print('stop - start = {}, shape:{}'.format(stop - start, str(shape)))
         start_ind = self._get_real_index(start)
         end_ind = self._get_real_index(stop)
         if end_ind >= start_ind:
@@ -97,9 +101,6 @@ class DataSequence:
             result[:n] = self.data_series[start_ind::step]
             result[n:] = self.data_series[self.nsamples:end_ind:step]
         else:
-            # print('start:{}, end:{}'.format(start, stop))
-            # print('start_ind:{}, end_ind:{}'.format(start_ind, end_ind))
-            # print('result.shape:{}, slice_shape:{}'.format(str(result.shape), str(self.data_series[start_ind:end_ind:step].shape)))
             result[:] = self.data_series[start_ind:end_ind:step]
         return result
 
