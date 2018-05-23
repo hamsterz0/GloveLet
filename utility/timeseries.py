@@ -67,17 +67,6 @@ class DataSequence:
         self._increment_head()
         self.data_series[self.head] = data
 
-    def print_data(self, index=0):
-        """
-        Prints a data sample and associated time delta.\n
-        By default, the most recent data sample is printed.\t
-        Otherwise, specifiy the index of the data sample to print.\t
-        :param index: The index of the data to convert to string. The most recent data sample is selected by default.
-        """
-        index = self._get_real_index(index)
-        out = self.data2str(index)
-        print(out + '  :  dt=' + str(self.__tdelta[index]))
-
     def _increment_head(self):
         self.__head += 1
         if self.__head >= self.__nsamples:
